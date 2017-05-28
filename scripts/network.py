@@ -153,9 +153,6 @@ class hierarchical():
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
-		self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-		self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
-
 		rule_probabilities = self.sess.run([self.rule_probabilities],feed_dict={self.input: self.resized_image})
 	
 		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
@@ -172,100 +169,67 @@ class hierarchical():
 
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if (selected_rule%2==0) and (self.state.h>1):
+				
+				# Scale split location.
 				split_location = int(self.state.h*split_location)
+				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
+				
+				# Update current parse tree with split location and rule applied.
+				self.parse_tree[self.current_parsing_index].split=split_location
+				self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+
+				# Insert splits into parse tree.
+				self.insert_node(s1,self.current_parsing_index+1)
+				self.insert_node(s2,self.current_parsing_index+2)
+				self.current_parsing_index+=2
+
+				# Modify the images.
+				self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+				self.images[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
 			if (selected_rule%2!=0) and (self.state.w>1):
+				# Scale split location.
 				split_location = int(self.state.w*split_location)
+				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
-			
-			self.insert_node(s1,self.current_parsing_index+1)
-			self.insert_node(s2,self.current_parsing_index+2)
-			self.current_parsing_index+=2
 
-		# if selected_rule==6:
-		# 	# Only add a node with primitive label.
-		# 	# s1 = parse_tree_node(label=1,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.h,backward_index=self.current_parsing_index)
-		# 	s1 = self.parse_tree[self.current_parsing_index].copy()
-		# 	s1.label=1
-		# 	self.insert_node(s1,self.current_parsing_index+1)
-		# 	self.current_parsing_index+=1
+				# Update current parse tree with split location and rule applied.
+				self.parse_tree[self.current_parsing_index].split=split_location
+				self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
 
-		# if selected_rule==7:
-		# 	s1 = self.parse_tree[self.current_parsing_index].copy()
-		# 	s1.label=2
-		# 	self.insert_node(s1,self.current_parsing_index+1)
-		# 	self.current_parsing_index+=1			
+				# Insert splits into parse tree.
+				self.insert_node(s1,self.current_parsing_index+1)
+				self.insert_node(s2,self.current_parsing_index+2)
+				self.current_parsing_index+=2
+
+				# Modify the images.
+				self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+				self.images[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label		
 
 		elif selected_rule>=6:
+
+			# Create a parse tree node object.
 			s1 = self.parse_tree[self.current_parsing_index].copy()
+			# Change label.
 			s1.label=selected_rule-5
+			# Change the backward index.
+			s1.backward_index = self.current_parsing_index
+
+			# Update current parse tree with rule applied.
+			self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+
+			# Insert node into parse tree.
 			self.insert_node(s1,self.current_parsing_index+1)
 			self.current_parsing_index+=1						
-
-	def parse_nonterminal_old(self):
-		# Pass a state nonterminal.
-		self.image_input = self.images[i,self.state[1]:self.state[1]+self.state[3],self.state[2]:self.state[2]+self.state[4]]
-		self.resized_image = cv2.resize(image_input,[self.image_size,self.image_size])
-
-		rule_probabilities = self.sess.run([self.rule_probabilities], feed_dict={self.input: self.resized_image})
-		
-		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
-		# Should it be an epsilon-greedy policy? 
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities)
-		indices = self.map_rules_to_indices(selected_rule)
-		# If rules 0-5, need a split location.
-		# If 6, need a goal location.
-
-		# SAMPLING A SPLIT LOCATION
-		if selected_rule<=5:
-			split_location = self.sess.run([self.sample_split], feed_dict={self.input: self.resized_image})
-
-			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
-			if (selected_rule%2==0) and (self.state[4]>1):					
-				# Scale the split location by the image height.
-				split_location *= self.state[4]
-				
-				s1 = [indices[0],self.state[1],self.state[2],self.state[3],split_location]
-				s2 = [indices[1],self.state[1],self.state[2]+split_location,self.state[3],state[4]-split_location]
-
-
-				self.append_state_to_tree(s1,self.current_parsing_index+1)
-				self.append_state_to_tree(s2,self.current_parsing_index+2)							
-
-			# If odd rule number, it is a horizontal split.
-			if ((selected_rule%2)!=0) and (self.state[3]>1):
-				split_location *= self.state[3]
-
-				s1 = [indices[0],self.state[1],self.state[2],split_location,self.state[4]]
-				s2 = [indices[1],self.state[1]+split_location,self.state[2],self.state[3]-split_location,self.state[4]]
-				self.append_state_to_tree(s1,self.current_parsing_index+1)
-				self.append_state_to_tree(s2,self.current_parsing_index+2)							
-
-			self.current_parsing_index+=2
-		
-		if selected_rule==6:
-
-			# This should be called in parse_primitive_terminal now.
-			# goal_location = self.state[3:]*self.sess.run([self.sample_goal],feed_dict={self.input: self.resized_image})			
-			# s1.append(goal_location)
-			s1 = self.state.copy()
-			s1[0] = 1
-			self.append_state_to_tree(s1,current_parsing_index+1)			
-			self.current_parsing_index+=1
-
-		if selected_rule==7:	
-			s1 = self.state.copy()
-			s1[0] = 2
-			self.append_state_to_tree(s1,current_parsing_index+1)
-			self.current_parsing_index+=1
+			self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
-		goal_location = self.state[3:]*self.sess.run([self.sample_goal],feed_dict={self.input: self.resized_image})
-		self.parse_tree[self.current_parsing_index].append(goal_location)
+		goal_location = [self.state.w,self.state.h]*self.sess.run([self.sample_goal],feed_dict={self.input: self.resized_image})
+		self.parse_tree[self.current_parsing_index].goal=goal_location
 
 	def meta_training(self):
 
@@ -283,15 +247,20 @@ class hierarchical():
 				self.initialize_tree()
 
 				# WHILE WE TERMINATE THAT PARSE:
+				while ((self.images[i]==0).any()):
 					# Forward pass of the rule policy- basically picking which rule.
-					
+					self.state = self.parse_tree[self.current_parsing_index]
+					# Pick up correct portion of image.
+					self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
+					self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
+
 					# If the current non-terminal is a shape.
-					if (state==0):
+					if (self.state.label==0):
 						self.parse_nonterminal()
 
 					# If the current non-terminal is a region assigned a particular primitive.
 					# if (state==1)or(state==2)or(state==3)or(state==4):
-					if (state==1):
+					if (self.state.label==1):
 						self.parse_primitive_terminal()
 
 	############################
