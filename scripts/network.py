@@ -12,6 +12,8 @@ class hierarchical():
 		self.backward_indices = []
 		self.rewards = []
 
+		self.current_parsing_index = 0
+
 	def initialize_tensorflow_model(self, sess):
 
 		# Initializing the session.
@@ -137,10 +139,16 @@ class hierarchical():
 		self.rewards = []
 		self.backward_indices = []
 
-	def append_to_tree(self, state, reward, backward_index):
-		self.parse_tree.append(state)
+	def initialize_tree(self, state, reward, backward_index):
+		# self.parse_tree.append(state)
 		self.rewards.append(reward)
 		self.backward_indices.append(backward_index)
+		self.current_parsing_index = 0
+		self.append_state_to_tree(self.current_parsing_index,state)
+		# self.append_applied_rule(self)
+
+	def append_state_to_tree(self, state, index):
+		self.parse_tree.append(index,state)
 
 	def parse_nonterminal(self):
 		# Pass a state nonterminal.
@@ -152,7 +160,7 @@ class hierarchical():
 		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
 		# Should it be an epsilon-greedy policy? 
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities)
-
+		indices = self.map_rules_to_indices(selected_rule)
 		# If rules 0-5, need a split location.
 		# If 6, need a goal location.
 
@@ -160,11 +168,33 @@ class hierarchical():
 		if selected_rule<=5:
 			split_location = self.sess.run([self.sample_split], feed_dict={self.input: self.resized_image})
 
-			# Apply the rule.
-			s1 = 
+			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
+			if (selected_rule%2==0) and (self.state[4]>1):					
+				# Scale the split location by the image height.
+				split_location *= self.state[4]
+				
+				s1 = [indices[0],self.state[1],self.state[2],self.state[3],split_location]
+				s2 = [indices[1],self.state[1],self.state[2]+split_location,self.state[3],state[4]-split_location]
+				self.append_state_to_tree(s1,self.current_parsing_index+1)
+				self.append_state_to_tree(s2,self.current_parsing_index+2)							
 
-	def parse_primitive(self):
-		# Pass a state primitive.
+			# If odd rule number, it is a horizontal split.
+			if ((selected_rule%2)!=0) and (self.state[3]>1):
+				split_location *= self.state[3]
+
+				s1 = [indices[0],self.state[1],self.state[2],split_location,self.state[4]]
+				s2 = [indices[1],self.state[1]+split_location,self.state[2],self.state[3]-split_location,self.state[4]]
+				self.append_state_to_tree(s1,self.current_parsing_index+1)
+				self.append_state_to_tree(s2,self.current_parsing_index+2)							
+		
+		if selected_rule==6:
+			goal_location = self.state[3:]*self.sess.run([self.sample_goal],feed_dict={self.input: self.resized_image})			
+
+			s1 = self.state.copy()
+			s1[0] = 1
+			s1.append(goal_location)
+
+			self.append_state_to_tree(s1,current_parsing_index+1)			
 
 	def meta_training(self):
 
@@ -191,7 +221,8 @@ class hierarchical():
 					self.parse_nonterminal()
 
 				# If the current non-terminal is a region assigned a particular primitive.
-				if (state==1)or(state==2)or(state==3)or(state==4):
+				# if (state==1)or(state==2)or(state==3)or(state==4):
+				if (state==1):
 					self.parse_primitive()
 
 	############################
@@ -203,6 +234,18 @@ class hierarchical():
 	# 4 for shape with primitive 4
 	# 5 for region with no primitive (not to be painted)
 	############################
+
+	def map_rules_to_indices(self, rule_index):
+		if (rule_index==0)or(rule_index==1):
+			return [0,0]
+		if (rule_index==2)or(rule_index==3):
+			return [1,0]
+		if (rule_index==4)or(rule_index==5):
+			return [0,1]
+		if (rule_index==6):
+			return 1
+		if (rule_index==7):
+			return 2
 
 	############################
 	# Rule numbers:
