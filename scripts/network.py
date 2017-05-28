@@ -101,8 +101,13 @@ class hierarchical():
 		# self.sample_split = tf.placeholder(tf.float32,shape=(None,1),name='sample_split')
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
+		# We evaluate this to retrieve a sample goal / split location. 
 		self.sample_split = self.split_dist.sample()
 		self.sample_goal = self.goal_dist.sample()
+
+		# Also maintaining placeholders for scaling, converting to integer, and back to float.
+		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
+		self.sampled_goal = tf.placeholder(tf.float32,shape=(None,2),name='sampled_goal')
 
 		# # # # # Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
@@ -116,10 +121,10 @@ class hierarchical():
 		self.rule_loss = -tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
-		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sample_split),self.split_return_weight)
+		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 
 		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
-		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sample_goal),self.goal_return_weight)
+		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.goal_return_weight)
 
 		# The total loss is the sum of individual losses.
 		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss
@@ -134,17 +139,16 @@ class hierarchical():
 
 	# def train_model(self):
 
-	def reset_parse_tree(self):
+	def initialize_tree(self, state, reward, backward_index):
+		# self.parse_tree.append(state)
 		self.parse_tree = []
 		self.rewards = []
 		self.backward_indices = []
 
-	def initialize_tree(self, state, reward, backward_index):
-		# self.parse_tree.append(state)
 		self.rewards.append(reward)
 		self.backward_indices.append(backward_index)
 		self.current_parsing_index = 0
-		self.append_state_to_tree(self.current_parsing_index,state)
+		self.append_state_to_tree(state,self.current_parsing_index)
 		# self.append_applied_rule(self)
 
 	def append_state_to_tree(self, state, index):
@@ -186,15 +190,22 @@ class hierarchical():
 				s2 = [indices[1],self.state[1]+split_location,self.state[2],self.state[3]-split_location,self.state[4]]
 				self.append_state_to_tree(s1,self.current_parsing_index+1)
 				self.append_state_to_tree(s2,self.current_parsing_index+2)							
+
+			self.current_parsing_index+=2
 		
 		if selected_rule==6:
 			goal_location = self.state[3:]*self.sess.run([self.sample_goal],feed_dict={self.input: self.resized_image})			
-
 			s1 = self.state.copy()
 			s1[0] = 1
 			s1.append(goal_location)
-
 			self.append_state_to_tree(s1,current_parsing_index+1)			
+			self.current_parsing_index+=1
+
+		if selected_rule==7:	
+			s1 = self.state.copy()
+			s1[0] = 2
+			self.append_state_to_tree(s1,current_parsing_index+1)
+			self.current_parsing_index+=1
 
 	def meta_training(self):
 
@@ -209,10 +220,8 @@ class hierarchical():
 				# Remember the state is pixel label, then x origin, y origin, width, height.
 				self.state = [0,0,0,self.image_size,self.image_size] 
 
-				# Reset the parse tree, rewards, and backward indices. 
-				self.reset_parse_tree()
-				# Append the current state, 0 reward, and -1 to parse tree, rewards and backward indices respectively.
-				self.append_to_tree(state,0,-1)
+				# Reset the parse tree, rewards, and backward indices. 				# Append the current state, 0 reward, and -1 to parse tree, rewards and backward indices respectively.
+				self.initialize_tree()
 
 				# Forward pass of the rule policy- basically picking which rule.
 				
