@@ -307,13 +307,11 @@ class hierarchical():
 				startgoal_weight = self.parse_tree[j].reward
 
 			# RUN TRAIN
-			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], 
-				feed_dict={self.input: self.resized_image, self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, 
+			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
+				feed_dict={self.input: self.resized_image, self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
 							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
 
 			previous_goal = goal.copy()
-
-
 
 	def meta_training(self):
 
