@@ -13,7 +13,7 @@ class parse_tree_node():
 		self.split = split
 		self.start = start
 		self.goal = goal
-		self.reward = -1
+		self.reward = 0.
 
 class hierarchical():
 
@@ -140,8 +140,10 @@ class hierarchical():
 		# # # # # Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		self.goal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='goal_return_weight')
+		# self.goal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='goal_return_weight')
+		# self.start_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='start_return_weight')
 		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='startgoal_return_weight')
+
 		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.fcs1_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
@@ -153,13 +155,16 @@ class hierarchical():
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 
 		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
-		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.goal_return_weight)
+		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.startgoal_return_weight)
+
+		# The start loss is the negative log probability of the chosen start, weighted byt he return obtained.
+		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
 
 		# Start goal loss - difference between current starting point and previous goal location - this must be in GLOBAL COORDINATES
 		self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal-self.sampled_start))),self.startgoal_return_weight)
 
 		# The total loss is the sum of individual losses.
-		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss + self.startgoal_loss
+		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss + self.startgoal_loss + self.start_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
@@ -250,8 +255,65 @@ class hierarchical():
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
-		goal_location = [self.state.w,self.state.h]*self.sess.run([self.sample_goal],feed_dict={self.input: self.resized_image})
+		start_location, goal_location = [self.state.w,self.state.h]*self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image})
 		self.parse_tree[self.current_parsing_index].goal=goal_location
+		self.parse_tree[self.current_parsing_index].start = start_location
+
+	def propagate_rewards(self):
+
+		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
+		# This is actually the return accumulated by any particular decision.
+		for j in reversed(range(len(self.parse_tree))):	
+			self.parse_tree[self.parse_tree[j].backward_index] += self.parse_tree[j].reward
+
+	def compute_rewards(self):
+		# For all terminal symbols only.
+
+	def backprop():
+		# Must decide whether to do this stochastically or in batches.
+
+		# For now, do it stochastically, moving forwards through the tree.
+		start = npy.zeros(2)
+		previous_start = npy.zeros(2)
+		goal = npy.zeros(2)
+		target_rule = npy.zeros(self.fcs1_output_shape)
+
+		for j in range(len(self.parse_tree)):
+
+			self.state = self.parse_tree[self.current_parsing_index]
+			# Pick up correct portion of image.
+			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
+			self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
+
+			goal_weight = 0
+			rule_weight = 0
+			startgoal_weight = 0
+			target_rule = npy.zeros(self.fcs1_output_shape)
+			# MUST PARSE EVERY NODE
+
+			# If shape:
+			if self.parse_tree[j].label==0:
+				# If split rule.
+				if self.parse_tree[j].rule_applied<=5:
+					split_weight = self.parse_tree[j].reward
+					rule_weight = self.parse_tree[j].reward
+					target_rule[self.parse_tree[j].rule_applied] = 1.
+				# If rule 6.
+				if self.parse_tree[j].rule_applied==6:
+					rule_weight = self.parse_tree[j].reward
+
+			# If region with primitive:
+			if self.parse_tree[j].label==1:
+				startgoal_weight = self.parse_tree[j].reward
+
+			# RUN TRAIN
+			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], 
+				feed_dict={self.input: self.resized_image, self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, 
+							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
+
+			previous_goal = goal.copy()
+
+
 
 	def meta_training(self):
 
@@ -285,10 +347,14 @@ class hierarchical():
 					if (self.state.label==1):
 						self.parse_primitive_terminal()
 
-				# WHEN THE PARSE IS COMPLETE, compute rewards for the chosen actions.
+				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
 				# REsolve goals into global frame.
-
+						
+				#compute rewards for the chosen actions., then propagate them through the tree.
+				self.compute_rewards()
+				self.propagate_rewards()
+				self.backprop()
 
 
 	############################
