@@ -2,7 +2,7 @@
 
 # Define a class for the parse tree / rule / etc? 
 class parse_tree_node():
-	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, goal=-1):
+	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=[-1,-1], goal=[-1,-1]):
 		self.label = label
 		self.x = x
 		self.y = y
@@ -11,6 +11,7 @@ class parse_tree_node():
 		self.backward_index = backward_index
 		self.rule_applied = rule_applied
 		self.split = split
+		self.start = start
 		self.goal = goal
 		self.reward = -1
 
@@ -79,6 +80,11 @@ class hierarchical():
 		self.b_fcs3_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs3_l1_shape]),name='b_fcs3_l1')
 		self.fcs3_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fsc3_l1),self.b_fcs3_l1),name='fcs3_l1')		
 
+		self.fcs4_l1_shape = 30
+		self.W_fcs4_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs4_l1_shape],stddev=0.1),name='W_fcs4_l1')
+		self.b_fcs4_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs4_l1_shape]),name='b_fcs4_l1')
+		self.fcs4_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fsc4_l1),self.b_fcs4_l1),name='fcs4_l1')				
+
 		# 2nd FC layer: Output:
 		self.number_primitives = 1
 		self.fcs1_output_shape = 5*self.number_primitives+3
@@ -103,8 +109,17 @@ class hierarchical():
 		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[:2])
 		self.goal_cov = tf.nn.relu(self.fcs3_preslice[2:])		
 
+		# Start output.
+		self.W_start = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_start')
+		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
+		
+		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_start)+self.b_start
+		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[:2])
+		self.start_cov = tf.nn.relu(self.fcs3_preslice[2:])		
+
 		# CONSTRUCTING THE DISTRIBUTIONS FOR GOALS AND SPLITS
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(self.goal_mean,self.goal_cov)
+		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(self.start_mean,self.start_cov)
 		self.split_dist = tf.contrib.distributions.Normal(mu=self.split_mean,sigma=self.split_cov)
 
 		# self.sample_goal = tf.placeholder(tf.float32,shape=(None,2),name='sample_goal')
@@ -114,15 +129,19 @@ class hierarchical():
 		# We evaluate this to retrieve a sample goal / split location. 
 		self.sample_split = self.split_dist.sample()
 		self.sample_goal = self.goal_dist.sample()
+		self.sample_start = self.start_dist.sample()
 
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
 		self.sampled_goal = tf.placeholder(tf.float32,shape=(None,2),name='sampled_goal')
+		self.sampled_start = tf.placeholder(tf.float32,shape=(None,2),name='sampled_start')
+		self.previous_goal = tf.placeholder(tf.float32,shape=(None,2),name='previous_goal')
 
 		# # # # # Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
 		self.goal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='goal_return_weight')
+		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='startgoal_return_weight')
 		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.fcs1_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
@@ -136,8 +155,11 @@ class hierarchical():
 		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
 		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.goal_return_weight)
 
+		# Start goal loss - difference between current starting point and previous goal location - this must be in GLOBAL COORDINATES
+		self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal-self.sampled_start))),self.startgoal_return_weight)
+
 		# The total loss is the sum of individual losses.
-		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss
+		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss + self.startgoal_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
@@ -262,6 +284,12 @@ class hierarchical():
 					# if (state==1)or(state==2)or(state==3)or(state==4):
 					if (self.state.label==1):
 						self.parse_primitive_terminal()
+
+				# WHEN THE PARSE IS COMPLETE, compute rewards for the chosen actions.
+				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
+				# REsolve goals into global frame.
+
+
 
 	############################
 	# Pixel labels: 
