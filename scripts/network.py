@@ -24,6 +24,7 @@ class hierarchical():
 
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
+		self.paintwidth=2
 
 	def initialize_tensorflow_model(self, sess):
 
@@ -266,8 +267,81 @@ class hierarchical():
 		for j in reversed(range(len(self.parse_tree))):	
 			self.parse_tree[self.parse_tree[j].backward_index] += self.parse_tree[j].reward
 
-	def compute_rewards(self):
+	# def execute_actions(self):
+		# The actual simulation run code would need to execute the actions here.
+
+	# def paint_a_rectange(self):
+	# 	# DEFINES JUST THE COVERAGE OBJECTIVE:
+
+	# 	# Operate from self.state
+	# 	# The state rectangle always starts from (0,0) and moves left and up.
+
+	# 	# Compute the angle and the length of start-goal line.
+	# 	angle = npy.arctan2((self.state.goal[1]-self.state.start[1])/(self.state.goal[0]-self.state.start[0]))
+	# 	length = npy.linalg.norm(self.state.goal-self.state.start)
+
+	# 	# paint_rectangle = npy.array([[self.state.start[0]+self.paintwidth*npy.sin(angle)/2, self.state.start[1]-self.paintwidth*npy.cos(angle)/2], 
+	# 	# 				   [self.state.start[0]-self.paintwidth*npy.sin(angle)/2, self.state.start[1]+self.paintwidth*npy.cos(angle)/2],
+	# 	# 				   [self.state.goal[0]+self.paintwidth*npy.sin(angle)/2, self.state.goal[1]-self.paintwidth*npy.cos(angle)/2],
+	# 	# 				   [self.state.goal[0]-self.paintwidth*npy.sin(angle)/2, self.state.goal[1]+self.paintwidth*npy.cos(angle)/2]])
+	# 	# bounding_height = max(self.state.h,npy.max(paint_rectangle[:,1]))
+	# 	# bounding_width = max(self.state.w,npy.max(paint_rectangle[:,0]))
+
+	# 	# base_rect = npy.zeros((bounding_width,bounding_height))
+
+	# 	# Create a rectangle from the paint brush.
+	# 	rect = box(self.state.start[0],self.state.start[1]-self.paintwidth,self.state.start[0]+length,self.state.start[1]+self.paintwidth)
+	# 	# Rotate it.
+	# 	rotated_rect = rotate(rect,angle,origin=self.state.start)
+	# 	# Create the state rectangle - the current spatial segment.
+	# 	state_rect = box(self.state.x,self.state.y,self.state.x+self.parse_tree.w,self.state.y+self.state.h)
+	# 	# Calculate the coverage.
+	# 	percent_coverage = state_rect.intersection(rotated_rect).area / state_rect.area
+
+	# 	return percent_coverage
+
+	def paint_image(self):
+		# DEFINES JUST THE COVERAGE OBJECTIVE:
+
+		# Compute the angle and the length of start-goal line.
+		angle = npy.arctan2((self.state.goal[1]-self.state.start[1])/(self.state.goal[0]-self.state.start[0]))
+		length = npy.linalg.norm(self.state.goal-self.state.start)
+
+		# # Create a rectangle from the paint brush. - This was in the local frame.
+		# rect = box(self.state.start[0],self.state.start[1]-self.paintwidth,self.state.start[0]+length,self.state.start[1]+self.paintwidth)
+
+		# Creating the rectangle in the global frame.
+		rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+		# Rotate it.
+		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
+
+		for x in range(self.image_size):
+			for y in range(self.image_size):
+				if rotated_rect.contains(point.Point(x,y)):
+					self.painted_image[x,y] = 1
+
+	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
+
+		# Rectange intersection
+		# self.painted_image = npy.zeros((self.image_size,self.image_size))
+		self.painted_image = -npy.ones((self.image_size,self.image_size))
+	
+		for j in range(len(self.parse_tree)):
+
+			# Assign state.
+			self.state = self.parse_tree[j]
+
+			# For every node in the tree, we know the ground truth image labels.
+			# We will compute the reward as:
+			# To be painted (-1 for no, 1 for yes)
+			# Whether it was painted (-1 for no or 1 for yes)
+
+			# If it is a region with a primitive.
+			if self.parse_tree[j].label==1:
+				self.paint_image()
+				
+		self.accumulated_reward = (self.images[image_index]*self.painted_image).sum()
 
 	def backprop():
 		# Must decide whether to do this stochastically or in batches.
@@ -313,6 +387,24 @@ class hierarchical():
 
 			previous_goal = goal.copy()
 
+	def construct_parse_tree(self):
+		# WHILE WE TERMINATE THAT PARSE:
+		while ((self.images[i]==0).any()):
+			# Forward pass of the rule policy- basically picking which rule.
+			self.state = self.parse_tree[self.current_parsing_index]
+			# Pick up correct portion of image.
+			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
+			self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
+
+			# If the current non-terminal is a shape.
+			if (self.state.label==0):
+				self.parse_nonterminal()
+
+			# If the current non-terminal is a region assigned a particular primitive.
+			# if (state==1)or(state==2)or(state==3)or(state==4):
+			if (self.state.label==1):
+				self.parse_primitive_terminal()
+
 	def meta_training(self):
 
 		# For all epochs
@@ -328,23 +420,7 @@ class hierarchical():
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
 
-				# WHILE WE TERMINATE THAT PARSE:
-				while ((self.images[i]==0).any()):
-					# Forward pass of the rule policy- basically picking which rule.
-					self.state = self.parse_tree[self.current_parsing_index]
-					# Pick up correct portion of image.
-					self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-					self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
-
-					# If the current non-terminal is a shape.
-					if (self.state.label==0):
-						self.parse_nonterminal()
-
-					# If the current non-terminal is a region assigned a particular primitive.
-					# if (state==1)or(state==2)or(state==3)or(state==4):
-					if (self.state.label==1):
-						self.parse_primitive_terminal()
-
+				self.construct_parse_tree()
 				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
 				# REsolve goals into global frame.
