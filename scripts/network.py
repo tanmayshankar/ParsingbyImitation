@@ -101,7 +101,7 @@ class hierarchical():
 		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
 		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
-
+		print(self.rule_probabilities)
 		# Split output.
 		self.W_split = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,2],stddev=0.1),name='W_split')
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
@@ -197,11 +197,12 @@ class hierarchical():
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
-		rule_probabilities = self.sess.run([self.rule_probabilities],feed_dict={self.input: self.resized_image})
+		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 	
 		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
 		# Should it be an epsilon-greedy policy? 
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities)
+
+		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 		
 		# If rules 0-5, need a split location.
@@ -209,12 +210,13 @@ class hierarchical():
 
 		# SAMPLING A SPLIT LOCATION
 		if selected_rule<=5:
-			split_location = self.sess.run([self.sample_split], feed_dict={self.input: self.resized_image})
+			split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if (selected_rule%2==0) and (self.state.h>1):
 				
 				# Scale split location.
+				
 				split_location = int(self.state.h*split_location)
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -262,7 +264,7 @@ class hierarchical():
 		elif selected_rule>=6:
 
 			# Create a parse tree node object.
-			s1 = self.parse_tree[self.current_parsing_index].copy()
+			s1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
 			# Change label.
 			s1.label=selected_rule-5
 			# Change the backward index.
@@ -279,7 +281,7 @@ class hierarchical():
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
-		start_location, goal_location = [self.state.w,self.state.h]*self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image})
+		start_location, goal_location = [self.state.w,self.state.h]*self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 		self.parse_tree[self.current_parsing_index].goal=goal_location
 		self.parse_tree[self.current_parsing_index].start = start_location
 
@@ -388,7 +390,7 @@ class hierarchical():
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-			self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
+			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			goal_weight = 0
 			rule_weight = 0
@@ -413,7 +415,7 @@ class hierarchical():
 
 			# RUN TRAIN
 			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
-				feed_dict={self.input: self.resized_image, self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
+				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
 							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
 
 			previous_goal = goal.copy()
@@ -425,11 +427,11 @@ class hierarchical():
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-			self.resized_image = cv2.resize(self.image_input,[self.image_size,self.image_size])
+			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
-				self.parse_nonterminal()
+				self.parse_nonterminal(image_index)
 
 			# If the current non-terminal is a region assigned a particular primitive.
 			# if (state==1)or(state==2)or(state==3)or(state==4):
