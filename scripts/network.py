@@ -27,6 +27,7 @@ class hierarchical():
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
 		self.images = []
+		self.true_labels = []
 
 	def initialize_tensorflow_model(self, sess):
 
@@ -45,7 +46,7 @@ class hierarchical():
 		self.conv3_num_filters = 20
 
 		# Placeholders
-		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,1],name='input')
+		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
 
 		# Convolutional layers: 
 		# Layer 1
@@ -67,7 +68,7 @@ class hierarchical():
 		self.relu_conv3 = tf.nn.relu(self.conv3)
 
 		# Now going to flatten this and move to a fully connected layer.s
-		self.fc_input_shape = 14*14
+		self.fc_input_shape = 14*14*self.conv3_num_filters
 		self.relu_conv3_flat = tf.reshape(self.relu_conv3,[-1,self.fc_input_shape])
 
 		# Going to split into 3 streams: RULE, SPLIT, and GOAL
@@ -104,24 +105,27 @@ class hierarchical():
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
 		
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
-		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0])
-		self.split_cov = tf.nn.relu(self.fcs2_preslice[1])
+		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
+		self.split_cov = tf.nn.relu(self.fcs2_preslice[0,1])
 
 		# Goal output.
 		self.W_goal = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_goal')
 		self.b_goal = tf.Variable(tf.constant(0.1,shape=[4]),name='b_goal')
 		
 		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_goal)+self.b_goal
-		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[:2])
-		self.goal_cov = tf.nn.relu(self.fcs3_preslice[2:])		
+		# self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[:2])
+		# self.goal_cov = tf.nn.relu(self.fcs3_preslice[2:])		
+
+		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
+		self.goal_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
 
 		# Start output.
 		self.W_start = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_start')
 		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
 		
 		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_start)+self.b_start
-		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[:2])
-		self.start_cov = tf.nn.relu(self.fcs3_preslice[2:])		
+		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
+		self.start_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
 
 		# CONSTRUCTING THE DISTRIBUTIONS FOR GOALS AND SPLITS
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(self.goal_mean,self.goal_cov)
@@ -138,19 +142,24 @@ class hierarchical():
 		self.sample_start = self.start_dist.sample()
 
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
-		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
-		self.sampled_goal = tf.placeholder(tf.float32,shape=(None,2),name='sampled_goal')
-		self.sampled_start = tf.placeholder(tf.float32,shape=(None,2),name='sampled_start')
-		self.previous_goal = tf.placeholder(tf.float32,shape=(None,2),name='previous_goal')
+		# self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
+		# self.sampled_goal = tf.placeholder(tf.float32,shape=(None,2),name='sampled_goal')
+		# self.sampled_start = tf.placeholder(tf.float32,shape=(None,2),name='sampled_start')
+		# self.previous_goal = tf.placeholder(tf.float32,shape=(None,2),name='previous_goal')
+
+		self.sampled_split = tf.placeholder(tf.float32,shape=( 1),name='sampled_split')
+		self.sampled_goal = tf.placeholder(tf.float32,shape=( 2),name='sampled_goal')
+		self.sampled_start = tf.placeholder(tf.float32,shape=( 2),name='sampled_start')
+		self.previous_goal = tf.placeholder(tf.float32,shape=( 2),name='previous_goal')
 
 		# # # # # Defining training ops. 
-		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
-		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		# self.goal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='goal_return_weight')
-		# self.start_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='start_return_weight')
-		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='startgoal_return_weight')
+		self.rule_return_weight = tf.placeholder(tf.float32,shape=( 1),name='rule_return_weight')
+		self.split_return_weight = tf.placeholder(tf.float32,shape=( 1),name='split_return_weight')
+		# self.goal_return_weight = tf.placeholder(t.ffloat32,shape=( 1),name='goal_return_weight')
+		# self.start_return_weight = tf.placeholder(tf.float32,shape=( 1),name='start_return_weight')
+		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=( 1),name='startgoal_return_weight')
 
-		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.fcs1_output_shape),name='target_rule')
+		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
@@ -167,7 +176,7 @@ class hierarchical():
 		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
 
 		# Start goal loss - difference between current starting point and previous goal location - this must be in GLOBAL COORDINATES
-		self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal-self.sampled_start))),self.startgoal_return_weight)
+		self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal,self.sampled_start))),self.startgoal_return_weight)
 
 		# The total loss is the sum of individual losses.
 		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss + self.startgoal_loss + self.start_loss
@@ -219,8 +228,11 @@ class hierarchical():
 				self.current_parsing_index+=2
 
 				# Modify the images.
-				self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
-				self.images[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
+				# self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+				# self.images[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
+
+				self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
 			if (selected_rule%2!=0) and (self.state.w>1):
 				# Scale split location.
@@ -238,9 +250,12 @@ class hierarchical():
 				self.insert_node(s2,self.current_parsing_index+2)
 				self.current_parsing_index+=2
 
-				# Modify the images.
-				self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
-				self.images[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label		
+				# # Modify the images.
+				# self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+				# self.images[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label		
+
+				self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
 		elif selected_rule>=6:
 
@@ -257,7 +272,8 @@ class hierarchical():
 			# Insert node into parse tree.
 			self.insert_node(s1,self.current_parsing_index+1)
 			self.current_parsing_index+=1						
-			self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+			# self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
@@ -331,7 +347,8 @@ class hierarchical():
 				if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
 					self.painted_image[x,y] = 1
 
-		self.state.reward = (self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		# self.state.reward = (self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
 	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
@@ -399,9 +416,9 @@ class hierarchical():
 
 			previous_goal = goal.copy()
 
-	def construct_parse_tree(self):
+	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
-		while ((self.images[i]==0).any()):
+		while ((self.predicted_labels[index]==0).any()):
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -423,7 +440,7 @@ class hierarchical():
 		for e in range(self.num_epochs):
 			# For all images
 			for i in range(self.num_images):
-
+				print("Epoch:",e,"Training Image:",i)
 				# Intialize the parse tree for this image.
 				image = self.images[i]
 
@@ -432,14 +449,18 @@ class hierarchical():
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
 
+				print("Constructing Parse Tree.")
 				self.construct_parse_tree()
 				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
 				# REsolve goals into global frame.
 						
 				#compute rewards for the chosen actions., then propagate them through the tree.
+				print("Computing Rewards.")
 				self.compute_rewards()
+				print("Propagating Rewards.")
 				self.propagate_rewards()
+				print("Backprop.")
 				self.backprop()
 
 
@@ -492,6 +513,10 @@ def main(args):
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
+	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
+
+	# CALL TRAINING
+	hierarchical_model.meta_training()
 
 if __name__ == '__main__':
 	main(sys.argv)
