@@ -17,8 +17,6 @@ class parse_tree_node():
 		self.reward = 0.
 
 	def disp(self):
-		print("Printing Node:")
-		print("______________")
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
 
@@ -294,6 +292,7 @@ class hierarchical():
 		self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
 		self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
 
+		self.current_parsing_index+=1
 	def propagate_rewards(self):
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
@@ -339,6 +338,7 @@ class hierarchical():
 	def terminal_reward(self, image_index):
 		# Compute the angle and the length of the start-goal line. 
 		angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
+		print(self.state.goal,self.state.start)		
 		length = npy.linalg.norm(self.state.goal-self.state.start)
 
 		# Create a rectangle for the paintbrush.
@@ -385,7 +385,7 @@ class hierarchical():
 				# self.paint_image()
 				self.terminal_reward(image_index)
 
-	def backprop(self):
+	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches.
 
 		# For now, do it stochastically, moving forwards through the tree.
@@ -437,10 +437,11 @@ class hierarchical():
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-			print("PARSING: ",self.state)
+			print("PARSING STATE")
+			self.state.disp()
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
-				print("________  PARSING NON TERMINAL")
+				print("PARSING NON TERMINAL")
 				self.parse_nonterminal(image_index)
 
 			# If the current non-terminal is a region assigned a particular primitive.
@@ -449,7 +450,6 @@ class hierarchical():
 				# print("________  PARSING TERMINAL")
 				self.parse_primitive_terminal()
 
-			print("________________________________________________________________")
 			for j in range(len(self.parse_tree)):
 				print("Printing Node",j)
 				self.parse_tree[j].disp()
@@ -460,7 +460,8 @@ class hierarchical():
 		# For all epochs
 		for e in range(self.num_epochs):
 			# For all images
-			for i in range(self.num_images):
+			# for i in range(self.num_images):
+			for i in range(1):
 				print("Epoch:",e,"Training Image:",i)
 				# Intialize the parse tree for this image.
 				image = self.images[i]
@@ -482,7 +483,7 @@ class hierarchical():
 				print("Propagating Rewards.")
 				self.propagate_rewards()
 				print("Backprop.")
-				self.backprop()
+				self.backprop(i)
 
 
 	############################
