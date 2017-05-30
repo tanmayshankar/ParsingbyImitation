@@ -290,7 +290,7 @@ class hierarchical():
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
 		# This is actually the return accumulated by any particular decision.
 		for j in reversed(range(len(self.parse_tree))):	
-			self.parse_tree[self.parse_tree[j].backward_index] += self.parse_tree[j].reward
+			self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward
 
 	# def paint_image(self):
 	# 	# DEFINES JUST THE COVERAGE OBJECTIVE:
@@ -431,11 +431,13 @@ class hierarchical():
 
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
+				print("________  PARSING NON TERMINAL")
 				self.parse_nonterminal(image_index)
 
 			# If the current non-terminal is a region assigned a particular primitive.
 			# if (state==1)or(state==2)or(state==3)or(state==4):
 			if (self.state.label==1):
+				print("________  PARSING TERMINAL")
 				self.parse_primitive_terminal()
 
 	def meta_training(self):
@@ -461,7 +463,7 @@ class hierarchical():
 						
 				#compute rewards for the chosen actions., then propagate them through the tree.
 				print("Computing Rewards.")
-				self.compute_rewards()
+				self.compute_rewards(i)
 				print("Propagating Rewards.")
 				self.propagate_rewards()
 				print("Backprop.")
