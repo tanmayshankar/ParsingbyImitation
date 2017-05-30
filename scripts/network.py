@@ -267,25 +267,25 @@ class hierarchical():
 		for j in reversed(range(len(self.parse_tree))):	
 			self.parse_tree[self.parse_tree[j].backward_index] += self.parse_tree[j].reward
 
-	def paint_image(self):
-		# DEFINES JUST THE COVERAGE OBJECTIVE:
+	# def paint_image(self):
+	# 	# DEFINES JUST THE COVERAGE OBJECTIVE:
 
-		# Compute the angle and the length of start-goal line.
-		angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
-		length = npy.linalg.norm(self.state.goal-self.state.start)
+	# 	# Compute the angle and the length of start-goal line.
+	# 	angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
+	# 	length = npy.linalg.norm(self.state.goal-self.state.start)
 
-		# # Create a rectangle from the paint brush. - This was in the local frame.
-		# rect = box(self.state.start[0],self.state.start[1]-self.paintwidth,self.state.start[0]+length,self.state.start[1]+self.paintwidth)
+	# 	# # Create a rectangle from the paint brush. - This was in the local frame.
+	# 	# rect = box(self.state.start[0],self.state.start[1]-self.paintwidth,self.state.start[0]+length,self.state.start[1]+self.paintwidth)
 
-		# Creating the rectangle in the global frame.
-		rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
-		# Rotate it.
-		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
+	# 	# Creating the rectangle in the global frame.
+	# 	rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+	# 	# Rotate it.
+	# 	rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
 
-		for x in range(self.image_size):
-			for y in range(self.image_size):
-				if rotated_rect.contains(point.Point(x,y)):
-					self.painted_image[x,y] = 1
+	# 	for x in range(self.image_size):
+	# 		for y in range(self.image_size):
+	# 			if rotated_rect.contains(point.Point(x,y)):
+	# 				self.painted_image[x,y] = 1
 
 	# def terminal_reward(self):
 	# 	# Compute the angle and the length of the start-goal line. 
@@ -483,7 +483,11 @@ def main(args):
 	sess = tf.Session()
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess)
+	hierarchical_model.initialize_tensorflow_model(sess
+
+	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)
+	# Modify the Images to -1 or 1 (instead of 0/1).
+	
 
 if __name__ == '__main__':
 	main(sys.argv)
