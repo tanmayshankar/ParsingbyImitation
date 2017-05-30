@@ -267,44 +267,11 @@ class hierarchical():
 		for j in reversed(range(len(self.parse_tree))):	
 			self.parse_tree[self.parse_tree[j].backward_index] += self.parse_tree[j].reward
 
-	# def execute_actions(self):
-		# The actual simulation run code would need to execute the actions here.
-
-	# def paint_a_rectange(self):
-	# 	# DEFINES JUST THE COVERAGE OBJECTIVE:
-
-	# 	# Operate from self.state
-	# 	# The state rectangle always starts from (0,0) and moves left and up.
-
-	# 	# Compute the angle and the length of start-goal line.
-	# 	angle = npy.arctan2((self.state.goal[1]-self.state.start[1])/(self.state.goal[0]-self.state.start[0]))
-	# 	length = npy.linalg.norm(self.state.goal-self.state.start)
-
-	# 	# paint_rectangle = npy.array([[self.state.start[0]+self.paintwidth*npy.sin(angle)/2, self.state.start[1]-self.paintwidth*npy.cos(angle)/2], 
-	# 	# 				   [self.state.start[0]-self.paintwidth*npy.sin(angle)/2, self.state.start[1]+self.paintwidth*npy.cos(angle)/2],
-	# 	# 				   [self.state.goal[0]+self.paintwidth*npy.sin(angle)/2, self.state.goal[1]-self.paintwidth*npy.cos(angle)/2],
-	# 	# 				   [self.state.goal[0]-self.paintwidth*npy.sin(angle)/2, self.state.goal[1]+self.paintwidth*npy.cos(angle)/2]])
-	# 	# bounding_height = max(self.state.h,npy.max(paint_rectangle[:,1]))
-	# 	# bounding_width = max(self.state.w,npy.max(paint_rectangle[:,0]))
-
-	# 	# base_rect = npy.zeros((bounding_width,bounding_height))
-
-	# 	# Create a rectangle from the paint brush.
-	# 	rect = box(self.state.start[0],self.state.start[1]-self.paintwidth,self.state.start[0]+length,self.state.start[1]+self.paintwidth)
-	# 	# Rotate it.
-	# 	rotated_rect = rotate(rect,angle,origin=self.state.start)
-	# 	# Create the state rectangle - the current spatial segment.
-	# 	state_rect = box(self.state.x,self.state.y,self.state.x+self.parse_tree.w,self.state.y+self.state.h)
-	# 	# Calculate the coverage.
-	# 	percent_coverage = state_rect.intersection(rotated_rect).area / state_rect.area
-
-	# 	return percent_coverage
-
 	def paint_image(self):
 		# DEFINES JUST THE COVERAGE OBJECTIVE:
 
 		# Compute the angle and the length of start-goal line.
-		angle = npy.arctan2((self.state.goal[1]-self.state.start[1])/(self.state.goal[0]-self.state.start[0]))
+		angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
 		length = npy.linalg.norm(self.state.goal-self.state.start)
 
 		# # Create a rectangle from the paint brush. - This was in the local frame.
@@ -317,6 +284,42 @@ class hierarchical():
 
 		for x in range(self.image_size):
 			for y in range(self.image_size):
+				if rotated_rect.contains(point.Point(x,y)):
+					self.painted_image[x,y] = 1
+
+	# def terminal_reward(self):
+	# 	# Compute the angle and the length of the start-goal line. 
+	# 	angle = npy.artctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
+	# 	length = npy.linalg.norm(self.state.goal-self.state.start)
+
+	# 	# Create a rectangle for the paintbrush.
+	# 	rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+	# 	# Rotate it.
+	# 	rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
+
+	# 	for x in range(self.state.x,self.state.x+self.state.w):
+	# 		for y in range(self.state.y,self.state.y+self.state.h):
+	# 			if rotated_rect.contains(point.Point(x,y)):
+	# 				self.painted_image[x,y] = 1
+
+	def terminal_reward(self):
+		# Compute the angle and the length of the start-goal line. 
+		angle = npy.artctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
+		length = npy.linalg.norm(self.state.goal-self.state.start)
+
+		# Create a rectangle for the paintbrush.
+		rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+		# Rotate it.
+		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
+
+		coords = npy.array(list(rotated_rect.exterior.coords))
+		bounding_height = max(self.state.y+self.state.h,npy.max(coords[:,1]))
+		bounding_width = max(self.state.x+self.state.w,npy.max(coords[:,0]))
+
+		bounding_rect = 
+
+		for x in range(self.state.x,self.state.x+self.state.w):
+			for y in range(self.state.y,self.state.y+self.state.h):
 				if rotated_rect.contains(point.Point(x,y)):
 					self.painted_image[x,y] = 1
 
@@ -339,9 +342,10 @@ class hierarchical():
 
 			# If it is a region with a primitive.
 			if self.parse_tree[j].label==1:
-				self.paint_image()
-				
-		self.accumulated_reward = (self.images[image_index]*self.painted_image).sum()
+				# self.paint_image()
+				self.terminal_reward()
+
+			# self.accumulated_reward = (self.images[image_index]*self.painted_image).sum()
 
 	def backprop():
 		# Must decide whether to do this stochastically or in batches.
