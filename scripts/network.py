@@ -21,13 +21,15 @@ class hierarchical():
 	def __init__(self):
 
 		self.num_epochs = 1
-		self.num_images = 200
+		self.num_images = 1000
 
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
 		self.images = []
 		self.true_labels = []
+		self.image_size = 20
+		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
 	def initialize_tensorflow_model(self, sess):
 
@@ -35,7 +37,7 @@ class hierarchical():
 		self.sess = sess
 
 		# Image size and other architectural parameters. 
-		self.image_size = 20
+		
 		self.conv1_size = 3	
 		self.conv1_num_filters = 20
 
@@ -418,7 +420,7 @@ class hierarchical():
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
-		while ((self.predicted_labels[index]==0).any()):
+		while ((self.predicted_labels[image_index]==0).any()):
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -450,7 +452,7 @@ class hierarchical():
 				self.initialize_tree()
 
 				print("Constructing Parse Tree.")
-				self.construct_parse_tree()
+				self.construct_parse_tree(i)
 				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
 				# REsolve goals into global frame.
