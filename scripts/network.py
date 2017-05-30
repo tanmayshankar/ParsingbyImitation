@@ -16,6 +16,12 @@ class parse_tree_node():
 		self.goal = goal
 		self.reward = 0.
 
+	def disp(self):
+		print("Printing Node:")
+		print("______________")
+		print("Label:", self.label)
+		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
+
 class hierarchical():
 
 	def __init__(self):
@@ -209,6 +215,7 @@ class hierarchical():
 		# If 6, need a goal location.
 
 		# SAMPLING A SPLIT LOCATION
+		print("Selected Rule:",selected_rule)
 		if selected_rule<=5:
 			split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 
@@ -281,9 +288,11 @@ class hierarchical():
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
-		start_location, goal_location = [self.state.w,self.state.h]*self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-		self.parse_tree[self.current_parsing_index].goal=goal_location
-		self.parse_tree[self.current_parsing_index].start = start_location
+		start_location, goal_location = self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+		start_location *= npy.array([self.state.w,self.state.h])
+		goal_location *= npy.array([self.state.w,self.state.h])
+		self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
+		self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
 
 	def propagate_rewards(self):
 
@@ -329,7 +338,7 @@ class hierarchical():
 
 	def terminal_reward(self, image_index):
 		# Compute the angle and the length of the start-goal line. 
-		angle = npy.artctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
+		angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
 		length = npy.linalg.norm(self.state.goal-self.state.start)
 
 		# Create a rectangle for the paintbrush.
@@ -376,7 +385,7 @@ class hierarchical():
 				# self.paint_image()
 				self.terminal_reward(image_index)
 
-	def backprop():
+	def backprop(self):
 		# Must decide whether to do this stochastically or in batches.
 
 		# For now, do it stochastically, moving forwards through the tree.
@@ -428,7 +437,7 @@ class hierarchical():
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-
+			print("PARSING: ",self.state)
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
 				print("________  PARSING NON TERMINAL")
@@ -437,8 +446,14 @@ class hierarchical():
 			# If the current non-terminal is a region assigned a particular primitive.
 			# if (state==1)or(state==2)or(state==3)or(state==4):
 			if (self.state.label==1):
-				print("________  PARSING TERMINAL")
+				# print("________  PARSING TERMINAL")
 				self.parse_primitive_terminal()
+
+			print("________________________________________________________________")
+			for j in range(len(self.parse_tree)):
+				print("Printing Node",j)
+				self.parse_tree[j].disp()
+				# print(self.parse_tree[j].label,self.parse_tree[j].x,self.parse_tree[j].y,self.parse_tree[j].w,self.parse_tree[j].h)
 
 	def meta_training(self):
 
@@ -526,3 +541,4 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
