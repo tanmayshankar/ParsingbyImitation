@@ -302,7 +302,7 @@ class hierarchical():
 	# 			if rotated_rect.contains(point.Point(x,y)):
 	# 				self.painted_image[x,y] = 1
 
-	def terminal_reward(self):
+	def terminal_reward(self, image_index):
 		# Compute the angle and the length of the start-goal line. 
 		angle = npy.artctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
 		length = npy.linalg.norm(self.state.goal-self.state.start)
@@ -316,12 +316,18 @@ class hierarchical():
 		bounding_height = max(self.state.y+self.state.h,npy.max(coords[:,1]))
 		bounding_width = max(self.state.x+self.state.w,npy.max(coords[:,0]))
 
-		bounding_rect = 
+		bounding_rect = box(self.state.x,self.state.y,bounding_width,bounding_height)		
 
-		for x in range(self.state.x,self.state.x+self.state.w):
-			for y in range(self.state.y,self.state.y+self.state.h):
-				if rotated_rect.contains(point.Point(x,y)):
+		for x in range(self.state.x,bounding_width):
+			for y in range(self.state.y, bounding_height):
+		# for x in range(self.state.x,self.state.x+self.state.w):
+		# 	for y in range(self.state.y,self.state.y+self.state.h):
+
+				if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
 					self.painted_image[x,y] = 1
+
+		self.state.reward = (self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]* \
+									 self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
 	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
@@ -343,9 +349,7 @@ class hierarchical():
 			# If it is a region with a primitive.
 			if self.parse_tree[j].label==1:
 				# self.paint_image()
-				self.terminal_reward()
-
-			# self.accumulated_reward = (self.images[image_index]*self.painted_image).sum()
+				self.terminal_reward(image_index)
 
 	def backprop():
 		# Must decide whether to do this stochastically or in batches.
