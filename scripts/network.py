@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from headers import *
 # Define a class for the parse tree / rule / etc? 
 class parse_tree_node():
 	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=[-1,-1], goal=[-1,-1]):
@@ -25,6 +26,7 @@ class hierarchical():
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
+		self.images = []
 
 	def initialize_tensorflow_model(self, sess):
 
@@ -38,6 +40,9 @@ class hierarchical():
 
 		self.conv2_size = 3	
 		self.conv2_num_filters = 20
+
+		self.conv3_size = 3	
+		self.conv3_num_filters = 20
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,1],name='input')
@@ -69,28 +74,28 @@ class hierarchical():
 		self.fcs1_l1_shape = 120
 		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
-		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fsc1_l1),self.b_fcs1_l1),name='fcs1_l1')
+		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
 		self.fcs2_l1_shape = 30
 		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
 		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
-		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fsc2_l1),self.b_fcs2_l1),name='fcs2_l1')		
+		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
 
 		self.fcs3_l1_shape = 30
 		self.W_fcs3_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs3_l1_shape],stddev=0.1),name='W_fcs3_l1')		
 		self.b_fcs3_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs3_l1_shape]),name='b_fcs3_l1')
-		self.fcs3_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fsc3_l1),self.b_fcs3_l1),name='fcs3_l1')		
+		self.fcs3_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs3_l1),self.b_fcs3_l1),name='fcs3_l1')		
 
 		self.fcs4_l1_shape = 30
 		self.W_fcs4_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs4_l1_shape],stddev=0.1),name='W_fcs4_l1')
 		self.b_fcs4_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs4_l1_shape]),name='b_fcs4_l1')
-		self.fcs4_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fsc4_l1),self.b_fcs4_l1),name='fcs4_l1')				
+		self.fcs4_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs4_l1),self.b_fcs4_l1),name='fcs4_l1')				
 
 		# 2nd FC layer: Output:
 		self.number_primitives = 1
 		self.fcs1_output_shape = 5*self.number_primitives+3
 		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
-		self.b_fcs1_l2 = tf.Variable(tf.truncated_normal(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
+		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
 		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
 
@@ -483,11 +488,10 @@ def main(args):
 	sess = tf.Session()
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess
+	hierarchical_model.initialize_tensorflow_model(sess)
 
-	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)
-	# Modify the Images to -1 or 1 (instead of 0/1).
-	
+	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
+	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 
 if __name__ == '__main__':
 	main(sys.argv)
