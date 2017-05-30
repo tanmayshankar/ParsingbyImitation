@@ -3,7 +3,7 @@
 from headers import *
 # Define a class for the parse tree / rule / etc? 
 class parse_tree_node():
-	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=[-1,-1], goal=[-1,-1]):
+	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
 		self.label = label
 		self.x = x
 		self.y = y
@@ -234,7 +234,7 @@ class hierarchical():
 				# Insert splits into parse tree.
 				self.insert_node(s1,self.current_parsing_index+1)
 				self.insert_node(s2,self.current_parsing_index+2)
-				self.current_parsing_index+=2
+				self.current_parsing_index+=1
 
 				# Modify the images.
 				# self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
@@ -257,7 +257,7 @@ class hierarchical():
 				# Insert splits into parse tree.
 				self.insert_node(s1,self.current_parsing_index+1)
 				self.insert_node(s2,self.current_parsing_index+2)
-				self.current_parsing_index+=2
+				self.current_parsing_index+=1
 
 				# # Modify the images.
 				# self.images[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
@@ -437,7 +437,7 @@ class hierarchical():
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-			print("PARSING STATE")
+			print("Parsing the following state:")
 			self.state.disp()
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
@@ -450,6 +450,7 @@ class hierarchical():
 				# print("________  PARSING TERMINAL")
 				self.parse_primitive_terminal()
 
+			print("PRINTING THE PARSE TREE:")
 			for j in range(len(self.parse_tree)):
 				print("Printing Node",j)
 				self.parse_tree[j].disp()
