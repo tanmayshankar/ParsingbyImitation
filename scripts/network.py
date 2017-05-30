@@ -326,8 +326,7 @@ class hierarchical():
 				if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
 					self.painted_image[x,y] = 1
 
-		self.state.reward = (self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]* \
-									 self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		self.state.reward = (self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
 	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
