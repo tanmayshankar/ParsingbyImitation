@@ -24,7 +24,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 1
+		self.num_epochs = 2
 		self.num_images = 1000
 
 		self.current_parsing_index = 0
@@ -214,8 +214,19 @@ class hierarchical():
 
 		# SAMPLING A SPLIT LOCATION
 		print("Selected Rule:",selected_rule)
+		split_location = -1
+
+		# In case the selected rule is a vertical split when height is 1, or horizontal split when width is 1.
+		if ((selected_rule%2==0) and (self.state.h==1)) or ((selected_rule%2!=0)and(self.state.w==1)):
+			selected_rule = npy.random.choice(range(6,8),p=rule_probabilities[0][6:]/rule_probabilities[0][6:].sum())
+			indices = self.map_rules_to_indices(selected_rule)
+
 		if selected_rule<=5:
-			split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+			
+			# Resampling until it gets a split INSIDE the segment.
+			# This just ensures the split lies within 0 and 1.
+			while (split_location<=0)and(split_location>=1):
+				split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if (selected_rule%2==0) and (self.state.h>1):
