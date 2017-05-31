@@ -248,6 +248,9 @@ class hierarchical():
 			if (selected_rule%2==0) and (self.state.h>1):
 				
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
+				if self.state.h==2:
+					split_location=0.5
+
 				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location>=self.state.h)):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 		
@@ -274,6 +277,9 @@ class hierarchical():
 				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
 			if (selected_rule%2!=0) and (self.state.w>1):
+
+				if self.state.w==2:
+					split_location=0.5
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location>=self.state.w)):
@@ -523,10 +529,9 @@ class hierarchical():
 			# for i in range(self.num_images):
 			for i in range(20):
 				print("##################################################################")
-				print("##################################################################")
 				print("Epoch:",e,"Training Image:",i)
 				print("##################################################################")
-				print("##################################################################")
+
 				for r in range(len(self.parse_tree)):
 					print("Printing Node",r)
 					self.parse_tree[r].disp()
@@ -539,11 +544,10 @@ class hierarchical():
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
 
-				print("##################################################################")
-				for r in range(len(self.parse_tree)):
-					print("Printing Node",r)
-					self.parse_tree[r].disp()
-
+				# print("##################################################################")
+				# for r in range(len(self.parse_tree)):
+				# 	print("Printing Node",r)
+				# 	self.parse_tree[r].disp()
 
 				print("Constructing Parse Tree.")
 				self.construct_parse_tree(i)
