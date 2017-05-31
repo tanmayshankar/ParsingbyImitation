@@ -213,21 +213,22 @@ class hierarchical():
 		# If 6, need a goal location.
 
 		# SAMPLING A SPLIT LOCATION
-		print("Selected Rule:",selected_rule)
+	
 		split_location = -1
 
 		# In case the selected rule is a vertical split when height is 1, or horizontal split when width is 1.
 		# if ((selected_rule%2==0) and (self.state.h==1)) or ((selected_rule%2!=0)and(self.state.w==1)):
-		# 	selected_rule = npy.random.choice(range(6,8),p=rule_probabilities[0][6:]/rule_probabilities[0][6:].sum())
-		# 	indices = self.map_rules_to_indices(selected_rule)
-
+	
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		if (self.state.h==1):
 			rule_probabilities[0][[0,2,4]]=0.
 		if (self.state.w==1):
 			rule_probabilities[0][[1,3,5]]=0.
 		rule_probabilities/=rule_probabilities.sum()
-
+		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+		indices = self.map_rules_to_indices(selected_rule)
+		print("Selected Rule:",selected_rule)
+		
 		if selected_rule<=5:
 			
 			# Resampling until it gets a split INSIDE the segment.
@@ -461,7 +462,8 @@ class hierarchical():
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
-		while ((self.predicted_labels[image_index]==0).any()):
+		# while ((self.predicted_labels[image_index]==0).any()):
+		while ((self.predicted_labels[image_index]==0).any() and (self.current_parsing_index<len(self.parse_tree))):
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
