@@ -252,7 +252,7 @@ class hierarchical():
 				if self.state.h==2:
 					split_location=0.5
 
-				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location>=self.state.h)):
+				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 		
 				# Scale split location.		
@@ -278,12 +278,12 @@ class hierarchical():
 				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
 			if (selected_rule%2!=0) and (self.state.w>1):
-
+				
 				if self.state.w==2:
 					split_location=0.5
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location>=self.state.w)):
+				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 				
 				# Scale split location.
