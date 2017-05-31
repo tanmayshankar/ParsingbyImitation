@@ -467,12 +467,16 @@ class hierarchical():
 			# print("SAMPLED START:",self.parse_tree[j].start)
 			# print("SAMPLED GOAL:",self.parse_tree[j].goal)
 
-			mean,cov,rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.goal_mean, self.goal_cov,self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
+			# mean,cov,rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.goal_mean, self.goal_cov,self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
+			# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
+			# 				self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
+
+			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
 				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
 							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
 
 			previous_goal = goal.copy()
-			print("MEAN AND COV:",mean,cov)
+			# print("MEAN AND COV:",mean,cov)
 			print("LOSS VALUES:",rule_loss, split_loss, start_loss, goal_loss, startgoal_loss)
 
 	def construct_parse_tree(self,image_index):
@@ -517,7 +521,7 @@ class hierarchical():
 		for e in range(2):
 			# For all images
 			# for i in range(self.num_images):
-			for i in range(1):
+			for i in range(20):
 				print("##################################################################")
 				print("##################################################################")
 				print("Epoch:",e,"Training Image:",i)
