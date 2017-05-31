@@ -217,22 +217,35 @@ class hierarchical():
 		split_location = -1
 
 		# In case the selected rule is a vertical split when height is 1, or horizontal split when width is 1.
-		if ((selected_rule%2==0) and (self.state.h==1)) or ((selected_rule%2!=0)and(self.state.w==1)):
-			selected_rule = npy.random.choice(range(6,8),p=rule_probabilities[0][6:]/rule_probabilities[0][6:].sum())
-			indices = self.map_rules_to_indices(selected_rule)
+		# if ((selected_rule%2==0) and (self.state.h==1)) or ((selected_rule%2!=0)and(self.state.w==1)):
+		# 	selected_rule = npy.random.choice(range(6,8),p=rule_probabilities[0][6:]/rule_probabilities[0][6:].sum())
+		# 	indices = self.map_rules_to_indices(selected_rule)
+
+		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
+		if (self.state.h==1):
+			rule_probabilities[0][[0,2,4]]=0.
+		if (self.state.w==1):
+			rule_probabilities[0][[1,3,5]]=0.
+		rule_probabilities/=rule_probabilities.sum()
 
 		if selected_rule<=5:
 			
 			# Resampling until it gets a split INSIDE the segment.
 			# This just ensures the split lies within 0 and 1.
-			while (split_location<=0)and(split_location>=1):
-				split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+			# while (split_location<=0)or(split_location>=1):
 
+			# # while (int(split_location*self.state.h)<=0)or(int(split_location*self.state.w)>=1):
+			# while ((int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h))or((int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w)):
+			# 	split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+			
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if (selected_rule%2==0) and (self.state.h>1):
 				
-				# Scale split location.
-				
+				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
+				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location>=self.state.h)):
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+				print("SPLIT LOCATION:",split_location)
+				# Scale split location.		
 				split_location = int(self.state.h*split_location)
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -255,6 +268,11 @@ class hierarchical():
 				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
 			if (selected_rule%2!=0) and (self.state.w>1):
+
+				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
+				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location>=self.state.w)):
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+				print("SPLIT LOCATION:",split_location)
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
 				# Create splits.
@@ -448,9 +466,11 @@ class hierarchical():
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 			print("Parsing the following state:")
 			self.state.disp()
+			print("IMAGE INPUT SHAPE:",self.image_input.shape)
+			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
 				print("PARSING NON TERMINAL")
@@ -463,6 +483,9 @@ class hierarchical():
 				self.parse_primitive_terminal()
 			print("_______________________")
 			print("PRINTING THE PARSE TREE:")
+			if (self.state.label==2):
+				self.current_parsing_index+=1
+
 			for j in range(len(self.parse_tree)):
 				print("Printing Node",j)
 				self.parse_tree[j].disp()
