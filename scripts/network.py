@@ -25,7 +25,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 1
+		self.num_epochs = 2
 		self.num_images = 1000
 
 		self.current_parsing_index = 0
@@ -140,7 +140,8 @@ class hierarchical():
 		# CONSTRUCTING THE DISTRIBUTIONS FOR GOALS AND SPLITS
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(self.goal_mean,self.goal_cov)
 		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(self.start_mean,self.start_cov)
-		self.split_dist = tf.contrib.distributions.Normal(mu=self.split_mean,sigma=self.split_cov)
+		# self.split_dist = tf.contrib.distributions.Normal(mu=self.split_mean,sigma=self.split_cov)
+		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# self.sample_goal = tf.placeholder(tf.float32,shape=(None,2),name='sample_goal')
 		# self.sample_split = tf.placeholder(tf.float32,shape=(None,1),name='sample_split')
@@ -523,11 +524,11 @@ class hierarchical():
 	def meta_training(self):
 
 		# For all epochs
-		# for e in range(self.num_epochs):
-		for e in range(2):
+		for e in range(self.num_epochs):
+		# for e in range(2):
 			# For all images
-			# for i in range(self.num_images):
-			for i in range(20):
+			for i in range(self.num_images):
+			# for i in range(20):
 				print("##################################################################")
 				print("Epoch:",e,"Training Image:",i)
 				print("##################################################################")
@@ -601,12 +602,12 @@ class hierarchical():
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	# gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
-	# config = tf.ConfigProto(gpu_options=gpu_ops)
-	# sess = tf.Session(config=config)
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
+	config = tf.ConfigProto(gpu_options=gpu_ops)
+	sess = tf.Session(config=config)
 
 	# If CPU:
-	sess = tf.Session()
+	# sess = tf.Session()
 
 	hierarchical_model = hierarchical()
 	hierarchical_model.initialize_tensorflow_model(sess)
