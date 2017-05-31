@@ -19,12 +19,13 @@ class parse_tree_node():
 	def disp(self):
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
+		print("Start:",self.start,"Goal:",self.goal)
 
 class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 2
+		self.num_epochs = 1
 		self.num_images = 1000
 
 		self.current_parsing_index = 0
@@ -112,7 +113,8 @@ class hierarchical():
 		
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
-		self.split_cov = tf.nn.relu(self.fcs2_preslice[0,1])
+		# self.split_cov = tf.nn.relu(self.fcs2_preslice[0,1])
+		self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
 
 		# Goal output.
 		self.W_goal = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_goal')
@@ -123,7 +125,8 @@ class hierarchical():
 		# self.goal_cov = tf.nn.relu(self.fcs3_preslice[2:])		
 
 		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
-		self.goal_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
+		# self.goal_cov = tf.nn.relu(self.fcs3_preslice[0,2:])
+		self.goal_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])
 
 		# Start output.
 		self.W_start = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_start')
@@ -131,7 +134,8 @@ class hierarchical():
 		
 		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_start)+self.b_start
 		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
-		self.start_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
+		# self.start_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
+		self.start_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])		
 
 		# CONSTRUCTING THE DISTRIBUTIONS FOR GOALS AND SPLITS
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(self.goal_mean,self.goal_cov)
@@ -195,6 +199,7 @@ class hierarchical():
 
 	def initialize_tree(self):
 		self.current_parsing_index = 0
+		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
 
 	def insert_node(self, state, index):
@@ -245,7 +250,7 @@ class hierarchical():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location>=self.state.h)):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-				print("SPLIT LOCATION:",split_location)
+		
 				# Scale split location.		
 				split_location = int(self.state.h*split_location)
 				# Create splits.
@@ -273,7 +278,7 @@ class hierarchical():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location>=self.state.w)):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-				print("SPLIT LOCATION:",split_location)
+				
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
 				# Create splits.
@@ -367,13 +372,18 @@ class hierarchical():
 
 	def terminal_reward(self, image_index):
 		# Compute the angle and the length of the start-goal line. 
+
+		print("COMPUTE REWARD STATE:")
+		self.state.disp()
+
 		angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
 		print(self.state.goal,self.state.start)		
 		length = npy.linalg.norm(self.state.goal-self.state.start)
 
 		# Create a rectangle for the paintbrush.
 		rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
-		# Rotate it.
+		# Rotate it.	
+
 		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
 
 		coords = npy.array(list(rotated_rect.exterior.coords))
@@ -426,7 +436,8 @@ class hierarchical():
 
 		for j in range(len(self.parse_tree)):
 
-			self.state = self.parse_tree[self.current_parsing_index]
+			# self.state = self.parse_tree[self.current_parsing_index]
+			self.state = self.parse_tree[j]
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
@@ -453,12 +464,16 @@ class hierarchical():
 				startgoal_weight = self.parse_tree[j].reward
 
 			# RUN TRAIN
-			print("PRINT split:",self.parse_tree[j].split)
-			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
+			# print("SAMPLED START:",self.parse_tree[j].start)
+			# print("SAMPLED GOAL:",self.parse_tree[j].goal)
+
+			mean,cov,rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.goal_mean, self.goal_cov,self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
 				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
 							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
 
 			previous_goal = goal.copy()
+			print("MEAN AND COV:",mean,cov)
+			print("LOSS VALUES:",rule_loss, split_loss, start_loss, goal_loss, startgoal_loss)
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -490,19 +505,28 @@ class hierarchical():
 			if (self.state.label==2):
 				self.current_parsing_index+=1
 
-			for j in range(len(self.parse_tree)):
-				print("Printing Node",j)
-				self.parse_tree[j].disp()
+			# for r in range(len(self.parse_tree)):
+			# 	print("Printing Node",r)
+			# 	self.parse_tree[r].disp()
 				# print(self.parse_tree[j].label,self.parse_tree[j].x,self.parse_tree[j].y,self.parse_tree[j].w,self.parse_tree[j].h)
 			print("_______________________")
 	def meta_training(self):
 
 		# For all epochs
-		for e in range(self.num_epochs):
+		# for e in range(self.num_epochs):
+		for e in range(2):
 			# For all images
 			# for i in range(self.num_images):
 			for i in range(1):
+				print("##################################################################")
+				print("##################################################################")
 				print("Epoch:",e,"Training Image:",i)
+				print("##################################################################")
+				print("##################################################################")
+				for r in range(len(self.parse_tree)):
+					print("Printing Node",r)
+					self.parse_tree[r].disp()
+
 				# Intialize the parse tree for this image.
 				image = self.images[i]
 
@@ -510,6 +534,12 @@ class hierarchical():
 				# self.state = [0,0,0,self.image_size,self.image_size] 
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
+
+				print("##################################################################")
+				for r in range(len(self.parse_tree)):
+					print("Printing Node",r)
+					self.parse_tree[r].disp()
+
 
 				print("Constructing Parse Tree.")
 				self.construct_parse_tree(i)
