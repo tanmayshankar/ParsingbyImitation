@@ -228,7 +228,7 @@ class hierarchical():
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 		print("Selected Rule:",selected_rule)
-		
+
 		if selected_rule<=5:
 			
 			# Resampling until it gets a split INSIDE the segment.
@@ -463,7 +463,7 @@ class hierarchical():
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
 		# while ((self.predicted_labels[image_index]==0).any()):
-		while ((self.predicted_labels[image_index]==0).any() and (self.current_parsing_index<len(self.parse_tree))):
+		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -485,6 +485,8 @@ class hierarchical():
 				self.parse_primitive_terminal()
 			print("_______________________")
 			print("PRINTING THE PARSE TREE:")
+			print("Length of tree:",len(self.parse_tree))
+			print("Current:",self.current_parsing_index)
 			if (self.state.label==2):
 				self.current_parsing_index+=1
 
