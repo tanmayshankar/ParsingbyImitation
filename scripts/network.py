@@ -153,17 +153,17 @@ class hierarchical():
 		# self.sampled_start = tf.placeholder(tf.float32,shape=(None,2),name='sampled_start')
 		# self.previous_goal = tf.placeholder(tf.float32,shape=(None,2),name='previous_goal')
 
-		self.sampled_split = tf.placeholder(tf.float32,shape=( 1),name='sampled_split')
-		self.sampled_goal = tf.placeholder(tf.float32,shape=( 2),name='sampled_goal')
-		self.sampled_start = tf.placeholder(tf.float32,shape=( 2),name='sampled_start')
-		self.previous_goal = tf.placeholder(tf.float32,shape=( 2),name='previous_goal')
+		self.sampled_split = tf.placeholder(tf.float32,shape=(None),name='sampled_split')
+		self.sampled_goal = tf.placeholder(tf.float32,shape=(2),name='sampled_goal')
+		self.sampled_start = tf.placeholder(tf.float32,shape=(2),name='sampled_start')
+		self.previous_goal = tf.placeholder(tf.float32,shape=(2),name='previous_goal')
 
 		# # # # # Defining training ops. 
-		self.rule_return_weight = tf.placeholder(tf.float32,shape=( 1),name='rule_return_weight')
-		self.split_return_weight = tf.placeholder(tf.float32,shape=( 1),name='split_return_weight')
+		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
+		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
 		# self.goal_return_weight = tf.placeholder(t.ffloat32,shape=( 1),name='goal_return_weight')
 		# self.start_return_weight = tf.placeholder(tf.float32,shape=( 1),name='start_return_weight')
-		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=( 1),name='startgoal_return_weight')
+		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None),name='startgoal_return_weight')
 
 		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
 
@@ -347,13 +347,13 @@ class hierarchical():
 		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
 
 		coords = npy.array(list(rotated_rect.exterior.coords))
-		bounding_height = max(self.state.y+self.state.h,npy.max(coords[:,1]))
-		bounding_width = max(self.state.x+self.state.w,npy.max(coords[:,0]))
+		bounding_height = int(npy.ceil(max(self.state.y+self.state.h,npy.max(coords[:,1]))))
+		bounding_width = int(npy.ceil(max(self.state.x+self.state.w,npy.max(coords[:,0]))))
 
 		bounding_rect = box(self.state.x,self.state.y,bounding_width,bounding_height)		
 
-		for x in range(self.state.x,bounding_width):
-			for y in range(self.state.y, bounding_height):
+		for x in range(int(self.state.x),bounding_width):
+			for y in range(int(self.state.y), bounding_height):
 		# for x in range(self.state.x,self.state.x+self.state.w):
 		# 	for y in range(self.state.y,self.state.y+self.state.h):
 
@@ -390,7 +390,7 @@ class hierarchical():
 
 		# For now, do it stochastically, moving forwards through the tree.
 		start = npy.zeros(2)
-		previous_start = npy.zeros(2)
+		previous_goal = npy.zeros(2)
 		goal = npy.zeros(2)
 		target_rule = npy.zeros(self.fcs1_output_shape)
 
@@ -401,9 +401,9 @@ class hierarchical():
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
-			goal_weight = 0
 			rule_weight = 0
 			startgoal_weight = 0
+			split_weight = 0
 			target_rule = npy.zeros(self.fcs1_output_shape)
 			# MUST PARSE EVERY NODE
 
@@ -423,6 +423,7 @@ class hierarchical():
 				startgoal_weight = self.parse_tree[j].reward
 
 			# RUN TRAIN
+			print("PRINT split:",self.parse_tree[j].split)
 			rule_loss, split_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
 				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
 							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
@@ -449,13 +450,13 @@ class hierarchical():
 			if (self.state.label==1):
 				# print("________  PARSING TERMINAL")
 				self.parse_primitive_terminal()
-
+			print("_______________________")
 			print("PRINTING THE PARSE TREE:")
 			for j in range(len(self.parse_tree)):
 				print("Printing Node",j)
 				self.parse_tree[j].disp()
 				# print(self.parse_tree[j].label,self.parse_tree[j].x,self.parse_tree[j].y,self.parse_tree[j].w,self.parse_tree[j].h)
-
+			print("_______________________")
 	def meta_training(self):
 
 		# For all epochs
