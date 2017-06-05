@@ -158,21 +158,19 @@ class hierarchical():
 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
-
 		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
 		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.startgoal_return_weight)
-
 		# The start loss is the negative log probability of the chosen start, weighted byt he return obtained.
 		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
-
 		# Start goal loss - difference between current starting point and previous goal location - this must be in GLOBAL COORDINATES
 		self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal,self.sampled_start))),self.startgoal_return_weight)
-
 		# The total loss is the sum of individual losses.
 		self.total_loss = self.rule_loss + self.split_loss + self.goal_loss + self.startgoal_loss + self.start_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
+
+		self.writer = tf.summary.FileWriter('training',self.sess.graph)
 
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
@@ -222,10 +220,14 @@ class hierarchical():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				if self.state.h==2:
 					split_location=0.5
-				
+				counter = 0				
 				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-			
+					counter+=1
+
+					if counter>25:
+						print("Split location:",split_location)
+
 				split_location = int(self.state.h*split_location)
 			
 				# Create splits.
@@ -249,9 +251,13 @@ class hierarchical():
 				if self.state.w==2:
 					split_location=0.5
 
+				counter = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					counter+=1
+					if counter>25:
+						print("Split location:",split_location)
 
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
@@ -403,8 +409,8 @@ class hierarchical():
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-			print("Parsing the following state:")
-			self.state.disp()
+			# print("Parsing the following state:")
+			# self.state.disp()
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# If the current non-terminal is a shape.
@@ -419,16 +425,20 @@ class hierarchical():
 			
 			if (self.state.label==2):
 				self.current_parsing_index+=1
-			
-			print("_______________________")
-			print("PRINTING THE PARSE TREE:")
-			print("Length of tree:",len(self.parse_tree))
-			print("Current:",self.current_parsing_index)
-			# for r in range(len(self.parse_tree)):
-			# 	print("Printing Node",r)
-			# 	self.parse_tree[r].disp()
-			# print(self.parse_tree[j].label,self.parse_tree[j].x,self.parse_tree[j].y,self.parse_tree[j].w,self.parse_tree[j].h)
-			print("_______________________")
+
+
+			plt.imshow(self.predicted_labels)
+			plt.colorbar()
+			plt.show()			
+			# print("_______________________")
+			# print("PRINTING THE PARSE TREE:")
+			# print("Length of tree:",len(self.parse_tree))
+			# print("Current:",self.current_parsing_index)
+			# # for r in range(len(self.parse_tree)):
+			# # 	print("Printing Node",r)
+			# # 	self.parse_tree[r].disp()
+			# # print(self.parse_tree[j].label,self.parse_tree[j].x,self.parse_tree[j].y,self.parse_tree[j].w,self.parse_tree[j].h)
+			# print("_______________________")
 
 	def meta_training(self):
 
@@ -444,9 +454,9 @@ class hierarchical():
 				print("Epoch:",e,"Training Image:",i)
 				print("##################################################################")
 
-				for r in range(len(self.parse_tree)):
-					print("Printing Node",r)
-					self.parse_tree[r].disp()
+				# for r in range(len(self.parse_tree)):
+				# 	print("Printing Node",r)
+				# 	self.parse_tree[r].disp()
 
 				# Intialize the parse tree for this image.=
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
