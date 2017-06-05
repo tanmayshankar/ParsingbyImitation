@@ -426,7 +426,8 @@ class hierarchical():
 			if (self.state.label==2):
 				self.current_parsing_index+=1
 
-
+			print("SHAPE $##$%##$%$%$*	")
+			print(self.predicted_labels.shape)
 			plt.imshow(self.predicted_labels)
 			plt.colorbar()
 			plt.show()			
