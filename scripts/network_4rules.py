@@ -166,12 +166,12 @@ class hierarchical():
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
 		self.minimum_width = 3
-
+		print(rule_probabilities[0])
 		if (self.state.h<=self.minimum_width):
 			rule_probabilities[0][0]=0.
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][1]=0.
-
+		print(rule_probabilities[0])
 		rule_probabilities/=rule_probabilities.sum()
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
@@ -265,7 +265,8 @@ class hierarchical():
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
 		self.gamma = 0.98
 		for j in reversed(range(len(self.parse_tree))):	
-			self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
+			if (self.parse_tree[j].backward_index>=0):
+				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
@@ -278,7 +279,7 @@ class hierarchical():
 			# 		self.painted_image[x,y] = 1
 
 			# CHANGING PAINTING CONSTANT TO 2
-			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 2
+			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
@@ -310,8 +311,19 @@ class hierarchical():
 		target_rule = npy.zeros(self.fcs1_output_shape)
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
+			
+			boundary_width = 2
+			lowerx = max(0,self.state.x-boundary_width)
+			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
+			lowery = max(0,self.state.y-boundary_width)
+			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
+
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+
 			# Pick up correct portion of image.
-			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
+			# self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
+
+
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			rule_weight = 0
@@ -341,6 +353,7 @@ class hierarchical():
 		# WHILE WE TERMINATE THAT PARSE:
 
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
+		self.alternate_painted_image = -npy.ones((self.image_size,self.image_size))
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
 	
 			# Forward pass of the rule policy- basically picking which rule.
@@ -364,9 +377,13 @@ class hierarchical():
 			if (self.state.label==2):
 				self.current_parsing_index+=1
 
+			# if (self.predicted_labels[image_index]==1).any():
+			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
+			self.fig.suptitle("Processing Image: {0}".format(image_index))
 			self.sc1.set_data(self.predicted_labels[image_index])
 			self.sc2.set_data(self.true_labels[image_index])
-			self.sc3.set_data(self.painted_image)
+			# self.sc3.set_data(self.painted_image)
+			self.sc3.set_data(self.alternate_painted_image)
 			self.sc4.set_data(self.images[image_index])
 			self.fig.canvas.draw()
 			plt.pause(0.01)
@@ -390,7 +407,7 @@ class hierarchical():
 		self.ax[0].set_adjustable('box-forced')
 
 		self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
-		self.sc2.set_clim([-1,1])
+		self.sc2.set_clim([-1,2])
 		# self.fig.colorbar(sc2, self.ax=self.ax[1])
 		self.ax[1].set_title("True Labels")
 		self.ax[1].set_adjustable('box-forced')
@@ -463,10 +480,7 @@ class hierarchical():
 	# Pixel labels: 
 	# 0 for shape
 	# 1 for shape with primitive 1
-	# 2 for shape with primitive 2
-	# 3 for shape with primitive 3
-	# 4 for shape with primitive 4
-	# 5 for region with no primitive (not to be painted)
+	# 2 for region with no primitive (not to be painted)
 	############################
 
 	def map_rules_to_indices(self, rule_index):
@@ -485,6 +499,14 @@ class hierarchical():
 	# Rule numbers:
 	# 0 (Shape) -> (Shape) (Shape) 								(Vertical split)
 	# 1 (Shape) -> (Shape (Shape) 								(Horizontal split)
+	# 2 (Shape) -> (Region with primitive #) 
+	# 3 (Shape) -> (Region not to be painted)
+	############################
+
+	############################
+	# Rule numbers:
+	# 0 (Shape) -> (Shape) (Shape) 								(Vertical split)
+	# 1 (Shape) -> (Shape (Shape) 								(Horizontal split)
 	# 2 (Shape) -> (Region with primitive #) (Shape)			(Vertical split)
 	# 3 (Shape) -> (Region with primitive #) (Shape)			(Horizontal split)
 	# 4 (Shape) -> (Shape) (Region with primitive #) 			(Vertical split)
@@ -492,6 +514,7 @@ class hierarchical():
 	# 6 (Shape) -> (Region with primitive #) 
 	# 7 (Shape) -> (Region not to be painted)
 	############################
+
 
 def main(args):
 
