@@ -322,14 +322,15 @@ class hierarchical():
 			# If shape:
 			if self.parse_tree[j].label==0:
 				# If split rule.
-				if self.parse_tree[j].rule_applied<=5:
+				# if self.parse_tree[j].rule_applied<=5:
+				if self.parse_tree[j].rule_applied<=1:
 					split_weight = self.parse_tree[j].reward
 					rule_weight = self.parse_tree[j].reward
 					target_rule[self.parse_tree[j].rule_applied] = 1.
-				# If rule 6.
-				if self.parse_tree[j].rule_applied==6:
+				# If rule 2 or rule 3.
+				if self.parse_tree[j].rule_applied>=2:
 					rule_weight = self.parse_tree[j].reward
-
+		
 			rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
 				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
 					 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
@@ -471,13 +472,13 @@ class hierarchical():
 	def map_rules_to_indices(self, rule_index):
 		if (rule_index==0)or(rule_index==1):
 			return [0,0]
-		if (rule_index==2)or(rule_index==3):
-			return [1,0]
-		if (rule_index==4)or(rule_index==5):
-			return [0,1]
-		if (rule_index==6):
+		# if (rule_index==2)or(rule_index==3):
+		# 	return [1,0]
+		# if (rule_index==4)or(rule_index==5):
+		# 	return [0,1]
+		if (rule_index==2):
 			return 1
-		if (rule_index==7):
+		if (rule_index==3):
 			return 2
 
 	############################
