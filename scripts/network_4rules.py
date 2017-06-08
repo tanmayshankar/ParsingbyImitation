@@ -90,7 +90,13 @@ class hierarchical():
 
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
-		self.fcs1_output_shape = 5*self.number_primitives+3
+		# Now we have shifted to the 4 rule version of this: 
+		# Horizontal split rule into two shapes
+		# Vertical split rule into two shapes
+		# Assignment rule to region with primitive.
+		# Assignment rule to region without primitive.
+
+		self.fcs1_output_shape = 1*self.number_primitives+3
 		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
 		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
@@ -145,7 +151,7 @@ class hierarchical():
 		self.parse_tree[self.current_parsing_index]=self.state
 
 	def insert_node(self, state, index):
-
+	
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
@@ -154,17 +160,17 @@ class hierarchical():
 		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
 		# Should it be an epsilon-greedy policy? 
 
-		# selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
-		# indices = self.map_rules_to_indices(selected_rule)
-	
 		# SAMPLING A SPLIT LOCATION
 		split_location = -1
 
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
-		if (self.state.h==1):
-			rule_probabilities[0][[0,2,4]]=0.
-		if (self.state.w==1):
-			rule_probabilities[0][[1,3,5]]=0.
+		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
+		self.minimum_width = 3
+
+		if (self.state.h<=self.minimum_width):
+			rule_probabilities[0][0]=0.
+		if (self.state.w<=self.minimum_width):
+			rule_probabilities[0][1]=0.
 
 		rule_probabilities/=rule_probabilities.sum()
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
@@ -172,20 +178,18 @@ class hierarchical():
 
 		print("Selected Rule:",selected_rule)
 
-		# If rule is #0 - #5, we need to sample a split location.
-		if selected_rule<=5:
-			
+		# If it is a split rule:
+		if selected_rule<=1:
+
 			# Resampling until it gets a split INSIDE the segment.
 			# This just ensures the split lies within 0 and 1.
 			# while (split_location<=0)or(split_location>=1):
 
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
-			if (selected_rule%2==0) and (self.state.h>1):
-				
-				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				if self.state.h==2:
-					split_location=0.5
+			# if (selected_rule%2==0) and (self.state.h>1):
+			if (selected_rule==0):			
 				counter = 0				
+				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
@@ -198,24 +202,8 @@ class hierarchical():
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
-				
-				# Update current parse tree with split location and rule applied.
-				self.parse_tree[self.current_parsing_index].split=split_location
-				self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
 
-				# Insert splits into parse tree.
-				self.insert_node(s1,self.current_parsing_index+1)
-				self.insert_node(s2,self.current_parsing_index+2)
-				self.current_parsing_index+=1
-
-				self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
-				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
-
-			if (selected_rule%2!=0) and (self.state.w>1):
-				
-				if self.state.w==2:
-					split_location=0.5
-
+			if (selected_rule==1):			
 				counter = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
@@ -230,25 +218,25 @@ class hierarchical():
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
+				
+			# Update current parse tree with split location and rule applied.
+			self.parse_tree[self.current_parsing_index].split=split_location
+			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
 
-				# Update current parse tree with split location and rule applied.
-				self.parse_tree[self.current_parsing_index].split=split_location
-				self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+			# Insert splits into parse tree.
+			self.insert_node(s1,self.current_parsing_index+1)
+			self.insert_node(s2,self.current_parsing_index+2)
+			self.current_parsing_index+=1
 
-				# Insert splits into parse tree.
-				self.insert_node(s1,self.current_parsing_index+1)
-				self.insert_node(s2,self.current_parsing_index+2)
-				self.current_parsing_index+=1
+			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+			self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
 
-				self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
-				self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
-
-		elif selected_rule>=6:
+		elif selected_rule>=2:
 
 			# Create a parse tree node object.
 			s1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
 			# Change label.
-			s1.label=selected_rule-5
+			s1.label=selected_rule-1
 			# Change the backward index.
 			s1.backward_index = self.current_parsing_index
 
@@ -273,8 +261,11 @@ class hierarchical():
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
 		# This is actually the return accumulated by any particular decision.
+
+		# Now we are discounting based on the depth of the tree (not just sequence in episode)
+		self.gamma = 0.98
 		for j in reversed(range(len(self.parse_tree))):	
-			self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward
+			self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
@@ -285,7 +276,9 @@ class hierarchical():
 			# for x in range(int(self.state.x),int(self.state.x+self.state.w)):
 			# 	for y in range(int(self.state.y),int(self.state.y+self.state.h)):
 			# 		self.painted_image[x,y] = 1
-			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
+
+			# CHANGING PAINTING CONSTANT TO 2
+			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 2
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
@@ -311,9 +304,9 @@ class hierarchical():
 			self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
 
 	def backprop(self, image_index):
-		# Must decide whether to do this stochastically or in batches.
+		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 
-		# For now, do it stochastically, moving forwards through the tree.
+		# NOW CHANGING TO 4 RULE SYSTEM.
 		target_rule = npy.zeros(self.fcs1_output_shape)
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
