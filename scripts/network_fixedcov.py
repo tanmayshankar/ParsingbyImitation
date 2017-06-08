@@ -18,6 +18,11 @@ class parse_tree_node():
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
 
+		print("Backward Index:",self.backward_index)
+		print("Reward:",self.reward)
+		print("Rule:",self.rule_applied,"Split:",self.split)
+		print("____________________________________________")
+
 class hierarchical():
 
 	def __init__(self):
@@ -140,6 +145,7 @@ class hierarchical():
 		self.parse_tree[self.current_parsing_index]=self.state
 
 	def insert_node(self, state, index):
+
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
@@ -148,8 +154,8 @@ class hierarchical():
 		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
 		# Should it be an epsilon-greedy policy? 
 
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
-		indices = self.map_rules_to_indices(selected_rule)
+		# selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+		# indices = self.map_rules_to_indices(selected_rule)
 	
 		# SAMPLING A SPLIT LOCATION
 		split_location = -1
@@ -271,7 +277,7 @@ class hierarchical():
 			self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward
 
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.state.w*self.state.h)
+			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
 	def terminal_reward_nostartgoal(self, image_index):
 
@@ -282,7 +288,6 @@ class hierarchical():
 			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		
 
 	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
@@ -310,7 +315,6 @@ class hierarchical():
 
 		# For now, do it stochastically, moving forwards through the tree.
 		target_rule = npy.zeros(self.fcs1_output_shape)
-
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			# Pick up correct portion of image.
@@ -373,6 +377,8 @@ class hierarchical():
 			self.fig.canvas.draw()
 			plt.pause(0.01)
 
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].disp()
 
 	def meta_training(self):
 
@@ -432,6 +438,9 @@ class hierarchical():
 
 				print("Constructing Parse Tree.")
 				self.construct_parse_tree(i)
+
+
+
 				
 				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
@@ -442,6 +451,9 @@ class hierarchical():
 				self.compute_rewards(i)
 				print("Propagating Rewards.")
 				self.propagate_rewards()
+
+				for j in range(len(self.parse_tree)):
+					self.parse_tree[j].disp()
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
 
 				print("Backprop.")
@@ -503,6 +515,9 @@ def main(args):
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
+
+	for i in range(1000):
+		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
 
 	# CALL TRAINING
 	hierarchical_model.meta_training()
