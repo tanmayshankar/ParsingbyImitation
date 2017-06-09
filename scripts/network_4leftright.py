@@ -195,7 +195,9 @@ class hierarchical():
 					counter+=1
 
 					if counter>25:
-						print("Split location:",split_location)
+						print("State: H",self.state.h)
+						print("Split fraction:",split_location)
+						print("Split location:",int(split_location*self.state.h))
 
 				split_location = int(self.state.h*split_location)
 			
@@ -210,7 +212,9 @@ class hierarchical():
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
 					if counter>25:
-						print("Split location:",split_location)
+						print("State: W",self.state.w)
+						print("Split fraction:",split_location)
+						print("Split location:",int(split_location*self.state.w))
 
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
