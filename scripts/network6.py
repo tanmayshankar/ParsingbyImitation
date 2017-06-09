@@ -27,7 +27,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 2
+		self.num_epochs = 20
 		self.num_images = 1000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
@@ -166,7 +166,7 @@ class hierarchical():
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
 		self.minimum_width = 3
-		print(rule_probabilities[0])
+		# print(rule_probabilities[0])
 		
 		epislon = 1e-8
 		rule_probabilities += epislon
@@ -177,13 +177,13 @@ class hierarchical():
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][[1,3]]=0.
 
-		print(rule_probabilities[0])
+		# print(rule_probabilities[0])
 
 		rule_probabilities/=rule_probabilities.sum()
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
-		print("Selected Rule:",selected_rule)
+		# print("Selected Rule:",selected_rule)
 
 		# If it is a split rule:
 		if selected_rule<=3:
@@ -301,8 +301,8 @@ class hierarchical():
 			# CHANGING PAINTING CONSTANT TO 2
 			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
 
-		# self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		self.state.reward = -(abs(self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]-self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h])).sum()		
+		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		# self.state.reward = -(abs(self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]-self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h])).sum()		
 
 
 	def compute_rewards(self, image_index):
@@ -369,7 +369,7 @@ class hierarchical():
 				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
 					 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
 
-			print("LOSS VALUES:",rule_loss, split_loss)
+			# print("LOSS VALUES:",rule_loss, split_loss)
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -389,7 +389,7 @@ class hierarchical():
 
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
-				print("PARSING NON TERMINAL")
+				# print("PARSING NON TERMINAL")
 				self.parse_nonterminal(image_index)
 
 			# If the current non-terminal is a region assigned a particular primitive.
@@ -406,54 +406,54 @@ class hierarchical():
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
-			self.fig.suptitle("Processing Image: {0}".format(image_index))
-			self.sc1.set_data(self.alternate_predicted_labels)
-			# self.sc1.set_data(self.predicted_labels[image_index])
-			self.sc2.set_data(self.true_labels[image_index])
-			# self.sc3.set_data(self.painted_image)
-			self.sc3.set_data(self.alternate_painted_image)
-			self.sc4.set_data(self.images[image_index])
-			self.fig.canvas.draw()
-			plt.pause(0.005)
+			# self.fig.suptitle("Processing Image: {0}".format(image_index))
+			# self.sc1.set_data(self.alternate_predicted_labels)
+			# # self.sc1.set_data(self.predicted_labels[image_index])
+			# self.sc2.set_data(self.true_labels[image_index])
+			# # self.sc3.set_data(self.painted_image)
+			# self.sc3.set_data(self.alternate_painted_image)
+			# self.sc4.set_data(self.images[image_index])
+			# self.fig.canvas.draw()
+			# plt.pause(0.005)
 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].disp()
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].disp()
 
 	def meta_training(self):
 
 		image_index = 0
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
-		self.fig, self.ax = plt.subplots(1,4,sharey=True)
-		# plt.ion()
-		# plt.show()
-		self.fig.show()
+		# self.fig, self.ax = plt.subplots(1,4,sharey=True)
+		# # plt.ion()
+		# # plt.show()
+		# self.fig.show()
 		
-		self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
-		self.sc1.set_clim([0,2])
-		# self.fig.colorbar(sc1, self.ax=self.ax[0])
-		self.ax[0].set_title("Predicted Labels")
-		self.ax[0].set_adjustable('box-forced')
+		# self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
+		# self.sc1.set_clim([0,2])
+		# # self.fig.colorbar(sc1, self.ax=self.ax[0])
+		# self.ax[0].set_title("Predicted Labels")
+		# self.ax[0].set_adjustable('box-forced')
 
-		self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
-		self.sc2.set_clim([-1,1])
-		# self.fig.colorbar(sc2, self.ax=self.ax[1])
-		self.ax[1].set_title("True Labels")
-		self.ax[1].set_adjustable('box-forced')
+		# self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
+		# self.sc2.set_clim([-1,1])
+		# # self.fig.colorbar(sc2, self.ax=self.ax[1])
+		# self.ax[1].set_title("True Labels")
+		# self.ax[1].set_adjustable('box-forced')
 
-		self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
-		self.sc3.set_clim([-1,1])
-		# self.fig.colorbar(sc3, self.ax=self.ax[2])
-		self.ax[2].set_title("Painted Image")
-		self.ax[2].set_adjustable('box-forced')
+		# self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
+		# self.sc3.set_clim([-1,1])
+		# # self.fig.colorbar(sc3, self.ax=self.ax[2])
+		# self.ax[2].set_title("Painted Image")
+		# self.ax[2].set_adjustable('box-forced')
 
-		self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
-		self.sc4.set_clim([-1,1])
-		# self.fig.colorbar(sc4,self.ax=self.ax[3])
-		self.ax[3].set_title("Actual Image")
-		self.ax[3].set_adjustable('box-forced')
-		# plt.draw()
-		self.fig.canvas.draw()
-		plt.pause(0.001)
+		# self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
+		# self.sc4.set_clim([-1,1])
+		# # self.fig.colorbar(sc4,self.ax=self.ax[3])
+		# self.ax[3].set_title("Actual Image")
+		# self.ax[3].set_adjustable('box-forced')
+		# # plt.draw()
+		# self.fig.canvas.draw()
+		# plt.pause(0.001)
 
 		# For all epochs
 		for e in range(self.num_epochs):
@@ -486,17 +486,18 @@ class hierarchical():
 				# REsolve goals into global frame.
 						
 				#compute rewards for the chosen actions., then propagate them through the tree.
-				print("Computing Rewards.")
+				# print("Computing Rewards.")
 				self.compute_rewards(i)
-				print("Propagating Rewards.")
+				# print("Propagating Rewards.")
 				self.propagate_rewards()
 
-				for j in range(len(self.parse_tree)):
-					self.parse_tree[j].disp()
+				# for j in range(len(self.parse_tree)):
+				# 	self.parse_tree[j].disp()
+				print("Parsing Image:",i)
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
-				print("Backprop.")
+				# print("Backprop.")
 				self.backprop(i)
-				print("TOTAL REWARD:",self.parse_tree[0].reward)
+				# print("TOTAL REWARD:",self.parse_tree[0].reward)
 
 				# self.sc1.set_data(self.predicted_labels[i])
 				# self.sc2.set_data(self.true_labels[i])
@@ -546,11 +547,13 @@ def main(args):
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 
-	# for i in range(1000):
-	# 	hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==-1)]=-5
+	for i in range(1000):
+		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==-1)]=-1.2
 
 	# CALL TRAINING
 	hierarchical_model.meta_training()
+
+	npy.save("parsed.npy",hierarchical_model.predicted_labels)
 
 if __name__ == '__main__':
 	main(sys.argv)
