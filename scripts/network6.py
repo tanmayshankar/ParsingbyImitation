@@ -49,6 +49,10 @@ class hierarchical():
 		self.conv2_num_filters = 20
 		self.conv3_size = 3	
 		self.conv3_num_filters = 20
+		self.conv4_size = 3	
+		self.conv4_num_filters = 20
+		self.conv5_size = 3	
+		self.conv5_num_filters = 20
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
@@ -72,16 +76,28 @@ class hierarchical():
 		self.conv3 = tf.add(tf.nn.conv2d(self.relu_conv2,self.W_conv3,strides=[1,1,1,1],padding='VALID'),self.b_conv3,name='conv3')
 		self.relu_conv3 = tf.nn.relu(self.conv3)
 
+		# Layer 4
+		self.W_conv4 = tf.Variable(tf.truncated_normal([self.conv4_size,self.conv4_size,self.conv3_num_filters,self.conv4_num_filters],stddev=0.1),name='W_conv4')
+		self.b_conv4 = tf.Variable(tf.constant(0.1,shape=[self.conv4_num_filters]),name='b_conv4')
+		self.conv4 = tf.add(tf.nn.conv2d(self.relu_conv3,self.W_conv4,strides=[1,1,1,1],padding='VALID'),self.b_conv4,name='conv4')
+		self.relu_conv4 = tf.nn.relu(self.conv4)
+
+		# Layer 5
+		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
+		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
+		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.relu_conv5 = tf.nn.relu(self.conv5)
+
 		# Now going to flatten this and move to a fully connected layer.s
-		self.fc_input_shape = 14*14*self.conv3_num_filters
-		self.relu_conv3_flat = tf.reshape(self.relu_conv3,[-1,self.fc_input_shape])
+		self.fc_input_shape = 10*10*self.conv5_num_filters
+		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
 		# Now not using the start and goal
 		self.fcs1_l1_shape = 120
 		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
-		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
+		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
 		self.fcs2_l1_shape = 30
 		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
@@ -364,10 +380,11 @@ class hierarchical():
 				# If rule 2 or rule 3.
 				if self.parse_tree[j].rule_applied>=2:
 					rule_weight = self.parse_tree[j].reward
-		
-			rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
-				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
-					 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
+
+			# Here ,we only backprop for shapes, since we only choose actions for shapese.
+				rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
+					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
+						 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
 
 			# print("LOSS VALUES:",rule_loss, split_loss)
 
@@ -504,6 +521,8 @@ class hierarchical():
 				# self.sc3.set_data(self.painted_image)
 				# self.sc4.set_data(self.images[i])
 				# self.fig.canvas.draw()
+			npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
+			self.predicted_labels = npy.zeros((1000,20,20))
 
 	############################
 	# Pixel labels: 
@@ -548,12 +567,12 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 
 	for i in range(1000):
-		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==-1)]=-1.2
+		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
 
 	# CALL TRAINING
 	hierarchical_model.meta_training()
 
-	npy.save("parsed.npy",hierarchical_model.predicted_labels)
+
 
 if __name__ == '__main__':
 	main(sys.argv)
