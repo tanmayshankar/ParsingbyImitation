@@ -76,21 +76,33 @@ class hierarchical():
 		self.conv3 = tf.add(tf.nn.conv2d(self.relu_conv2,self.W_conv3,strides=[1,1,1,1],padding='VALID'),self.b_conv3,name='conv3')
 		self.relu_conv3 = tf.nn.relu(self.conv3)
 
+		# Layer 4
+		self.W_conv4 = tf.Variable(tf.truncated_normal([self.conv4_size,self.conv4_size,self.conv3_num_filters,self.conv4_num_filters],stddev=0.1),name='W_conv4')
+		self.b_conv4 = tf.Variable(tf.constant(0.1,shape=[self.conv4_num_filters]),name='b_conv4')
+		self.conv4 = tf.add(tf.nn.conv2d(self.relu_conv3,self.W_conv4,strides=[1,1,1,1],padding='VALID'),self.b_conv4,name='conv4')
+		self.relu_conv4 = tf.nn.relu(self.conv4)
+
+		# Layer 5
+		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
+		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
+		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.relu_conv5 = tf.nn.relu(self.conv5)
+
 		# Now going to flatten this and move to a fully connected layer.s
-		self.fc_input_shape = 10*10*self.conv3_num_filters
-		self.relu_conv3_flat = tf.reshape(self.relu_conv3,[-1,self.fc_input_shape])
+		self.fc_input_shape = 10*10*self.conv5_num_filters
+		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
 		# Now not using the start and goal
 		self.fcs1_l1_shape = 120
 		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
-		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
+		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
 		self.fcs2_l1_shape = 30
 		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
 		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
-		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv3_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
+		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
 
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
