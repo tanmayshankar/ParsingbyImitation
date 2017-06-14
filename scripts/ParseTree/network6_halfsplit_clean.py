@@ -359,15 +359,15 @@ class hierarchical():
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
-			# self.fig.suptitle("Processing Image: {0}".format(image_index))
-			# self.sc1.set_data(self.alternate_predicted_labels)
-			# # self.sc1.set_data(self.predicted_labels[image_index])
-			# self.sc2.set_data(self.true_labels[image_index])
-			# # self.sc3.set_data(self.painted_image)
-			# self.sc3.set_data(self.alternate_painted_image)
-			# self.sc4.set_data(self.images[image_index])
-			# self.fig.canvas.draw()
-			# plt.pause(0.005)
+			self.fig.suptitle("Processing Image: {0}".format(image_index))
+			self.sc1.set_data(self.alternate_predicted_labels)
+			# self.sc1.set_data(self.predicted_labels[image_index])
+			self.sc2.set_data(self.true_labels[image_index])
+			# self.sc3.set_data(self.painted_image)
+			self.sc3.set_data(self.alternate_painted_image)
+			self.sc4.set_data(self.images[image_index])
+			self.fig.canvas.draw()
+			plt.pause(0.001)
 
 		# for j in range(len(self.parse_tree)):
 		# 	self.parse_tree[j].disp()
@@ -376,6 +376,37 @@ class hierarchical():
 
 		image_index = 0
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
+		self.fig, self.ax = plt.subplots(1,4,sharey=True)
+		# plt.ion()
+		# plt.show()
+		self.fig.show()
+		
+		self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
+		self.sc1.set_clim([0,2])
+		# self.fig.colorbar(sc1, self.ax=self.ax[0])
+		self.ax[0].set_title("Predicted Labels")
+		self.ax[0].set_adjustable('box-forced')
+
+		self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
+		self.sc2.set_clim([-1,1])
+		# self.fig.colorbar(sc2, self.ax=self.ax[1])
+		self.ax[1].set_title("True Labels")
+		self.ax[1].set_adjustable('box-forced')
+
+		self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
+		self.sc3.set_clim([-1,1])
+		# self.fig.colorbar(sc3, self.ax=self.ax[2])
+		self.ax[2].set_title("Painted Image")
+		self.ax[2].set_adjustable('box-forced')
+
+		self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
+		self.sc4.set_clim([-1,1])
+		# self.fig.colorbar(sc4,self.ax=self.ax[3])
+		self.ax[3].set_title("Actual Image")
+		self.ax[3].set_adjustable('box-forced')
+		# plt.draw()
+		self.fig.canvas.draw()
+		plt.pause(0.001)
 
 		# For all epochs
 		for e in range(self.num_epochs):	
@@ -399,7 +430,7 @@ class hierarchical():
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
 				self.backprop(i)
 
-			npy.save("halfparsed_clean2_{0}.npy".format(e),self.predicted_labels)
+			npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
 			self.predicted_labels = npy.zeros((20000,20,20))
 
 	############################
