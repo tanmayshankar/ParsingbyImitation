@@ -146,7 +146,7 @@ class hierarchical():
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
 
 		# NO NEGATIVE SIGN HERE
-		self.rule_loss = -tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
@@ -399,9 +399,13 @@ class hierarchical():
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
-			self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-			# print("Parsing the following state:")
-			# self.state.disp()
+			boundary_width = 2
+			lowerx = max(0,self.state.x-boundary_width)
+			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
+			lowery = max(0,self.state.y-boundary_width)
+			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
+
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# If the current non-terminal is a shape.

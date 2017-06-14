@@ -85,14 +85,15 @@ class hierarchical():
 		# Layer 5
 		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
 		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
-		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')
+		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
 
 		self.fc_input_shape = self.relu_conv5.shape[1]
-		# self.fc_input_shape = 10*10*self.conv5_num_filters
-		self.fc_input_shape = 5*5*self.conv5_num_filters
+		self.fc_input_shape = 10*10*self.conv5_num_filters
+		# self.fc_input_shape = 5*5*self.conv5_num_filters
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
@@ -125,12 +126,8 @@ class hierarchical():
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
 
-		self.rule_loss = -tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
-
-		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
-		# self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
-		# The total loss is the sum of individual losses.
-		# self.total_loss = self.rule_loss + self.split_loss
+		# NO NEGATIVE SIGN HERE - 13/6
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.rule_loss,name='Adam_Optimizer')
@@ -402,7 +399,7 @@ class hierarchical():
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
 				self.backprop(i)
 
-			npy.save("halfparsed_{0}.npy".format(e),self.predicted_labels)
+			npy.save("halfparsed_clean2_{0}.npy".format(e),self.predicted_labels)
 			self.predicted_labels = npy.zeros((20000,20,20))
 
 	############################
@@ -452,6 +449,7 @@ def main(args):
 	for i in range(20000):
 		hierarchical_model.images[i][npy.where(hierarchical_model.images[i]==2)]=-1
 		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==2)]=-1
+		# hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
 	hierarchical_model.images += noise
 
 	# CALL TRAINING
@@ -459,5 +457,6 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
 
 
