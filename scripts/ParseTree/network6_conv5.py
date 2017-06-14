@@ -28,7 +28,7 @@ class hierarchical():
 	def __init__(self):
 
 		self.num_epochs = 20
-		self.num_images = 1000
+		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
@@ -526,7 +526,7 @@ class hierarchical():
 				# self.sc4.set_data(self.images[i])
 				# self.fig.canvas.draw()
 			npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
-			self.predicted_labels = npy.zeros((1000,20,20))
+			self.predicted_labels = npy.zeros((20000,20,20))
 
 	############################
 	# Pixel labels: 
@@ -570,8 +570,16 @@ def main(args):
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 
-	for i in range(1000):
-		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
+	noise = 0.2*npy.random.rand(20000,20,20)
+	
+	for i in range(20000):
+		hierarchical_model.images[i][npy.where(hierarchical_model.images[i]==2)]=-1
+		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==2)]=-1
+		# hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
+	hierarchical_model.images += noise
+
+	# for i in range(20000):
+	# 	hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
 
 	# CALL TRAINING
 	hierarchical_model.meta_training()
