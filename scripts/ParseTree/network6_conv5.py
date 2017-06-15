@@ -561,6 +561,14 @@ class hierarchical():
 	# 5 (Shape) -> (Region not to be painted)
 	############################
 
+	def preprocess_images_labels(self):
+
+		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
+		self.images[npy.where(self.images==2)]=-1
+		self.true_labels[npy.where(self.true_labels==2)]=-1
+		self.images += noise
+
+
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
@@ -568,33 +576,17 @@ def main(args):
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
-	# If CPU:
-	# sess = tf.Session()
-
 	hierarchical_model = hierarchical()
 	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
-
-	noise = 0.2*npy.random.rand(20000,20,20)
 	
-	for i in range(20000):
-		hierarchical_model.images[i][npy.where(hierarchical_model.images[i]==2)]=-1
-		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==2)]=-1
-		# hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
-	hierarchical_model.images += noise
-
-	# for i in range(20000):
-	# 	hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
-
+	hierarchical_model.preprocess_images_labels()
+	hierarchical_model.plot = 0
 	# CALL TRAINING
 	hierarchical_model.meta_training()
 
-
-
 if __name__ == '__main__':
 	main(sys.argv)
-
-
