@@ -37,7 +37,7 @@ class hierarchical():
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
-	def initialize_tensorflow_model(self, sess):
+	def initialize_tensorflow_model(self, sess, model_file=None):
 
 		# Initializing the session.
 		self.sess = sess
@@ -158,10 +158,19 @@ class hierarchical():
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
 
+		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
+		# Creating a saver object to save models.
+		self.saver = tf.train.Saver(max_to_keep=None)
 
-		init = tf.global_variables_initializer()
-		self.sess.run(init)
+		if model_file:
+			self.saver.restore(self.sess,model_file)
+		else:
+			init = tf.global_variables_initializer()
+			self.sess.run(init)
+
+	def save_model(self, model_index):
+		save_path = self.saver.save(self.sess,'saved_models/net6_conv5_model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
 		self.current_parsing_index = 0
@@ -525,6 +534,7 @@ class hierarchical():
 				# self.fig.canvas.draw()
 			npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
 			self.predicted_labels = npy.zeros((20000,20,20))
+			self.save_model(e)
 
 	############################
 	# Pixel labels: 
