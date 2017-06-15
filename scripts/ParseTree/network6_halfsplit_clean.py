@@ -37,7 +37,7 @@ class hierarchical():
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
-	def initialize_tensorflow_model(self, sess):
+	def initialize_tensorflow_model(self, sess, model_file=None):
 
 		# Initializing the session.
 		self.sess = sess
@@ -132,10 +132,23 @@ class hierarchical():
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.rule_loss,name='Adam_Optimizer')
 
+		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
+		# Creating a saver object to save models.
+		self.saver = tf.train.Saver(max_to_keep=None)
 
-		init = tf.global_variables_initializer()
-		self.sess.run(init)
+		if model_file:
+			self.saver.restore(self.sess,model_file)
+		else:
+			init = tf.global_variables_initializer()
+			self.sess.run(init)
+
+	def save_model(self, model_index):
+		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+
+	# def load_model(self, model_file):
+	# 	self.saver.restore(self.sess, model_file)
+	# 	self.is_restored = True
 
 	def initialize_tree(self):
 		self.current_parsing_index = 0
@@ -436,6 +449,8 @@ class hierarchical():
 			npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
 			self.predicted_labels = npy.zeros((20000,20,20))
 
+			self.save_model(e)
+
 	############################
 	# Pixel labels: 
 	# 0 for shape
@@ -461,15 +476,20 @@ class hierarchical():
 	# 5 (Shape) -> (Region not to be painted)
 	############################
 
+	def preprocess_images_labels(self):
+
+		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
+		self.images[npy.where(self.images==2)]=-1
+		self.true_labels[npy.where(self.true_labels==2)]=-1
+		self.images += noise
+
+
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
 	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
-
-	# If CPU:
-	# sess = tf.Session()
 
 	hierarchical_model = hierarchical()
 	hierarchical_model.initialize_tensorflow_model(sess)
@@ -478,13 +498,7 @@ def main(args):
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
-	noise = 0.2*npy.random.rand(20000,20,20)
-	
-	for i in range(20000):
-		hierarchical_model.images[i][npy.where(hierarchical_model.images[i]==2)]=-1
-		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==2)]=-1
-		# hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
-	hierarchical_model.images += noise
+	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	# CALL TRAINING
 	hierarchical_model.meta_training()
