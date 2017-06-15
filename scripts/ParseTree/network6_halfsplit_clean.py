@@ -153,7 +153,7 @@ class hierarchical():
 		split_location = -1
 
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 4
+		self.minimum_width = 3
 		
 		epislon = 1e-5
 		rule_probabilities += epislon
@@ -359,15 +359,16 @@ class hierarchical():
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
-			self.fig.suptitle("Processing Image: {0}".format(image_index))
-			self.sc1.set_data(self.alternate_predicted_labels)
-			# self.sc1.set_data(self.predicted_labels[image_index])
-			self.sc2.set_data(self.true_labels[image_index])
-			# self.sc3.set_data(self.painted_image)
-			self.sc3.set_data(self.alternate_painted_image)
-			self.sc4.set_data(self.images[image_index])
-			self.fig.canvas.draw()
-			plt.pause(0.001)
+			if self.plot:
+				self.fig.suptitle("Processing Image: {0}".format(image_index))
+				self.sc1.set_data(self.alternate_predicted_labels)
+				# self.sc1.set_data(self.predicted_labels[image_index])
+				self.sc2.set_data(self.true_labels[image_index])
+				# self.sc3.set_data(self.painted_image)
+				self.sc3.set_data(self.alternate_painted_image)
+				self.sc4.set_data(self.images[image_index])
+				self.fig.canvas.draw()
+				plt.pause(0.001)
 
 		# for j in range(len(self.parse_tree)):
 		# 	self.parse_tree[j].disp()
@@ -376,37 +377,39 @@ class hierarchical():
 
 		image_index = 0
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
-		self.fig, self.ax = plt.subplots(1,4,sharey=True)
-		# plt.ion()
-		# plt.show()
-		self.fig.show()
-		
-		self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
-		self.sc1.set_clim([0,2])
-		# self.fig.colorbar(sc1, self.ax=self.ax[0])
-		self.ax[0].set_title("Predicted Labels")
-		self.ax[0].set_adjustable('box-forced')
 
-		self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
-		self.sc2.set_clim([-1,1])
-		# self.fig.colorbar(sc2, self.ax=self.ax[1])
-		self.ax[1].set_title("True Labels")
-		self.ax[1].set_adjustable('box-forced')
+		if self.plot:
+			self.fig, self.ax = plt.subplots(1,4,sharey=True)
+			# plt.ion()
+			# plt.show()
+			self.fig.show()
+			
+			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
+			self.sc1.set_clim([0,2])
+			# self.fig.colorbar(sc1, self.ax=self.ax[0])
+			self.ax[0].set_title("Predicted Labels")
+			self.ax[0].set_adjustable('box-forced')
 
-		self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
-		self.sc3.set_clim([-1,1])
-		# self.fig.colorbar(sc3, self.ax=self.ax[2])
-		self.ax[2].set_title("Painted Image")
-		self.ax[2].set_adjustable('box-forced')
+			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
+			self.sc2.set_clim([-1,1])
+			# self.fig.colorbar(sc2, self.ax=self.ax[1])
+			self.ax[1].set_title("True Labels")
+			self.ax[1].set_adjustable('box-forced')
 
-		self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
-		self.sc4.set_clim([-1,1])
-		# self.fig.colorbar(sc4,self.ax=self.ax[3])
-		self.ax[3].set_title("Actual Image")
-		self.ax[3].set_adjustable('box-forced')
-		# plt.draw()
-		self.fig.canvas.draw()
-		plt.pause(0.001)
+			self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
+			self.sc3.set_clim([-1,1])
+			# self.fig.colorbar(sc3, self.ax=self.ax[2])
+			self.ax[2].set_title("Painted Image")
+			self.ax[2].set_adjustable('box-forced')
+
+			self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
+			self.sc4.set_clim([-1,1])
+			# self.fig.colorbar(sc4,self.ax=self.ax[3])
+			self.ax[3].set_title("Actual Image")
+			self.ax[3].set_adjustable('box-forced')
+			# plt.draw()
+			self.fig.canvas.draw()
+			plt.pause(0.001)
 
 		# For all epochs
 		for e in range(self.num_epochs):	
@@ -482,7 +485,7 @@ def main(args):
 		hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==2)]=-1
 		# hierarchical_model.true_labels[i][npy.where(hierarchical_model.true_labels[i]==1)]=2
 	hierarchical_model.images += noise
-
+	hierarchical_model.plot = 0
 	# CALL TRAINING
 	hierarchical_model.meta_training()
 

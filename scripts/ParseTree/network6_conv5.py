@@ -85,11 +85,13 @@ class hierarchical():
 		# Layer 5
 		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
 		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
-		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
-		self.fc_input_shape = 10*10*self.conv5_num_filters
+		# self.fc_input_shape = 10*10*self.conv5_num_filters
+		self.fc_input_shape = 5*5*self.conv5_num_filters
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
@@ -147,7 +149,7 @@ class hierarchical():
 
 		# NO NEGATIVE SIGN HERE
 		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
-
+ 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 		# The total loss is the sum of individual losses.
@@ -184,7 +186,7 @@ class hierarchical():
 		self.minimum_width = 3
 		# print(rule_probabilities[0])
 		
-		epislon = 1e-8
+		epislon = 1e-5
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):
@@ -222,7 +224,7 @@ class hierarchical():
 						print("State: H",self.state.h)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.h))
-
+						print(rule_probabilities[0])
 				split_location = int(self.state.h*split_location)
 			
 				# Create splits.
@@ -240,7 +242,7 @@ class hierarchical():
 						print("State: W",self.state.w)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.w))
-
+						print(rule_probabilities[0])
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
 
@@ -484,9 +486,9 @@ class hierarchical():
 			for i in range(self.num_images):
 			# for i in range(20):
 				
-				print("##################################################################")
+				print("#________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i)
-				print("##################################################################")
+				print("#________________________________________________________________")
 
 				# for r in range(len(self.parse_tree)):
 				# 	print("Printing Node",r)
@@ -496,11 +498,7 @@ class hierarchical():
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
 
-				print("Constructing Parse Tree.")
 				self.construct_parse_tree(i)
-
-
-
 				
 				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
