@@ -208,6 +208,8 @@ class hierarchical():
 
 		if model_file:
 			self.saver.restore(self.sess,model_file)
+			init = tf.variable_initializer(self.new_stream_var_list)
+			self.sess.run(init)
 		else:
 			init = tf.global_variables_initializer()
 			self.sess.run(init)
@@ -563,8 +565,8 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 1
 	
-	train=False
-	if train:
+	load = True
+	if load:
 		print("HI!")
 		model_file = str(sys.argv[3])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
