@@ -177,6 +177,7 @@ class hierarchical():
 			rule_probabilities[0][[1,3]]=0.
 
 		rule_probabilities/=rule_probabilities.sum()
+		# selected_rule = npy.argmax(rule_probabilities)
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
@@ -296,8 +297,8 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-
+			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			self.image_input = self.images[image_index]
 			# Pick up correct portion of image.
 			# self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 
@@ -350,7 +351,9 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			self.image_input = self.images[image_index]
+			
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# If the current non-terminal is a shape.
@@ -386,7 +389,7 @@ class hierarchical():
 		# for j in range(len(self.parse_tree)):
 		# 	self.parse_tree[j].disp()
 
-	def meta_training(self):
+	def meta_training(self, train=True):
 
 		image_index = 0
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
@@ -425,6 +428,9 @@ class hierarchical():
 			plt.pause(0.001)
 
 		# For all epochs
+		if not(train):
+			self.num_epochs=1
+
 		for e in range(self.num_epochs):	
 			# For all images
 			for i in range(self.num_images):		
@@ -441,12 +447,16 @@ class hierarchical():
 				#compute rewards for the chosen actions., then propagate them through the tree.
 				self.compute_rewards(i)
 				self.propagate_rewards()
-				
 				print("Parsing Image:",i)
+				
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
-				self.backprop(i)
+				if train:
+					self.backprop(i)
 
-			npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+			if train:
+				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+			else:
+				npy.save("validation.npy".format(e),self.predicted_labels)
 			self.predicted_labels = npy.zeros((20000,20,20))
 
 			self.save_model(e)
@@ -492,7 +502,6 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
@@ -500,8 +509,18 @@ def main(args):
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
+	
+	load = 0	
+	if load:
+		print("HI!")
+		model_file = str(sys.argv[3])
+		hierarchical_model.initialize_tensorflow_model(sess,model_file)
+	else:
+		hierarchical_model.initialize_tensorflow_model(sess)
+
 	# CALL TRAINING
-	hierarchical_model.meta_training()
+	# hierarchical_model.meta_training(train=False)
+	hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)

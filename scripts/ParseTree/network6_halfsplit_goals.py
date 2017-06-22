@@ -33,7 +33,7 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=2
+		self.paintwidth=1
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
@@ -144,7 +144,7 @@ class hierarchical():
 		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
 		# self.goal_cov = tf.nn.relu(self.fcs3_preslice[0,2:])
 		# self.goal_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])
-		self.goal_cov = 0.5*npy.ones(2,dtype=npy.float32)
+		self.goal_cov = 0.2*npy.ones(2,dtype=npy.float32)
 
 		# Start output.
 		self.W_start = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_start')
@@ -154,11 +154,14 @@ class hierarchical():
 		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
 		# self.start_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
 		# self.start_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])		
-		self.start_cov = 0.5*npy.ones(2,dtype=npy.float32)
+		self.start_cov = 0.2*npy.ones(2,dtype=npy.float32)
 
 		# Creating start and goal distributions.
-		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(self.goal_mean,self.goal_cov)
-		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(self.start_mean,self.start_cov)
+		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
+		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_diag=self.start_cov)
+
+		# self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_identity_multiplier=0.00001)
+		# self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_identity_multiplier=0.00001)
 
 		self.sample_goal = self.goal_dist.sample()
 		self.sample_start = self.start_dist.sample()
@@ -302,12 +305,17 @@ class hierarchical():
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
-		start_location, goal_location = self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+		# start_location, goal_location = self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+		start_location, goal_location, start_mean, goal_mean = self.sess.run([self.sample_start,self.sample_goal, self.start_mean, self.goal_mean],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+
+		print("SAMPLED:")
+		print(start_location,goal_location)
+		print("DIST:")
+		print(start_mean,goal_mean)
 		start_location *= npy.array([self.state.w,self.state.h])
 		goal_location *= npy.array([self.state.w,self.state.h])
 		self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
 		self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
-
 		self.current_parsing_index+=1
 
 	def propagate_rewards(self):
@@ -334,15 +342,15 @@ class hierarchical():
 
 		# Create a rectangle for the paintbrush.
 		rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+
 		# Rotate it.	
+		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]],use_radians=True)
 
-		rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]])
-
-		coords = npy.array(list(rotated_rect.exterior.coords))
+		coords = npy.array(list(rotated_rect.exterior.coords)[0:4])
 		bounding_height = int(npy.ceil(max(self.state.y+self.state.h,npy.max(coords[:,1]))))
 		bounding_width = int(npy.ceil(max(self.state.x+self.state.w,npy.max(coords[:,0]))))
 
-		bounding_rect = box(self.state.x,self.state.y,bounding_width,bounding_height)		
+		# bounding_rect = box(self.state.x,self.state.y,bounding_width,bounding_height)		
 
 		for x in range(int(self.state.x),bounding_width):
 			for y in range(int(self.state.y), bounding_height):
@@ -385,6 +393,8 @@ class hierarchical():
 
 			# If it is a region with a primitive.
 			# if self.parse_tree[j].label==1:
+
+			# NOW WE ARE COMPUTING REWARDS / PAINTING WITHIN PROCESS_PRIMITIVE_TERMINAL
 			if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
 				# self.terminal_reward_nostartgoal(image_index)
 				self.terminal_reward(image_index)
@@ -454,7 +464,8 @@ class hierarchical():
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
 
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
-	
+			
+			# self.painted_image = -npy.ones((self.image_size,self.image_size))
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -620,7 +631,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	train=False
 	# if sys.argv[3]:

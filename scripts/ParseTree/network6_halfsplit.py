@@ -85,11 +85,14 @@ class hierarchical():
 		# Layer 5
 		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
 		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
-		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
-		self.fc_input_shape = 10*10*self.conv5_num_filters
+
+		self.fc_input_shape = self.relu_conv5.shape[1]
+		# self.fc_input_shape = 10*10*self.conv5_num_filters
+		self.fc_input_shape = 5*5*self.conv5_num_filters
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
@@ -166,7 +169,6 @@ class hierarchical():
 		self.parse_tree[self.current_parsing_index]=self.state
 
 	def insert_node(self, state, index):
-	
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
@@ -180,10 +182,10 @@ class hierarchical():
 
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 3
+		self.minimum_width = 4
 		# print(rule_probabilities[0])
 		
-		epislon = 1e-8
+		epislon = 1e-5
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):
@@ -372,13 +374,16 @@ class hierarchical():
 			if self.parse_tree[j].label==0:
 				# If split rule.
 				# if self.parse_tree[j].rule_applied<=5:
-				if self.parse_tree[j].rule_applied<=1:
-					# split_weight = self.parse_tree[j].reward
-					rule_weight = self.parse_tree[j].reward
-					target_rule[self.parse_tree[j].rule_applied] = 1.
-				# If rule 2 or rule 3.
-				if self.parse_tree[j].rule_applied>=2:
-					rule_weight = self.parse_tree[j].reward
+				# if self.parse_tree[j].rule_applied<=1:
+				# 	# split_weight = self.parse_tree[j].reward
+				# 	rule_weight = self.parse_tree[j].reward
+				# 	target_rule[self.parse_tree[j].rule_applied] = 1.
+				# # If rule 2 or rule 3.
+				# if self.parse_tree[j].rule_applied>=2:
+				# 	rule_weight = self.parse_tree[j].reward
+
+				rule_weight = self.parse_tree[j].reward
+				target_rule[self.parse_tree[j].rule_applied] = 1.
 
 			# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				rule_loss, _ = self.sess.run([self.rule_loss, self.train], \
@@ -494,9 +499,6 @@ class hierarchical():
 
 				print("Constructing Parse Tree.")
 				self.construct_parse_tree(i)
-
-
-
 				
 				# WHEN THE PARSE IS COMPLETE, 
 				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
