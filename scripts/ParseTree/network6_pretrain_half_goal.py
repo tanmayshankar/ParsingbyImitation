@@ -38,6 +38,7 @@ class hierarchical():
 		self.true_labels = []
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
+		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -182,10 +183,10 @@ class hierarchical():
 		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
 
 		# Start goal loss - difference between current starting point and previous goal location - this must be in GLOBAL COORDINATES
-		self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal,self.sampled_start))),self.startgoal_return_weight)
+		# self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal,self.sampled_start))),self.startgoal_return_weight)
 
 		# The total loss is the sum of individual losses.
-		self.total_loss = self.rule_loss + self.goal_loss + self.startgoal_loss + self.start_loss
+		self.total_loss = self.rule_loss + self.goal_loss + self.start_loss #+ self.startgoal_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
@@ -208,7 +209,7 @@ class hierarchical():
 
 
 	def save_model(self, model_index):
-		save_path = self.saver.save(self.sess,'saved_models/model_{0}_pretrain_half_goal.ckpt'.format(model_index))
+		save_path = self.saver.save(self.sess,'saved_models/model_{0}_pretrain_half_goal_2.ckpt'.format(model_index))
 
 	# def load_model(self, model_file):
 	# 	self.saver.restore(self.sess, model_file)
@@ -232,7 +233,7 @@ class hierarchical():
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
 		self.minimum_width = 3
 		
-		epislon = 1e-5
+		epislon = 1e-3
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):
@@ -240,8 +241,11 @@ class hierarchical():
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][[1,3]]=0.
 
-		rule_probabilities/=rule_probabilities.sum()
+		rule_probabilities[0]/=rule_probabilities[0].sum()
 		# selected_rule = npy.argmax(rule_probabilities)
+		# if self.state.h<=self.minimum_width or self.state.w<=self.minimum_width:
+		# 	print("STATE:",self.state.h,self.state.w)
+		# 	print("Rule probabilities:",rule_probabilities)
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
@@ -329,6 +333,7 @@ class hierarchical():
 				for y in range(int(self.state.y), bounding_height):
 					if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
 						self.painted_image[x,y] = 1
+						self.painted_images[image_index,x,y] = 1
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 		self.current_parsing_index+=1
@@ -380,11 +385,12 @@ class hierarchical():
 			if self.parse_tree[j].label==1:
 				startgoal_weight = self.parse_tree[j].reward
 
-			rule_loss, start_loss, goal_loss, startgoal_loss, _ = self.sess.run([self.rule_loss,self.start_loss,self.goal_loss,self.startgoal_loss, self.train], \
+			rule_loss, start_loss, goal_loss,  _ = self.sess.run([self.rule_loss,self.start_loss,self.goal_loss, self.train], \
 				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
 							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
 
-			previous_goal = copy.deepcopy(self.parse_tree[j].goal)
+			if self.parse_tree[j].label==1:
+				previous_goal = copy.deepcopy(self.parse_tree[j].goal)
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -399,9 +405,9 @@ class hierarchical():
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
-			print("--------------")
-			self.state.disp()
-			print("--------------")
+			# print("--------------")
+			# self.state.disp()
+			# print("--------------")
 			boundary_width = 2
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
@@ -503,9 +509,11 @@ class hierarchical():
 					self.backprop(i)
 
 			if train:
-				npy.save("half_goals_{0}.npy".format(e),self.predicted_labels)
+				npy.save("half_goals_pretrain_{0}.npy".format(e),self.predicted_labels)
+				npy.save("half_goals_painted_images_{0}.npy".format(e),self.painted_images)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
+
 			self.predicted_labels = npy.zeros((20000,20,20))
 
 			self.save_model(e)
@@ -545,7 +553,7 @@ class hierarchical():
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="0,3")
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
@@ -556,7 +564,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 1
+	hierarchical_model.plot = 0
 	
 	load = True
 	if load:
