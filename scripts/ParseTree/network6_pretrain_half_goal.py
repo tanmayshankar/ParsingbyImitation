@@ -105,6 +105,20 @@ class hierarchical():
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
 		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
+		# 2nd FC layer: RULE Output:
+		self.number_primitives = 1
+		self.fcs1_output_shape = 1*self.number_primitives+5
+		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
+		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
+		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
+		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
+
+		# Creating a saver object to save models.
+		self.saver = tf.train.Saver(max_to_keep=None)
+
+		if model_file:
+			self.saver.restore(self.sess,model_file)
+
 		# Pulling goal and start streams from the conv features rather than Stream 1 FC features;
 		# Conv features will retain spatial information.
 		
@@ -120,39 +134,19 @@ class hierarchical():
 		self.b_fcs4_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs4_l1_shape]),name='b_fcs4_l1')
 		self.fcs4_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs4_l1),self.b_fcs4_l1),name='fcs4_l1')				
 
-		# 2nd FC layer: RULE Output:
-		self.number_primitives = 1
-		# Now we have shifted to the 4 rule version of this: 
-		# Horizontal split rule into two shapes
-		# Vertical split rule into two shapes
-		# Assignment rule to region with primitive.
-		# Assignment rule to region without primitive.
-
-		self.fcs1_output_shape = 1*self.number_primitives+5
-		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
-		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
-		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
-		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
-		
 		# Goal output.
 		self.W_goal = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_goal')
 		self.b_goal = tf.Variable(tf.constant(0.1,shape=[4]),name='b_goal')
 		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_goal)+self.b_goal
-		# self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[:2])
-		# self.goal_cov = tf.nn.relu(self.fcs3_preslice[2:])		
-
 		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
-		# self.goal_cov = tf.nn.relu(self.fcs3_preslice[0,2:])
 		# self.goal_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])
 		self.goal_cov = 0.2*npy.ones(2,dtype=npy.float32)
 
 		# Start output.
 		self.W_start = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_start')
 		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
-		
 		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_start)+self.b_start
 		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
-		# self.start_cov = tf.nn.relu(self.fcs3_preslice[0,2:])		
 		# self.start_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])		
 		self.start_cov = 0.2*npy.ones(2,dtype=npy.float32)
 
@@ -162,9 +156,6 @@ class hierarchical():
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
 		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_diag=self.start_cov)
 
-		# self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_identity_multiplier=0.00001)
-		# self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_identity_multiplier=0.00001)
-
 		self.sample_goal = self.goal_dist.sample()
 		self.sample_start = self.start_dist.sample()
 
@@ -172,12 +163,10 @@ class hierarchical():
 		self.sampled_start = tf.placeholder(tf.float32,shape=(2),name='sampled_start')
 		self.previous_goal = tf.placeholder(tf.float32,shape=(2),name='previous_goal')
 
-
 		# Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		# self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
 		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None),name='startgoal_return_weight')
-
 		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
@@ -203,11 +192,8 @@ class hierarchical():
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
-		# Creating a saver object to save models.
-		self.saver = tf.train.Saver(max_to_keep=None)
-
+			
 		if model_file:
-			self.saver.restore(self.sess,model_file)
 			init = tf.variable_initializer(self.new_stream_var_list)
 			self.sess.run(init)
 		else:
@@ -215,7 +201,7 @@ class hierarchical():
 			self.sess.run(init)
 
 	def save_model(self, model_index):
-		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+		save_path = self.saver.save(self.sess,'saved_models/model_{0}_pretrain_half_goal.ckpt'.format(model_index))
 
 	# def load_model(self, model_file):
 	# 	self.saver.restore(self.sess, model_file)
