@@ -150,7 +150,7 @@ class hierarchical():
 		# self.start_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])		
 		self.start_cov = 0.2*npy.ones(2,dtype=npy.float32)
 
-		self.new_stream_var_list = [self.W_fcs3_l1,self.b_fcs3_l1, self.W_fcs4_l1, self.b_fcs4_l1, self.W_goal, self.b_goal, self.W_start, self.b_goal]
+		self.new_stream_var_list = [self.W_fcs3_l1,self.b_fcs3_l1, self.W_fcs4_l1, self.b_fcs4_l1, self.W_goal, self.b_goal, self.W_start, self.b_start]
 
 		# Creating start and goal distributions.
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
@@ -193,12 +193,19 @@ class hierarchical():
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
 			
+		# if model_file:
+		# 	init = tf.variables_initializer(self.new_stream_var_list)
+		# 	self.sess.run(init)
+		# 	# self.sess.run( tf.initialize_variables( list( tf.get_variable(name) for name in self.sess.run( tf.report_uninitialized_variables(tf.all_variables()) ) ) ) )
+		# else:
+		# 	init = tf.global_variables_initializer()
+		# 	self.sess.run(init)
+
+		init = tf.global_variables_initializer()
+		self.sess.run(init)
 		if model_file:
-			init = tf.variable_initializer(self.new_stream_var_list)
-			self.sess.run(init)
-		else:
-			init = tf.global_variables_initializer()
-			self.sess.run(init)
+			self.saver.restore(self.sess,model_file)
+
 
 	def save_model(self, model_index):
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}_pretrain_half_goal.ckpt'.format(model_index))
