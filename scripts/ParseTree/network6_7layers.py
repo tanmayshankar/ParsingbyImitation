@@ -36,7 +36,7 @@ class hierarchical():
 		self.paintwidth=1
 		self.images = []
 		self.true_labels = []
-		self.image_size = 20
+		self.image_size = 100
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
@@ -49,13 +49,17 @@ class hierarchical():
 		self.conv1_size = 3	
 		self.conv1_num_filters = 20
 		self.conv2_size = 3	
-		self.conv2_num_filters = 20
+		self.conv2_num_filters = 30
 		self.conv3_size = 3	
-		self.conv3_num_filters = 20
+		self.conv3_num_filters = 30
 		self.conv4_size = 3	
-		self.conv4_num_filters = 20
+		self.conv4_num_filters = 40
 		self.conv5_size = 3	
-		self.conv5_num_filters = 20
+		self.conv5_num_filters = 50
+		self.conv6_size = 3	
+		self.conv6_num_filters = 50
+		self.conv7_size = 3	
+		self.conv7_num_filters = 50
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
@@ -92,12 +96,29 @@ class hierarchical():
 		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
+		# Layer 6
+		self.W_conv6 = tf.Variable(tf.truncated_normal([self.conv6_size,self.conv6_size,self.conv5_num_filters,self.conv6_num_filters],stddev=0.1),name='W_conv6')
+		self.b_conv6 = tf.Variable(tf.constant(0.1,shape=[self.conv6_num_filters]),name='b_conv6')
+		self.conv6 = tf.add(tf.nn.conv2d(self.relu_conv5,self.W_conv6,strides=[1,2,2,1],padding='VALID'),self.b_conv6,name='conv6')
+		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.relu_conv6 = tf.nn.relu(self.conv6)
+
+		# Layer 7
+		self.W_conv7 = tf.Variable(tf.truncated_normal([self.conv7_size,self.conv7_size,self.conv6_num_filters,self.conv7_num_filters],stddev=0.1),name='W_conv7')
+		self.b_conv7 = tf.Variable(tf.constant(0.1,shape=[self.conv7_num_filters]),name='b_conv7')
+		self.conv7 = tf.add(tf.nn.conv2d(self.relu_conv6,self.W_conv7,strides=[1,2,2,1],padding='VALID'),self.b_conv7,name='conv7')
+		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		self.relu_conv7 = tf.nn.relu(self.conv7)
+
 		# Now going to flatten this and move to a fully connected layer.s
 
-		self.fc_input_shape = self.relu_conv5.shape[1]
-		self.fc_input_shape = 10*10*self.conv5_num_filters
+		# self.fc_input_shape = self.relu_conv7.shape[1]
+		# self.fc_input_shape = self.relu_conv7.shape[1]*self.relu_conv7.shape[2]*self.conv7_num_filters
+		self.fc_input_shape = 4*4*self.conv7_num_filters
+
+		# self.fc_input_shape = 10*10*self.conv7_num_filters
 		# self.fc_input_shape = 5*5*self.conv5_num_filters
-		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
+		self.relu_conv5_flat = tf.reshape(self.relu_conv7,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
 		# Now not using the start and goal
@@ -231,7 +252,7 @@ class hierarchical():
 		split_location = -1
 
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 10
+		self.minimum_width = 5
 		
 		epislon = 1e-3
 		rule_probabilities += epislon
@@ -509,8 +530,8 @@ class hierarchical():
 					self.backprop(i)
 
 			if train:
-				npy.save("half_goals_pretrain_{0}.npy".format(e),self.predicted_labels)
-				npy.save("half_goals_painted_images_{0}.npy".format(e),self.painted_images)
+				npy.save("7layer_{0}.npy".format(e),self.predicted_labels)
+				npy.save("7layer_painted_images_{0}.npy".format(e),self.painted_images)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
@@ -566,7 +587,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = True
+	load = False
 	if load:
 		print("HI!")
 		model_file = str(sys.argv[3])
