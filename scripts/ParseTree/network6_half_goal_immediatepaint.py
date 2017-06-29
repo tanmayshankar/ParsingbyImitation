@@ -156,6 +156,8 @@ class hierarchical():
 		# self.start_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])		
 		self.start_cov = 0.2*npy.ones(2,dtype=npy.float32)
 
+		self.new_stream_var_list = [self.W_fcs3_l1,self.b_fcs3_l1, self.W_fcs4_l1, self.b_fcs4_l1, self.W_goal, self.b_goal, self.W_start, self.b_goal]
+
 		# Creating start and goal distributions.
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
 		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_diag=self.start_cov)
@@ -559,7 +561,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	train=False
 	if train:
