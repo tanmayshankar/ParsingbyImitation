@@ -442,7 +442,7 @@ class hierarchical():
 				self.sc3.set_data(self.alternate_painted_image)
 				self.sc4.set_data(self.images[image_index])
 				self.fig.canvas.draw()
-				plt.pause(0.001)
+				plt.pause(0.5)
 
 	def meta_training(self, train=True):
 
@@ -480,7 +480,7 @@ class hierarchical():
 			self.ax[3].set_adjustable('box-forced')
 			# plt.draw()
 			self.fig.canvas.draw()
-			plt.pause(0.001)
+			plt.pause(0.5)
 
 		# For all epochs
 		if not(train):
@@ -564,7 +564,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = True
 	if load:
