@@ -397,7 +397,7 @@ class hierarchical():
 				self.sc5.set_data(self.attention)
 				self.sc6.set_data(self.image_input)
 				self.fig.canvas.draw()
-				plt.pause(0.001)
+				plt.pause(0.5)
 
 		# for j in range(len(self.parse_tree)):
 		# 	self.parse_tree[j].disp()
