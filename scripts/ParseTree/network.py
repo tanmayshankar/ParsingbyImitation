@@ -336,6 +336,7 @@ class hierarchical():
 		self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
 
 		self.current_parsing_index+=1
+		
 	def propagate_rewards(self):
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
