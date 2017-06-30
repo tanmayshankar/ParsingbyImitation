@@ -130,7 +130,9 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		# self.split_mean = tf.nn.sigmoid(self.fcs2_preslice)
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
-		self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice[0,1]),0.2)
+		# self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice[0,1]),0.2)
+		# self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice))
+		self.split_cov = tf.nn.softplus(self.fcs2_preslice)
 		self.split_dist = tf.contrib.distributions.Normal(loc=0.5,scale=self.split_cov)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
@@ -153,10 +155,16 @@ class hierarchical():
 		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
-		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
+		# TRYING SPLIT LOSS WITH NEGATIVE SIGN 30/06
+		self.split_loss = tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 		# The total loss is the sum of individual losses.
 		self.total_loss = self.rule_loss + self.split_loss
 
+		# Creating summaries to log the losses.
+		self.rule_loss_summary = tf.summary.scalar('Rule_Loss',self.rule_loss)
+		self.split_loss_summary = tf.summary.scalar('Split_Loss',self.split_loss)
+		self.total_loss_summary = tf.summary.scalar('Total_Loss',self.total_loss)
+		self.merge_summaries = tf.summary.merge_all()
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
 
@@ -208,16 +216,16 @@ class hierarchical():
 		if selected_rule<=3:
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if ((selected_rule==0) or (selected_rule==2)):
-
+				counter = 0
 				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location, split_cov = self.sess.run([self.sample_split,self.split_cov], feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
 
 					if counter>25:
 						print("State: H",self.state.h)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.h))
-
+				print("Split: ",split_location,split_cov)
 				split_location = int(self.state.h*split_location)
 		
 				# Create splits.
@@ -225,15 +233,16 @@ class hierarchical():
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
 
 			if ((selected_rule==1) or (selected_rule==3)):
+				counter = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location, split_cov = self.sess.run([self.sample_split,self.split_cov], feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
 					if counter>25:
 						print("State: W",self.state.w)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.w))
-
+				print("Split: ",split_location,split_cov)
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
 
@@ -259,6 +268,8 @@ class hierarchical():
 				self.insert_node(s1,self.current_parsing_index+2)
 
 			self.current_parsing_index+=1
+
+			
 
 		elif selected_rule>=4:
  
@@ -327,7 +338,7 @@ class hierarchical():
 
 			self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
 
-	def backprop(self, image_index):
+	def backprop(self, image_index, epoch):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 
 		# NOW CHANGING TO 4 RULE SYSTEM.
@@ -354,28 +365,18 @@ class hierarchical():
 			target_rule = npy.zeros(self.fcs1_output_shape)
 
 			# MUST PARSE EVERY NODE
-			# If shape:
 			if self.parse_tree[j].label==0:
-				# If split rule.
-				# if self.parse_tree[j].rule_applied<=5:
-				# if self.parse_tree[j].rule_applied<=1:
-				# 	# split_weight = self.parse_tree[j].reward
-				# 	rule_weight = self.parse_tree[j].reward
-				# 	target_rule[self.parse_tree[j].rule_applied] = 1.
-				# # If rule 2 or rule 3.
-				# if self.parse_tree[j].rule_applied>=2:
-				# 	rule_weight = self.parse_tree[j].reward
-
 				rule_weight = self.parse_tree[j].reward
 				target_rule[self.parse_tree[j].rule_applied] = 1.
 				split_weight = self.parse_tree[j].reward
 
 			# Here ,we only backprop for shapes, since we only choose actions for shapese.
-				rule_loss, _ = self.sess.run([self.rule_loss, self.train], \
+				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 					self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split})
-
 			# print("LOSS VALUES:",rule_loss, split_loss)
+
+				self.writer.add_summary(merged_summaries, self.num_images*epoch+image_index)
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -475,7 +476,7 @@ class hierarchical():
 		# For all epochs
 		if not(train):
 			self.num_epochs=1
-
+	
 		for e in range(self.num_epochs):	
 			# For all images
 			for i in range(self.num_images):		
@@ -496,7 +497,7 @@ class hierarchical():
 				
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
 				if train:
-					self.backprop(i)
+					self.backprop(i,e)
 
 			if train:
 				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
@@ -555,7 +556,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0	
+	load = 0
 	if load:
 		print("HI!")
 		model_file = str(sys.argv[3])
@@ -569,6 +570,7 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
 
 
 
