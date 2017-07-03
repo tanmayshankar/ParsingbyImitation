@@ -128,12 +128,11 @@ class hierarchical():
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
 		
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
-		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice)
+		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,1])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
-		# self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice[0,1]),0.2)
-		# self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice))
-		self.split_cov = tf.nn.softplus(self.fcs2_preslice)
-		self.split_dist = tf.contrib.distributions.Normal(loc=0.5,scale=self.split_cov)
+		epislon = 0.0001
+		self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice[0,1]),epislon)
+		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
 		# We evaluate this to retrieve a sample goal / split location. 
@@ -158,25 +157,14 @@ class hierarchical():
 		# TRYING SPLIT LOSS WITH NEGATIVE SIGN 30/06
 		self.split_loss = tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight,name='split_loss')[0]
 		# The total loss is the sum of individual losses.
-		self.split_loss_weightage = 0.1
+		self.multitask_split_loss_weight = 0.1
 
-		self.total_loss = tf.add(self.rule_loss,self.split_loss_weightage*self.split_loss[0],name='total_loss')
+		self.total_loss = tf.add(self.rule_loss,self.multitask_split_loss_weight*self.split_loss[0],name='total_loss')
 
 		# Creating summaries to log the losses.
 		print(self.rule_loss,self.split_loss,self.total_loss)
 		print(self.rule_loss.op.name,self.split_loss.op.name,self.total_loss.op.name)
-		# self.rule_loss_summary = tf.summary.scalar(self.rule_loss.op.name,self.rule_loss)
-		# self.split_loss_summary = tf.summary.scalar(self.split_loss.op.name,self.split_loss)
-		# self.total_loss_summary = tf.summary.scalar(self.total_loss.op.name,self.total_loss)
-
-		# self.rule_loss_summary = tf.summary.scalar([self.rule_loss.op.name],self.rule_loss)
-		# self.split_loss_summary = tf.summary.scalar([self.split_loss.op.name],self.split_loss)
-		# self.total_loss_summary = tf.summary.scalar([self.total_loss.op.name],self.total_loss)
-
-		# self.rule_loss_summary = tf.summary.scalar(['Rule_Loss'],self.rule_loss)
-		# self.split_loss_summary = tf.summary.scalar(['Split_Loss'],self.split_loss)
-		# self.total_loss_summary = tf.summary.scalar(['Total_Loss'],self.total_loss)
-		
+	
 		self.rule_loss_summary = tf.summary.scalar('Rule_Loss',self.rule_loss[0])
 		self.split_loss_summary = tf.summary.scalar('Split_Loss',self.split_loss[0])
 		self.total_loss_summary = tf.summary.scalar('Total_Loss',self.total_loss[0])
