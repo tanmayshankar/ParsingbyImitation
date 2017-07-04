@@ -173,7 +173,8 @@ class hierarchical():
 
 		self.merge_summaries = tf.summary.merge_all()
 		# Creating a training operation to minimize the total loss.
-		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
+		# self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
+		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.rule_loss,name='Adam_Optimizer')
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
