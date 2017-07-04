@@ -135,7 +135,7 @@ class hierarchical():
 
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice)
 		# self.split_dist = tf.contrib.distributions.Normal(loc=0.5,scale=self.split_cov)
-		self.split_dist = tf.contrib.distributions.Normal(loc=0.5,scale=0.07)
+		self.split_dist = tf.contrib.distributions.Normal(loc=0.5,scale=0.01)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
 		# We evaluate this to retrieve a sample goal / split location. 
@@ -364,8 +364,8 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.image_input = self.images[image_index]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			# self.image_input = self.images[image_index]
 			# Pick up correct portion of image.
 			# self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 
@@ -391,7 +391,7 @@ class hierarchical():
 				# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 				# 	self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split})
 
-				# print("RUle:",rule_loss)
+				# print("RULE LOSS:",rule_loss)
 				# print("SPLIT:",split_loss)
 				# print("TOTA::",total_loss)
 
@@ -415,8 +415,8 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.image_input = self.images[image_index]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			# self.image_input = self.images[image_index]
 			
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
