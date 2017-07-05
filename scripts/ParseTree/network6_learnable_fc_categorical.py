@@ -102,6 +102,12 @@ class hierarchical():
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
 		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
+		# Adding split stream.
+		self.fcs2_l1_shape = 80
+		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
+		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
+		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
+
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
 		# Now we have shifted to the 4 rule version of this: 
@@ -111,26 +117,14 @@ class hierarchical():
 		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
 		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
-		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
-		
-		# CREATING GRADIENT STREAM: CATEGORICAL PROBABILITIES:
-		self.gradient_values = tf.placeholder(tf.float32,shape=(None,self.image_size),name='gradient_values')
+		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='rule_softmax')
 
-		# First hidden layer:
-		self.hidden_fc1 = 40		
-		self.W_fc1 = tf.Variable(tf.truncated_normal([self.image_size,self.hidden_fc1],stddev=0.1),name='W_fc1')
-		self.b_fc1 = tf.Variable(tf.constant(0.1,shape=[self.hidden_fc1]),name='b_fc1')
-		self.relu_fc1 = tf.nn.relu(tf.add(tf.matmul(self.gradient_values,self.W_fc1),self.b_fc1),name='gradient_fc1')
-
-		# Second hidden layer:
-		self.hidden_fc2 = 70
-		self.W_fc2 = tf.Variable(tf.truncated_normal([self.hidden_fc1,self.hidden_fc2],stddev=0.1),name='W_fc2')
-		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[self.hidden_fc2]),name='b_fc2')
-		self.relu_fc2 = tf.nn.relu(tf.add(tf.matmul(self.relu_fc1,self.W_fc2),self.b_fc2),name='gradient_fc2')
-
-		self.W_fc3 = tf.Variable(tf.truncated_normal([self.hidden_fc2,self.image_size],stddev=0.1),name='W_fc3')
-		self.b_fc3 = tf.Variable(tf.constant(0.1,shape=[self.image_size]),name='b_fc3')
-		self.categorical_probabilities = tf.nn.softmax(tf.add(tf.matmul(self.relu_fc2,self.W_fc3),self.b_fc3),name='gradient_fc3')		
+		# Adding second FC layer for sampling splits from a categorical distribution.
+		self.fcs2_output_shape = self.image_size
+		self.W_fcs2_l2 = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,self.fcs2_output_shape],stddev=0.1),name='W_fcs2_l2')
+		self.b_fcs2_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_output_shape]),name='b_fcs2_l2')
+		self.fcs2_presoftmax = tf.add(tf.matmul(self.fcs2_l1,self.W_fcs2_l2),self.b_fcs2_l2,name='fcs2_presoftmax')
+		self.categorical_probabilities = tf.nn.softmax(self.fcs2_presoftmax,name='split_softmax')
 
 		# Vector of probabilities along ONE dimension.
 		# self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
@@ -224,8 +218,8 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
-
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.gradient_values: self.y_gradients.reshape((1,20))})[0]
+					
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})			 
 					epsilon = 0.001
 					categorical_prob_softmax+=epsilon
 					categorical_prob_softmax[0] = 0.
@@ -254,8 +248,7 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
-
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.gradient_values: self.x_gradients.reshape((1,20))})[0]
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})			 
 					epsilon = 0.001
 					categorical_prob_softmax+=epsilon
 					categorical_prob_softmax[0] = 0.
