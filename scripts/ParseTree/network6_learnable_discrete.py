@@ -109,15 +109,17 @@ class hierarchical():
 		self.fcs1_output_shape = 1*self.number_primitives+5
 		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
 		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
+		print(self.fcs1_l1,"FCS_L1")
+		print(self.W_fcs1_l2,"W_FCS1_L2")
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
 		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
 		
-
 		# CREATING GRADIENT STREAM: CATEGORICAL PROBABILITIES:
 		self.gradient_values = tf.placeholder(tf.float32,shape=(None,self.image_size),name='gradient_values')
 
 		# First hidden layer:
 		self.hidden_fc1 = 40
+		print(self.gradient_values,"GRADIENT")
 		self.W_fc1 = tf.Variable(tf.truncated_normal([self.image_size,self.hidden_fc1],stddev=0.1),name='W_fc1')
 		self.b_fc1 = tf.Variable(tf.constant(0.1,shape=[self.hidden_fc1]),name='b_fc1')
 		self.relu_fc1 = tf.nn.relu(tf.add(tf.multiply(self.gradient_values,self.W_fc1),self.b_fc1),name='gradient_fc1')
