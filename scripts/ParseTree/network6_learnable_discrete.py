@@ -219,15 +219,15 @@ class hierarchical():
 				counter = 0
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
-				while (split_location<=0)or(split_location>=self.state.w):				
+				while (split_location<=0)or(split_location>=self.state.h):				
+					# print(split_location,self.state.h)
 					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.gradient_values: self.y_gradients.reshape((1,20))})[0]
 					categorical_prob_softmax[[0,-1]]=0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
-
 					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
 					split_location = int(float(self.state.h*split_location)/20)				
-					# print(split_location,self.state.h,int(float(self.state.h*split_location)/20))
-
+					counter +=1
+					
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
@@ -237,13 +237,15 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
+					# print(split_location,self.state.w)
 					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.gradient_values: self.x_gradients.reshape((1,20))})[0]
 					categorical_prob_softmax[[0,-1]]=0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
 					split_location = int(float(self.state.w*split_location)/20)
-					# print(split_location,self.state.w,int(float(self.state.w*split_location)/20))
+					counter +=1
 
+				
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
