@@ -3,7 +3,8 @@ from headers import *
 
 # Define a class for the parse tree / rule / etc? 
 class parse_tree_node():
-	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
+	# def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
+	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=0, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
 		self.label = label
 		self.x = x
 		self.y = y
@@ -358,7 +359,7 @@ class hierarchical():
 				target_rule[self.parse_tree[j].rule_applied] = 1.
 				if self.parse_tree[j].rule_applied<=3:
 					split_weight = self.parse_tree[j].reward
-
+				print("BACKPROP:",self.parse_tree[j].rule_applied,split_weight)
 				# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
