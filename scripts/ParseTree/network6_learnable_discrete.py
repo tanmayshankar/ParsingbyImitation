@@ -225,7 +225,7 @@ class hierarchical():
 
 					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
 					split_location = int(float(self.state.h*split_location)/20)				
-					print(split_location,self.state.h,int(float(self.state.h*split_location)/20))
+					# print(split_location,self.state.h,int(float(self.state.h*split_location)/20))
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -241,7 +241,7 @@ class hierarchical():
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
 					split_location = int(float(self.state.w*split_location)/20)
-					print(split_location,self.state.w,int(float(self.state.w*split_location)/20))
+					# print(split_location,self.state.w,int(float(self.state.w*split_location)/20))
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -356,7 +356,8 @@ class hierarchical():
 			if self.parse_tree[j].label==0:
 				rule_weight = self.parse_tree[j].reward
 				target_rule[self.parse_tree[j].rule_applied] = 1.
-				split_weight = self.parse_tree[j].reward
+				if self.parse_tree[j].rule_applied<=3:
+					split_weight = self.parse_tree[j].reward
 
 				# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
