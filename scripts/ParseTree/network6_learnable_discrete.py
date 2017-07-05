@@ -359,7 +359,6 @@ class hierarchical():
 				target_rule[self.parse_tree[j].rule_applied] = 1.
 				if self.parse_tree[j].rule_applied<=3:
 					split_weight = self.parse_tree[j].reward
-				print("BACKPROP:",self.parse_tree[j].rule_applied,split_weight)
 				# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
