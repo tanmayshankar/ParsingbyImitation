@@ -123,10 +123,14 @@ class hierarchical():
 		self.relu_fc1 = tf.nn.relu(tf.add(tf.matmul(self.gradient_values,self.W_fc1),self.b_fc1),name='gradient_fc1')
 
 		# Second hidden layer:
-		self.W_fc2 = tf.Variable(tf.truncated_normal([self.hidden_fc1,self.image_size],stddev=0.1),name='W_fc2')
-		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[self.image_size]),name='b_fc2')
-		# self.categorical_probabilities = tf.nn.relu(tf.add(tf.matmul(self.relu_fc1,self.W_fc2),self.b_fc2),name='gradient_fc2')
-		self.categorical_probabilities = tf.nn.softmax(tf.add(tf.matmul(self.relu_fc1,self.W_fc2),self.b_fc2),name='gradient_fc2')
+		self.hidden_fc2 = 70
+		self.W_fc2 = tf.Variable(tf.truncated_normal([self.hidden_fc1,self.hidden_fc2],stddev=0.1),name='W_fc2')
+		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[self.hidden_fc2]),name='b_fc2')
+		self.relu_fc2 = tf.nn.relu(tf.add(tf.matmul(self.relu_fc1,self.W_fc2),self.b_fc2),name='gradient_fc2')
+
+		self.W_fc3 = tf.Variable(tf.truncated_normal([self.hidden_fc2,self.image_size],stddev=0.1),name='W_fc3')
+		self.b_fc3 = tf.Variable(tf.constant(0.1,shape=[self.image_size]),name='b_fc3')
+		self.categorical_probabilities = tf.nn.softmax(tf.add(tf.matmul(self.relu_fc2,self.W_fc3),self.b_fc3),name='gradient_fc3')		
 
 		# Vector of probabilities along ONE dimension.
 		# self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
