@@ -112,8 +112,23 @@ class hierarchical():
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
 		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
 		
+
+		# CREATING GRADIENT STREAM: CATEGORICAL PROBABILITIES:
+		self.gradient_values = tf.placeholder(tf.float32,shape=(None,self.image_size),name='gradient_values')
+
+		# First hidden layer:
+		self.hidden_fc1 = 40
+		self.W_fc1 = tf.Variable(tf.truncated_normal([self.image_size,self.hidden_fc1],stddev=0.1),name='W_fc1')
+		self.b_fc1 = tf.Variable(tf.constant(0.1,shape=[self.hidden_fc1]),name='b_fc1')
+		self.relu_fc1 = tf.nn.relu(tf.add(tf.multiply(self.gradient_values,self.W_fc1),self.b_fc1),name='gradient_fc1')
+
+		# Second hidden layer:
+		self.W_fc2 = tf.Variable(tf.truncated_normal([self.hidden_fc1,self.image_size],stddev=0.1),name='W_fc2')
+		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[self.image_size]),name='b_fc2')
+		self.categorical_probabilities = tf.nn.relu(tf.add(tf.multiply(self.relu_fc1,self.W_fc2),self.b_fc2),name='gradient_fc2')
+
 		# Vector of probabilities along ONE dimension.
-		self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
+		# self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
 		self.split_dist = tf.contrib.distributions.Categorical(probs=self.categorical_probabilities)
 		
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
