@@ -13,7 +13,7 @@ class parse_tree_node():
 		self.rule_applied = rule_applied
 		self.split = split
 		self.reward = 0.
-		self.categorical_probabilities = npy.ones((1,20))/20
+		self.gradient_values = npy.ones((1,20))/20
 
 	def disp(self):
 		print("Label:", self.label)
@@ -251,7 +251,7 @@ class hierarchical():
 			# Update current parse tree with split location and rule applied.
 			self.parse_tree[self.current_parsing_index].split=split_location
 			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
-			self.parse_tree[self.current_parsing_index].categorical_probabilities[0] = categorical_prob_softmax
+			self.parse_tree[self.current_parsing_index].gradient_values[0] = categorical_prob_softmax
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 			self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
@@ -363,7 +363,7 @@ class hierarchical():
 				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 					self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split, \
-					self.categorical_probabilities: self.parse_tree[j].categorical_probabilities})
+					self.gradient_values: self.parse_tree[j].gradient_values})
 
 			# print("LOSS VALUES:",rule_loss, split_loss)
 				# rule_loss, split_loss, total_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.total_loss, self.train], \
