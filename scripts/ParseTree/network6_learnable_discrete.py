@@ -232,7 +232,6 @@ class hierarchical():
 					categorical_prob_softmax[-1] = 0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
-					split_location = int(float(self.state.h*split_location)/20)				
 					counter +=1
 					if counter>=25:
 						print("PREINT:",split_location,self.state.h)
