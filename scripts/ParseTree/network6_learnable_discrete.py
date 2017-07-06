@@ -225,7 +225,7 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
 
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.gradient_values: self.y_gradients.reshape((1,20))})[0]
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.gradient_values: self.y_gradients.reshape((1,20))})[0]								
 					epsilon = 0.001
 					categorical_prob_softmax+=epsilon
 					categorical_prob_softmax[0] = 0.
