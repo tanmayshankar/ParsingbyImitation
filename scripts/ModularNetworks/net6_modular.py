@@ -74,7 +74,7 @@ class hierarchical():
 		# Defining Rule FC layers.
 		self.rule_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[0]),self.b_rule_fc[0]),name='rule_fc0')
 		self.rule_fc[1] = tf.add(tf.matmul(self.rule_fc[0],self.W_rule_fc[0]),self.b_rule_fc[0],name='rule_fc1')
-		# self.rule_probabilities = tf.nn.softmax(self.rule_fc[1],name='rule_probabilities')
+		self.rule_probabilities = tf.nn.softmax(self.rule_fc[1],name='rule_probabilities')
 
 		########## SPLIT FC LAYERS ##########
 
@@ -180,11 +180,12 @@ class hierarchical():
 			rule_probabilities[0][[1,3]]=0.
 
 		rule_probabilities[0]/=rule_probabilities[0].sum()
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+		selected_rule = npy.random.choice(range(self.fc_rule_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
 		# If it is a split rule:
 		if selected_rule<=3:
+			
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if ((selected_rule==0) or (selected_rule==2)):
 				counter = 0
@@ -192,7 +193,7 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
 					
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]
+					categorical_prob_softmax = self.sess.run(self.split_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]
 					# print(categorical_prob_softmax)
 					# epsilon = 0.00001
 					# categorical_prob_softmax+=epsilon
@@ -221,7 +222,7 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]					
+					categorical_prob_softmax = self.sess.run(self.split_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]					
 					# print(categorical_prob_softmax)
 					# epsilon = 0.00001
 					# categorical_prob_softmax+=epsilon
@@ -324,7 +325,7 @@ class hierarchical():
 		# Stochastic gradient descent; variable parse tree length means stochastically is better than batch. 
 
 		# NOW CHANGING TO 4 RULE SYSTEM.
-		target_rule = npy.zeros(self.fcs1_output_shape)
+		target_rule = npy.zeros(self.fc_rule_output_shape)
 
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
@@ -342,10 +343,11 @@ class hierarchical():
 			self.x_gradients = abs(self.x_gradients).sum(axis=1)
 			self.y_gradients = abs(self.y_gradients).sum(axis=0)
 
+			# Setting weights for different losses and modules.
 			rule_weight = 0
 			split_weight = 0
-			target_rule = npy.zeros(self.fcs1_output_shape)
-			split_module_weights = npy.zeros((4))
+			target_rule = npy.zeros(self.fc_rule_output_shape)
+			split_module_weights = npy.zeros((self.num_split_modules))
 
 			# MUST PARSE EVERY NODE
 			if self.parse_tree[j].label==0:
@@ -357,20 +359,10 @@ class hierarchical():
 					split_weight = self.parse_tree[j].reward
 					split_module_weights[self.parse_tree[j].rule_applied] = 1.
 
-				# Here ,we only backprop for shapes, since we only choose actions for shapese.
-				# merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
-				# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
-				# 	self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split})
-
 				merged_summaries, _ = self.sess.run([self.merge_summaries,self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 					self.target_rule: target_rule, self.split_return_weight: split_weight, \
 					self.split_module_weights: split_module_weights, self.sampled_split: self.parse_tree[j].split })															
-
-			# print("LOSS VALUES:",rule_loss, split_loss)
-				# rule_loss, split_loss, total_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.total_loss, self.train], \
-				# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
-				# 	self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split})
 
 				self.writer.add_summary(merged_summaries, self.num_images*epoch+image_index)
 
