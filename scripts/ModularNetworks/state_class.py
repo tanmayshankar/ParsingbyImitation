@@ -14,7 +14,7 @@ class parse_tree_node():
 		self.rule_applied = rule_applied
 		self.split = split
 		self.reward = 0.
-		# self.gradient_values = npy.ones((1,20))/20
+		self.split_prior = npy.ones((1,20))/20
 
 	def disp(self):
 		print("Label:", self.label)

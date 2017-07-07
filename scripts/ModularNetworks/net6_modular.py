@@ -23,8 +23,9 @@ class hierarchical():
 		# Number of layers. 
 		self.num_layers = 5
 		self.num_fc_layers = 2
-		self.conv_sizes = 3*npy.ones((self.num_layers))
-		self.conv_num_filters = 20*npy.ones((self.num_layers))
+		self.conv_sizes = 3*npy.ones((self.num_layers),dtype=int)
+		# self.conv_num_filters = 20*npy.ones((self.num_layers),dtype=int)
+		self.conv_num_filters = npy.array([1,20,20,20,20,20],dtype=int)
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
@@ -38,13 +39,12 @@ class hierarchical():
 
 		# Defining variables. 
 		for i in range(self.num_layers):
-			self.W_conv[i] = tf.Variable(tf.truncated_normal([self.conv_sizes[i],self.conv_sizes[i], 1, self.conv_num_filters[i]],stddev=0.1),name='W_conv{0}'.format(i+1))
+			self.W_conv[i] = tf.Variable(tf.truncated_normal([self.conv_sizes[i],self.conv_sizes[i], self.conv_num_filters[i], self.conv_num_filters[i+1]],stddev=0.1),name='W_conv{0}'.format(i+1))
 			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
 
 		# Defining first conv layer.
 		self.conv[0] = tf.add(tf.nn.conv2d(self.input,self.W_conv[0],strides=[1,1,1,1],padding='VALID'),self.b_conv[0],name='conv1')
 		self.relu_conv[0] = tf.nn.relu(self.conv[0])
-
 		# Defining subsequent conv layers.
 		for i in range(1,self.num_layers):
 			self.conv[i] = tf.add(tf.nn.conv2d(self.conv[i-1],self.W_conv[i],strides=[1,1,1,1],padding='VALID'),self.b_conv[i],name='conv{0}'.format(i+1))
@@ -53,18 +53,18 @@ class hierarchical():
 		########## RULE FC LAYERS ##########
 
 		# Defining FC layer variables.
-		self.W_rule_fc = [[] for i in range(self.num_rule_fc_layers)]
-		self.b_rule_fc = [[] for i in range(self.num_rule_fc_layers)]
+		self.W_rule_fc = [[] for i in range(self.num_fc_layers)]
+		self.b_rule_fc = [[] for i in range(self.num_fc_layers)]
 		# Defining rule_fc layers.
-		self.rule_fc = [[] for i in range(self.num_rule_fc_layers)]
+		self.rule_fc = [[] for i in range(self.num_fc_layers)]
 
 		self.number_primitives = 1
-		self.fc_input_shape = 10*10*self.conv_num_filters[0]
+		self.fc_input_shape = 10*10*self.conv_num_filters[-1]		
 		self.fc_rule_output_shape = 1*self.number_primitives+5
 		self.fc_rule_shapes = npy.array([self.fc_input_shape, 120, self.fc_rule_output_shape])
 
 		# Defining Rule FC variables.
-		for i in range(self.num_rule_fc_layers):
+		for i in range(self.num_fc_layers):
 			self.W_rule_fc[i] = tf.Variable(tf.truncated_normal([self.fc_rule_shapes[i],self.fc_rule_shapes[i+1]],stddev=0.1),name='W_rule_fc{0}'.format(i+1))
 			self.b_rule_fc[i] = tf.Variable(tf.constant(0.1,shape=[self.fc_rule_shapes[i+1]]),name='b_rule_fc{0}'.format(i+1))
 
@@ -73,7 +73,7 @@ class hierarchical():
 		
 		# Defining Rule FC layers.
 		self.rule_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[0]),self.b_rule_fc[0]),name='rule_fc0')
-		self.rule_fc[1] = tf.add(tf.matmul(self.rule_fc[0],self.W_rule_fc[0]),self.b_rule_fc[0],name='rule_fc1')
+		self.rule_fc[1] = tf.add(tf.matmul(self.rule_fc[0],self.W_rule_fc[1]),self.b_rule_fc[1],name='rule_fc1')
 		self.rule_probabilities = tf.nn.softmax(self.rule_fc[1],name='rule_probabilities')
 
 		########## SPLIT FC LAYERS ##########
@@ -89,21 +89,20 @@ class hierarchical():
 		self.categorical_probabilities = [[] for i in range(self.num_split_modules)]
 
 		self.image_size = 20
-		self.fc_split_shapes = npy.array([self.fc_input_shape,80,self.image_size])
+		self.fc_split_shapes = npy.array([self.fc_input_shape,80,self.image_size],dtype=int)
 
 		# Defining FC variables.
 		for j in range(self.num_split_modules):
 			for i in range(self.num_split_fc_layers):
 				self.W_split_fc[j][i] = tf.Variable(tf.truncated_normal([self.fc_split_shapes[i],self.fc_split_shapes[i+1]],stddev=0.1),name='W_split{0}_fc{1}'.format(j,i+1))
 				self.b_split_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.fc_split_shapes[i+1]]),name='b_split{0}_fc{1}'.format(j,i+1))
-
 		# Defining split FC layers.
 		for j in range(self.num_split_modules):
-			self.split_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_split_fc[j][0]),self.b_rule_fc[j][0]),name='split{0}_fc0'.format(j))
-			self.split_fc[j][1] = tf.add(tf.matmul(self.fc_input,self.W_split_fc[j][1]),self.b_rule_fc[j][1],name='split{0}_fc1'.format(j))
+			self.split_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_split_fc[j][0]),self.b_split_fc[j][0]),name='split{0}_fc0'.format(j))
+			self.split_fc[j][1] = tf.add(tf.matmul(self.split_fc[j][0],self.W_split_fc[j][1]),self.b_split_fc[j][1],name='split{0}_fc1'.format(j))
 			self.categorical_probabilities[j] = tf.nn.softmax(self.split_fc[j][1],name='categorical_probabilities{0}'.format(j))
 
-		self.split_module_weights = tf.placeholder(tf.float32,shape(None,4),name='split_module_weights')
+		self.split_module_weights = tf.placeholder(tf.float32,shape=(None,4),name='split_module_weights')
 		self.split_likelihood =  self.categorical_probabilities[0]*self.split_module_weights[0,0] + \
 									self.categorical_probabilities[1]*self.split_module_weights[0,1] + \
 									self.categorical_probabilities[2]*self.split_module_weights[0,2] + \
@@ -114,7 +113,7 @@ class hierarchical():
 		self.split_probabilities = tf.nn.softmax(tf.add(self.prior_weight*self.split_prior, self.split_likelihood),name='split_probabilities')
 
 		# DEFINING A SPLIT DISTRIBUTION:
-		self.split_dist = tf.contrib.distribution.Categorical(probs=self.split_probabilities, allow_nan_stats=False)
+		self.split_dist = tf.contrib.distributions.Categorical(probs=self.split_probabilities, allow_nan_stats=False)
 		self.sample_split = self.split_dist.sample()
 		self.sampled_split = tf.placeholder(tf.int32,shape=(None),name='sampled_split')
 
@@ -126,7 +125,7 @@ class hierarchical():
 		self.target_rule = tf.placeholder(tf.float32,shape=(self.fc_rule_output_shape),name='target_rule')
 
 		# Defining loss values; the neat thing is by stacking categorical probabilities, you can simply take log probability.
-		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rule_fc[1]),name='rule_loss')
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rule_fc[1]),self.rule_return_weight,name='rule_loss')
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight,name='split_loss')
 		self.split_loss_weightage = 0.1
 		self.total_loss = tf.add(self.rule_loss, self.split_loss_weightage*self.split_loss,name='total_loss')
@@ -196,16 +195,20 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
 					
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+					split_module_weights = npy.zeros((1,4))
+					split_module_weights[0,selected_rule] = 1.
+
+					categorical_prob_softmax = self.sess.run(self.split_probabilities, 
 						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.split_prior: self.y_gradients.reshape((1,20))})[0]
+									self.split_prior: self.y_gradients.reshape((1,20)), \
+									self.split_module_weights: split_module_weights})[0]
 
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[-1] = 0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
-
+					# print(categorical_prob_softmax)
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
 
 					counter +=1
@@ -226,15 +229,21 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+
+					split_module_weights = npy.zeros((1,4))
+					split_module_weights[0,selected_rule] = 1.
+
+					categorical_prob_softmax = self.sess.run(self.split_probabilities, 
 						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.split_prior: self.y_gradients.reshape((1,20))})[0]			
-					
+									self.split_prior: self.y_gradients.reshape((1,20)), \
+									self.split_module_weights: split_module_weights})[0]
+
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[-1] = 0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
+					# print(categorical_prob_softmax)
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
 
 					counter +=1
@@ -365,7 +374,8 @@ class hierarchical():
 				merged_summaries, _ = self.sess.run([self.merge_summaries,self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 					self.target_rule: target_rule, self.split_return_weight: split_weight, \
-					self.split_module_weights: split_module_weights, self.sampled_split: self.parse_tree[j].split })															
+					self.split_module_weights: split_module_weights.reshape((1,4)), self.sampled_split: self.parse_tree[j].split, \
+					self.split_prior: self.parse_tree[j].split_prior})															
 
 				self.writer.add_summary(merged_summaries, self.num_images*epoch+image_index)
 
@@ -532,7 +542,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 0
 	if load:
