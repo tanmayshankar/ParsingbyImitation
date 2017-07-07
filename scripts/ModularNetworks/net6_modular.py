@@ -104,10 +104,14 @@ class hierarchical():
 			self.categorical_probabilities[j] = tf.nn.softmax(self.split_fc[j][1],name='categorical_probabilities{0}'.format(j))
 
 		self.split_module_weights = tf.placeholder(tf.float32,shape(None,4),name='split_module_weights')
-		self.split_probabilities =  self.categorical_probabilities[0]*self.split_module_weights[0,0] + \
+		self.split_likelihood =  self.categorical_probabilities[0]*self.split_module_weights[0,0] + \
 									self.categorical_probabilities[1]*self.split_module_weights[0,1] + \
 									self.categorical_probabilities[2]*self.split_module_weights[0,2] + \
 									self.categorical_probabilities[3]*self.split_module_weights[0,3]
+
+		self.split_prior = tf.placeholder(tf.float32,shape=(None,self.image_size),name='split_prior')
+		self.prior_weight = 1.
+		self.split_probabilities = tf.nn.softmax(tf.add(self.prior_weight*self.split_prior, self.split_likelihood),name='split_probabilities')
 
 		# DEFINING A SPLIT DISTRIBUTION:
 		self.split_dist = tf.contrib.distribution.Categorical(probs=self.split_probabilities, allow_nan_stats=False)
@@ -185,7 +189,6 @@ class hierarchical():
 
 		# If it is a split rule:
 		if selected_rule<=3:
-			
 			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
 			if ((selected_rule==0) or (selected_rule==2)):
 				counter = 0
@@ -193,26 +196,27 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
 					
-					categorical_prob_softmax = self.sess.run(self.split_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]
-					# print(categorical_prob_softmax)
-					# epsilon = 0.00001
-					# categorical_prob_softmax+=epsilon
-					# categorical_prob_softmax[0] = 0.
-					# categorical_prob_softmax[-1] = 0.
-					# categorical_prob_softmax /= categorical_prob_softmax.sum()
-					# print(categorical_prob_softmax)
-					split_location = npy.random.choice(range(1,self.image_size-1),p=categorical_prob_softmax)
-					# split_location = int(float(self.state.h*split_location)/20)				
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
+									self.split_prior: self.y_gradients.reshape((1,20))})[0]
+
+					epsilon = 0.00001
+					categorical_prob_softmax+=epsilon
+					categorical_prob_softmax[0] = 0.
+					categorical_prob_softmax[-1] = 0.
+					categorical_prob_softmax /= categorical_prob_softmax.sum()
+
+					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
+
 					counter +=1
-					# if counter>=25:
-					print("PREINT:",split_location,self.state.h)
+					# print("PREINT:",split_location,self.state.h)
 					if split_location>=10:
 						split_location = int(npy.floor(float(self.state.h*split_location)/20))
 					else:
 						split_location = int(npy.ceil(float(self.state.h*split_location)/20))		
-					# if counter>=25:
-					print("POSTINT:",split_location,self.state.h)
-					# print("ANYWAY:",split_location)
+
+					# print("POSTINT:",split_location,self.state.h)
+
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
@@ -222,35 +226,34 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
-					categorical_prob_softmax = self.sess.run(self.split_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]					
-					# print(categorical_prob_softmax)
-					# epsilon = 0.00001
-					# categorical_prob_softmax+=epsilon
-					# categorical_prob_softmax[0] = 0.
-					# categorical_prob_softmax[-1] = 0.
-					# categorical_prob_softmax /= categorical_prob_softmax.sum()
-					print(categorical_prob_softmax)
-					split_location = npy.random.choice(range(1,self.image_size-1),p=categorical_prob_softmax)				
-					counter +=1
-					# if counter>=25:
-					print("PREINT:",split_location,self.state.w)
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
+									self.split_prior: self.y_gradients.reshape((1,20))})[0]			
+					
+					epsilon = 0.00001
+					categorical_prob_softmax+=epsilon
+					categorical_prob_softmax[0] = 0.
+					categorical_prob_softmax[-1] = 0.
+					categorical_prob_softmax /= categorical_prob_softmax.sum()
+					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
 
+					counter +=1
+					# print("PREINT:",split_location,self.state.w)
 					if split_location>=10:
 						split_location = int(npy.floor(float(self.state.w*split_location)/20))
 					else:
 						split_location = int(npy.ceil(float(self.state.w*split_location)/20))
 
-					# if counter>=25:
-					print("POSTINT:",split_location,self.state.w)
-					# print("ANYWAY:",split_location)
-				
+					# print("POSTINT:",split_location,self.state.w)
+			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
-				
+		
 			# Update current parse tree with split location and rule applied.
 			self.parse_tree[self.current_parsing_index].split=split_location
 			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
+			self.parse_tree[self.current_parsing_index].split_prior[0] = categorical_prob_softmax
 			# self.parse_tree[self.current_parsing_index].gradient_values[0] = categorical_prob_softmax
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
