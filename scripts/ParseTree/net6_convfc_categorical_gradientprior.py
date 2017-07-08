@@ -239,7 +239,6 @@ class hierarchical():
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[-1] = 0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
-
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
 
 					counter +=1
@@ -514,8 +513,7 @@ class hierarchical():
 			for i in range(self.num_images):		
 				
 				print("#________________________________________________________________#")
-				print("Epoch:",e,"Training Image:",i)
-				print("#________________________________________________________________#")
+				print("Epoch:",e,"Training Image:",i)				
 
 				# Intialize the parse tree for this image.=
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
@@ -523,8 +521,10 @@ class hierarchical():
 				self.construct_parse_tree(i)	
 				self.compute_rewards(i)
 				self.propagate_rewards()
+				
 				print("Parsing Image:",i)
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
+
 				if train:
 					self.backprop(i,e)
 			if train:

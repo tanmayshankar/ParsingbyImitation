@@ -235,7 +235,7 @@ class hierarchical():
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.h))
 				# print("Split: ",split_location,split_cov)
-				print("Split: ",split_location)
+				# print("Split: ",split_location)
 				split_location = int(self.state.h*split_location)
 		
 				# Create splits.
@@ -254,7 +254,7 @@ class hierarchical():
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.w))
 				# print("Split: ",split_location,split_cov)
-				print("Split: ",split_location)
+				# print("Split: ",split_location)
 				# Scale split location.
 				split_location = int(self.state.w*split_location)
 

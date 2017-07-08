@@ -144,13 +144,14 @@ class hierarchical():
 			self.sess.run(init)
 
 	def save_model(self, model_index):
-		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+		save_path = self.saver.save(self.sess,'saved_models/model_{0}_highgamma.ckpt'.format(model_index))
 
 	# def load_model(self, model_file):
 	# 	self.saver.restore(self.sess, model_file)
 	# 	self.is_restored = True
 
 	def initialize_tree(self):
+		self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
@@ -176,7 +177,7 @@ class hierarchical():
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][[1,3]]=0.
 
-		rule_probabilities/=rule_probabilities.sum()
+		rule_probabilities[0]/=rule_probabilities[0].sum()
 		# selected_rule = npy.argmax(rule_probabilities)
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
@@ -240,7 +241,7 @@ class hierarchical():
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
 		# This is actually the return accumulated by any particular decision.
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
-		self.gamma = 0.98
+		self.gamma = 1.00
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
@@ -297,8 +298,8 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.image_input = self.images[image_index]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			# self.image_input = self.images[image_index]
 			# Pick up correct portion of image.
 			# self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
 
@@ -351,8 +352,8 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.image_input = self.images[image_index]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			# self.image_input = self.images[image_index]
 			
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
@@ -431,35 +432,65 @@ class hierarchical():
 		if not(train):
 			self.num_epochs=1
 
+		# for e in range(self.num_epochs):	
+		# 	# For all images
+		# 	for i in range(self.num_images):		
+				
+		# 		print("#________________________________________________________________#")
+		# 		print("Epoch:",e,"Training Image:",i)
+		# 		print("#________________________________________________________________#")
+
+		# 		# Intialize the parse tree for this image.=
+
+		# 		self.initialize_tree()
+
+		# 		self.construct_parse_tree(i)	
+		# 		#compute rewards for the chosen actions., then propagate them through the tree.
+		# 		self.compute_rewards(i)
+		# 		self.propagate_rewards()
+		# 		print("Parsing Image:",i)
+				
+		# 		print("TOTAL REWARD:",self.parse_tree[0].reward)
+		# 		if train:
+		# 			self.backprop(i)
+
+		# 	if train:
+		# 		npy.save("half_highgamma_{0}.npy".format(e),self.predicted_labels)
+		# 	else:
+		# 		npy.save("validation.npy".format(e),self.predicted_labels)
+		# 	self.predicted_labels = npy.zeros((20000,20,20))
+
+		# 	self.save_model(e)
+
 		for e in range(self.num_epochs):	
-			# For all images
+
+			image_list = range(self.num_images)
+			npy.random.shuffle(image_list)
+
 			for i in range(self.num_images):		
 				
-				print("#________________________________________________________________#")
-				print("Epoch:",e,"Training Image:",i)
-				print("#________________________________________________________________#")
-
-				# Intialize the parse tree for this image.=
-				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
+				print("_________________________________________________________________")
+				print("Epoch:",e,"Training Image:",i)	
 				self.initialize_tree()
-
-				self.construct_parse_tree(i)	
-				#compute rewards for the chosen actions., then propagate them through the tree.
-				self.compute_rewards(i)
+				# self.construct_parse_tree(i)	
+				self.construct_parse_tree(image_list[i])
+				# self.compute_rewards(i)
+				self.compute_rewards(image_list[i])
 				self.propagate_rewards()
-				print("Parsing Image:",i)
-				
-				print("TOTAL REWARD:",self.parse_tree[0].reward)
+				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
+
 				if train:
-					self.backprop(i)
+					# self.backprop(i,e)
+					self.backprop(image_list[i])
 
 			if train:
-				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+				npy.save("parse_{0}.npy".format(e),self.predicted_labels)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
+			
 			self.predicted_labels = npy.zeros((20000,20,20))
-
 			self.save_model(e)
+
 
 	############################
 	# Pixel labels: 
@@ -510,7 +541,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0	
+	load = 0
 	if load:
 		print("HI!")
 		model_file = str(sys.argv[3])

@@ -166,7 +166,6 @@ class hierarchical():
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
-		self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
@@ -205,6 +204,7 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				categorical_prob_softmax = copy.deepcopy(self.y_gradients)
+				categorical_prob_softmax = npy.exp(categorical_prob_softmax)/npy.exp(categorical_prob_softmax).sum()
 				categorical_prob_softmax[[0,-1]] = 0.
 				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 				
@@ -226,9 +226,9 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				categorical_prob_softmax = copy.deepcopy(self.x_gradients)
+				categorical_prob_softmax = npy.exp(categorical_prob_softmax)/npy.exp(categorical_prob_softmax).sum()
 				categorical_prob_softmax[[0,-1]] = 0.
 				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
-							
 				
 				while (split_location<=0)or(split_location>=self.state.w):
 					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
@@ -464,61 +464,30 @@ class hierarchical():
 		if not(train):
 			self.num_epochs=1
 	
-		# for e in range(self.num_epochs):	
-		# 	# For all images
-		# 	for i in range(self.num_images):		
-				
-		# 		print("#________________________________________________________________#")
-		# 		print("Epoch:",e,"Training Image:",i)
-		# 		print("#________________________________________________________________#")
-
-		# 		# Intialize the parse tree for this image.=
-		# 		
-		# 		self.initialize_tree()
-		# 		self.construct_parse_tree(i)	
-		# 		self.compute_rewards(i)
-		# 		self.propagate_rewards()
-		# 		print("Parsing Image:",i)
-		# 		print("TOTAL REWARD:",self.parse_tree[0].reward)
-		# 		if train:
-		# 			self.backprop(i,e)
-		# 	if train:
-		# 		npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
-		# 	else:
-		# 		npy.save("validation.npy".format(e),self.predicted_labels)
-		# 	self.predicted_labels = npy.zeros((20000,20,20))
-		# 	self.save_model(e)
-
 		for e in range(self.num_epochs):	
-
-			image_list = range(self.num_images)
-			npy.random.shuffle(image_list)
-
+			# For all images
 			for i in range(self.num_images):		
 				
-				print("_________________________________________________________________")
-				print("Epoch:",e,"Training Image:",i)	
+				print("#________________________________________________________________#")
+				print("Epoch:",e,"Training Image:",i)
+				print("#________________________________________________________________#")
+
+				# Intialize the parse tree for this image.=
+				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
-				# self.construct_parse_tree(i)	
-				self.construct_parse_tree(image_list[i])
-				# self.compute_rewards(i)
-				self.compute_rewards(image_list[i])
+				self.construct_parse_tree(i)	
+				self.compute_rewards(i)
 				self.propagate_rewards()
-				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
-
+				print("Parsing Image:",i)
+				print("TOTAL REWARD:",self.parse_tree[0].reward)
 				if train:
-					# self.backprop(i,e)
-					self.backprop(image_list[i],e)
-
+					self.backprop(i,e)
 			if train:
-				npy.save("parse_{0}.npy".format(e),self.predicted_labels)
+				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
-			
 			self.predicted_labels = npy.zeros((20000,20,20))
 			self.save_model(e)
-
-
 
 	############################
 	# Pixel labels: 

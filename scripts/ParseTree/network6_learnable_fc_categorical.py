@@ -418,7 +418,7 @@ class hierarchical():
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))			
 			self.x_gradients, self.y_gradients = npy.gradient(self.resized_image)
 			self.x_gradients = abs(self.x_gradients).sum(axis=1)
 			self.y_gradients = abs(self.y_gradients).sum(axis=0)
@@ -459,28 +459,24 @@ class hierarchical():
 			
 			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
 			self.sc1.set_clim([0,2])
-			# self.fig.colorbar(sc1, self.ax=self.ax[0])
 			self.ax[0].set_title("Predicted Labels")
 			self.ax[0].set_adjustable('box-forced')
 
 			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
 			self.sc2.set_clim([-1,1])
-			# self.fig.colorbar(sc2, self.ax=self.ax[1])
 			self.ax[1].set_title("True Labels")
 			self.ax[1].set_adjustable('box-forced')
 
 			self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
 			self.sc3.set_clim([-1,1])
-			# self.fig.colorbar(sc3, self.ax=self.ax[2])
 			self.ax[2].set_title("Painted Image")
 			self.ax[2].set_adjustable('box-forced')
 
 			self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
 			self.sc4.set_clim([-1,1])
-			# self.fig.colorbar(sc4,self.ax=self.ax[3])
 			self.ax[3].set_title("Actual Image")
 			self.ax[3].set_adjustable('box-forced')
-			# plt.draw()
+
 			self.fig.canvas.draw()
 			plt.pause(0.001)
 
@@ -508,10 +504,13 @@ class hierarchical():
 				self.construct_parse_tree(i)	
 				self.compute_rewards(i)
 				self.propagate_rewards()
+
 				print("Parsing Image:",i)
 				print("TOTAL REWARD:",self.parse_tree[0].reward)
+
 				if train:
 					self.backprop(i,e)
+
 			if train:
 				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
 			else:
