@@ -6,8 +6,8 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 20
-		self.num_images = 20000
+		self.num_epochs = 1
+		self.num_images = 5000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
@@ -209,8 +209,8 @@ class hierarchical():
 					categorical_prob_softmax[-1] = 0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
 					# print(categorical_prob_softmax)
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
-
+					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
+					split_location = npy.argmax(categorical_prob_softmax)
 					counter +=1
 					# print("PREINT:",split_location,self.state.h)
 					if split_location>=10:
@@ -244,7 +244,9 @@ class hierarchical():
 					categorical_prob_softmax[-1] = 0.
 					categorical_prob_softmax /= categorical_prob_softmax.sum()
 					# print(categorical_prob_softmax)
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
+
+					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
+					split_location = npy.argmax(categorical_prob_softmax)
 
 					counter +=1
 					# print("PREINT:",split_location,self.state.w)
@@ -485,10 +487,10 @@ class hierarchical():
 				print("_________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i)	
 				self.initialize_tree()
-				# self.construct_parse_tree(i)	
-				self.construct_parse_tree(image_list[i])
-				# self.compute_rewards(i)
-				self.compute_rewards(image_list[i])
+				self.construct_parse_tree(i)	
+				# self.construct_parse_tree(image_list[i])
+				self.compute_rewards(i)
+				# self.compute_rewards(image_list[i])
 				self.propagate_rewards()
 				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
 
@@ -498,11 +500,13 @@ class hierarchical():
 
 			if train:
 				npy.save("parse_{0}.npy".format(e),self.predicted_labels)
+				self.save_model(e)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
 			
+			self.evaluate()
 			self.predicted_labels = npy.zeros((20000,20,20))
-			self.save_model(e)
+			
 
 	def map_rules_to_indices(self, rule_index):
 		if (rule_index<=3):
@@ -517,6 +521,17 @@ class hierarchical():
 		self.images[npy.where(self.images==2)]=-1
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
+
+	def evaluate(self):
+
+		pred_label = copy.deepcopy(self.predicted_labels)
+		pred_label[npy.where(pred_label==2)]=-1
+
+		print("The image correlation:")
+		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
+		print("Wrong pixel fraction:")
+		print(abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
+
 
 	############################
 	# Pixel labels: 
@@ -551,7 +566,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
 		model_file = str(sys.argv[3])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
@@ -559,8 +574,8 @@ def main(args):
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	# hierarchical_model.meta_training(train=False)
-	hierarchical_model.meta_training(train=True)
+	hierarchical_model.meta_training(train=False)
+	# hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
