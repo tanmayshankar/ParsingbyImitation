@@ -109,7 +109,7 @@ class hierarchical():
 									self.categorical_probabilities[3]*self.split_module_weights[0,3]
 
 		self.split_prior = tf.placeholder(tf.float32,shape=(None,self.image_size),name='split_prior')
-		self.prior_weight = 1.
+		self.prior_weight = 0.5
 		self.split_probabilities = tf.nn.softmax(tf.add(self.prior_weight*self.split_prior, self.split_likelihood),name='split_probabilities')
 
 		# DEFINING A SPLIT DISTRIBUTION:
@@ -482,15 +482,15 @@ class hierarchical():
 
 			for i in range(self.num_images):		
 				
-				print("_________________________________________________________________")
-				print("Epoch:",e,"Training Image:",i)	
+
 				self.initialize_tree()
 				# self.construct_parse_tree(i)	
 				self.construct_parse_tree(image_list[i])
 				# self.compute_rewards(i)
 				self.compute_rewards(image_list[i])
 				self.propagate_rewards()
-				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
+				print("______________________________________________________________________________")
+				print("Epoch:",e,"Training Image:",i," Reward obtained:",self.parse_tree[0].reward)
 
 				if train:
 					# self.backprop(i,e)
