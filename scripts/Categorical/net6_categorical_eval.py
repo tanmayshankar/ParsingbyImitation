@@ -6,8 +6,8 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 20
-		self.num_images = 20000
+		self.num_epochs = 1
+		self.num_images = 5000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
@@ -211,10 +211,8 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
 					
-					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
-					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-					# 		self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
-					categorical_prob_softmax = copy.deepcopy(self.y_gradients)
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]
 
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
@@ -242,9 +240,8 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
 
-					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
-					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-					# 				self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
+					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]									
 		
 					categorical_prob_softmax = copy.deepcopy(self.x_gradients)
 
@@ -497,6 +494,8 @@ class hierarchical():
 			# For all images
 			for i in range(self.num_images):		
 				
+				print("#________________________________________________________________#")
+				print("Epoch:",e,"Training Image:",i)				
 
 				# Intialize the parse tree for this image.=
 				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
@@ -504,18 +503,21 @@ class hierarchical():
 				self.construct_parse_tree(i)	
 				self.compute_rewards(i)
 				self.propagate_rewards()
-
-				print("#________________________________________________________________#")
-				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
+				
+				print("Parsing Image:",i)
+				print("TOTAL REWARD:",self.parse_tree[0].reward)
 
 				if train:
 					self.backprop(i,e)
 			if train:
 				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+				self.save_model(e)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
+
+			self.evaluate()
 			self.predicted_labels = npy.zeros((20000,20,20))
-			self.save_model(e)
+
 
 	############################
 	# Pixel labels: 
@@ -523,6 +525,14 @@ class hierarchical():
 	# 1 for shape with primitive 1
 	# 2 for region with no primitive (not to be painted)
 	############################
+
+	def map_rules_to_indices(self, rule_index):
+		if (rule_index<=3):
+			return [0,0]
+		if (rule_index==4):
+			return 1
+		if (rule_index==5):
+			return 2
 
 	############################
 	# Rule numbers:
@@ -540,13 +550,16 @@ class hierarchical():
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
 
-	def map_rules_to_indices(self, rule_index):
-		if (rule_index<=3):
-			return [0,0]
-		if (rule_index==4):
-			return 1
-		if (rule_index==5):
-			return 2
+	def evaluate(self):
+
+		pred_label = copy.deepcopy(self.predicted_labels)
+		pred_label[npy.where(pred_label==2)]=-1
+
+		print("The image correlation:")
+		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
+		print("Wrong pixel fraction:")
+		print(abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
+
 
 
 def main(args):
@@ -579,3 +592,7 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
+
+
+
