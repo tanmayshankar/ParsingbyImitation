@@ -104,15 +104,18 @@ class hierarchical():
 		self.fcs2_presoftmax = tf.add(tf.matmul(self.fcs2_l1,self.W_fcs2_l2),self.b_fcs2_l2,name='fcs2_presoftmax')
 
 		# self.categorical_likelihood = tf.nn.softmax(self.fcs2_presoftmax,name='split_softmax')
-		self.categorical_likelihood = tf.nn.sigmoid(self.fcs2_presoftmax,name='split_softmax')
+		# self.categorical_likelihood = tf.nn.sigmoid(self.fcs2_presoftmax,name='split_softmax')
 
-		self.categorical_prior = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_prior')
+		# self.categorical_prior = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_prior')
 		# self.categorical_posterior = tf.add(self.categorical_prior,self.categorical_likelihood,name='categorical_posterior')
 
-		self.prior_weight = 1.
+		# self.prior_weight = 0.
 		# This is the categorical posterior combining the prior and likelihood.
-		self.categorical_posterior_presoftmax = tf.add(self.prior_weight*self.categorical_prior,self.categorical_likelihood,name='categorical_posterior_presoftmax')
-		self.categorical_probabilities = tf.nn.softmax(self.categorical_posterior_presoftmax,name='categorical_probabilities')
+		# self.categorical_posterior_presoftmax = tf.add(self.prior_weight*self.categorical_prior,self.categorical_likelihood,name='categorical_posterior_presoftmax')
+		
+		self.categorical_probabilities = tf.nn.softmax(self.fcs2_presoftmax,name='categorical_probabilities')
+		# self.categorical_probabilities = tf.nn.softmax(self.categorical_posterior_presoftmax,name='categorical_probabilities')
+
 		# self.categorical_probabilities = tf.add(self.prior_weight*self.categorical_prior,self.categorical_likelihood,name='categorical_probabilities')
 
 		# Vector of probabilities along ONE dimension.
@@ -208,9 +211,10 @@ class hierarchical():
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
 				while (split_location<=0)or(split_location>=self.state.h):				
 					
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
-						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-							self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
+					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
+					# 		self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
+					categorical_prob_softmax = copy.deepcopy(self.y_gradients)
 
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
@@ -220,13 +224,13 @@ class hierarchical():
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
 
 					counter +=1
-					# print("PREINT:",split_location,self.state.h)
+					print("PREINT:",split_location,self.state.h)
 					if split_location>=10:
 						split_location = int(npy.floor(float(self.state.h*split_location)/20))
 					else:
 						split_location = int(npy.ceil(float(self.state.h*split_location)/20))		
 
-					# print("POSTINT:",split_location,self.state.h)
+					print("POSTINT:",split_location,self.state.h)
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -237,10 +241,13 @@ class hierarchical():
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
 				while (split_location<=0)or(split_location>=self.state.w):				
-					categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
-						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
-					
+
+					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
+					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
+					# 				self.categorical_prior: self.y_gradients.reshape((1,20))})[0]			
+		
+					# categorical_prob_softmax = copy.deepcopy(self.)
+
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
 					categorical_prob_softmax[0] = 0.
@@ -249,13 +256,13 @@ class hierarchical():
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
 
 					counter +=1
-					# print("PREINT:",split_location,self.state.w)
+					print("PREINT:",split_location,self.state.w)
 					if split_location>=10:
 						split_location = int(npy.floor(float(self.state.w*split_location)/20))
 					else:
 						split_location = int(npy.ceil(float(self.state.w*split_location)/20))
 
-					# print("POSTINT:",split_location,self.state.w)
+					print("POSTINT:",split_location,self.state.w)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
