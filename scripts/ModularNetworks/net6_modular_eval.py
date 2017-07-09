@@ -235,7 +235,7 @@ class hierarchical():
 
 					categorical_prob_softmax = self.sess.run(self.split_probabilities, 
 						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.split_prior: self.y_gradients.reshape((1,20)), \
+									self.split_prior: self.x_gradients.reshape((1,20)), \
 									self.split_module_weights: split_module_weights})[0]
 
 					epsilon = 0.00001
