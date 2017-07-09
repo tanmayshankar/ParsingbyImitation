@@ -526,14 +526,6 @@ class hierarchical():
 	# 2 for region with no primitive (not to be painted)
 	############################
 
-	def map_rules_to_indices(self, rule_index):
-		if (rule_index<=3):
-			return [0,0]
-		if (rule_index==4):
-			return 1
-		if (rule_index==5):
-			return 2
-
 	############################
 	# Rule numbers:
 	# 0 (Shape) -> (Shape)(Shape) 								(Vertical split)
@@ -549,6 +541,15 @@ class hierarchical():
 		self.images[npy.where(self.images==2)]=-1
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
+
+	def map_rules_to_indices(self, rule_index):
+		if (rule_index<=3):
+			return [0,0]
+		if (rule_index==4):
+			return 1
+		if (rule_index==5):
+			return 2
+
 
 def main(args):
 
@@ -580,7 +581,3 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
-
-
-
-
