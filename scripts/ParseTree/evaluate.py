@@ -178,7 +178,7 @@ class hierarchical():
 			rule_probabilities[0][[1,3]]=0.
 
 		# rule_probabilities/=rule_probabilities.sum()
-		selected_rule = npy.argmax(rule_probabilities)
+		selected_rule = npy.argmax(rule_probabilities[0])
 		# selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
@@ -456,7 +456,7 @@ class hierarchical():
 			if train:
 				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
 			else:
-				npy.save("validation.npy".format(e),self.predicted_labels)
+				npy.save("validation_newgreedy.npy".format(e),self.predicted_labels)
 
 			self.evaluate()
 			self.predicted_labels = npy.zeros((20000,20,20))

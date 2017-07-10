@@ -27,6 +27,9 @@ class hierarchical():
 		# self.conv_num_filters = 20*npy.ones((self.num_layers),dtype=int)
 		self.conv_num_filters = npy.array([1,20,20,20,20,20],dtype=int)
 
+		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
+		self.minimum_width = 5
+
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
 		
@@ -127,7 +130,7 @@ class hierarchical():
 		# Defining loss values; the neat thing is by stacking categorical probabilities, you can simply take log probability.
 		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rule_fc[1]),self.rule_return_weight,name='rule_loss')
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight,name='split_loss')
-		self.split_loss_weightage = 0.1
+		self.split_loss_weightage = 1.
 		self.total_loss = tf.add(self.rule_loss, self.split_loss_weightage*self.split_loss,name='total_loss')
 
 		# Creating summaries to log the losses.
@@ -171,8 +174,6 @@ class hierarchical():
 		# SAMPLING A SPLIT LOCATION
 		split_location = -1
 
-		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 3 
 		
 		epislon = 1e-5
 		rule_probabilities += epislon
@@ -200,7 +201,7 @@ class hierarchical():
 
 					categorical_prob_softmax = self.sess.run(self.split_probabilities, 
 						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.split_prior: self.y_gradients.reshape((1,20)), \
+									self.split_prior: self.y_gradients.reshape((1,self.image_size)), \
 									self.split_module_weights: split_module_weights})[0]
 
 					epsilon = 0.00001
@@ -214,9 +215,9 @@ class hierarchical():
 					counter +=1
 					# print("PREINT:",split_location,self.state.h)
 					if split_location>=10:
-						split_location = int(npy.floor(float(self.state.h*split_location)/20))
+						split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
 					else:
-						split_location = int(npy.ceil(float(self.state.h*split_location)/20))		
+						split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))		
 
 					# print("POSTINT:",split_location,self.state.h)
 
@@ -235,7 +236,7 @@ class hierarchical():
 
 					categorical_prob_softmax = self.sess.run(self.split_probabilities, 
 						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.split_prior: self.x_gradients.reshape((1,20)), \
+									self.split_prior: self.x_gradients.reshape((1,self.image_size)), \
 									self.split_module_weights: split_module_weights})[0]
 
 					epsilon = 0.00001
@@ -249,9 +250,9 @@ class hierarchical():
 					counter +=1
 					# print("PREINT:",split_location,self.state.w)
 					if split_location>=10:
-						split_location = int(npy.floor(float(self.state.w*split_location)/20))
+						split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
 					else:
-						split_location = int(npy.ceil(float(self.state.w*split_location)/20))
+						split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
 
 					# print("POSTINT:",split_location,self.state.w)
 			
@@ -501,7 +502,7 @@ class hierarchical():
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
 			
-			self.predicted_labels = npy.zeros((20000,20,20))
+			self.predicted_labels = npy.zeros((20000,self.image_size,self.image_size))
 			self.save_model(e)
 
 	def map_rules_to_indices(self, rule_index):

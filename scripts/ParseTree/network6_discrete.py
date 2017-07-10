@@ -138,7 +138,7 @@ class hierarchical():
 		# TRYING SPLIT LOSS WITH NEGATIVE SIGN 30/06
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight,name='split_loss')
 		# The total loss is the sum of individual losses.
-		self.split_loss_weightage = 0.1
+		self.split_loss_weightage = 1.
 		self.total_loss = tf.add(self.rule_loss,self.split_loss_weightage*self.split_loss,name='total_loss')
 
 		# Creating summaries to log the losses.

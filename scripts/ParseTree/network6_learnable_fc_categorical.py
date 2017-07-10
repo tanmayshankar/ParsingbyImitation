@@ -186,7 +186,7 @@ class hierarchical():
 
 	def insert_node(self, state, index):
 		self.parse_tree.insert(index,state)
-
+		
 	def parse_nonterminal(self, image_index):
 
 		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})

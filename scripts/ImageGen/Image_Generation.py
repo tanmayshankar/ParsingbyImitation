@@ -73,17 +73,14 @@ for i in range(num_images):
 	print("Processing image",i)
 	while (images[i]==0).any():
 		if state.label==0:
-			if (state.h<=minimum_split_width) and (state.w<=minimum_split_width):
-				rule = npy.random.choice([4,5])
+			rule_probs = npy.ones((6))
 			if (state.h<=minimum_split_width):
-	            # Horizontal split rules and 4 and 5.
-				rule = npy.random.choice([1,3,4,5])
-			if (state.w<=minimum_split_width):
-	            # Vertical split and 4 and 5. 
-				rule = npy.random.choice([0,2,4,5])
-			else: 
-				rule = npy.random.randint(0,high=6)
-		
+				rule_probs[[0,2]]=0.
+			if (state.h<=minimum_split_width):
+				rule_probs[[1,3]]=0.
+			rule_probs/=rule_probs.sum()
+			rule = npy.random.choice(range(6),p=rule_probs)
+
 			if rule<=3:
 				# Now must expand.
 				# If vertical split rule.
