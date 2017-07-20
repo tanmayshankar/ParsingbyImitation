@@ -213,8 +213,8 @@ class hierarchical():
 					
 					# categorical_prob_softmax
 					split_probabilities = self.sess.run(self.categorical_probabilities, 
-						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-							self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
+						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]
+							# self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
 
 					categorical_prob_softmax = copy.deepcopy(self.y_gradients)
 
@@ -249,8 +249,8 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.w):				
 
 					split_probabilities = self.sess.run(self.categorical_probabilities, 
-						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-									self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
+						feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})[0]
+									# self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
 		
 					categorical_prob_softmax = copy.deepcopy(self.x_gradients)
 
