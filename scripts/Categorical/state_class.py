@@ -17,6 +17,9 @@ class parse_tree_node():
 		# self.split_prior = npy.ones((1,20))/20
 		self.categorical_prior = npy.ones((1,20))/20
 
+		self.gradient_policy_probability = 1.
+		self.network_policy_probability = 1.
+
 	def disp(self):
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
