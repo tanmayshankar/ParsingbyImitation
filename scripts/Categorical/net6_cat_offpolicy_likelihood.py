@@ -526,11 +526,12 @@ class hierarchical():
 				if train:
 					self.backprop(i,e)
 			if train:
-				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
+				self.save_model(e)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
 			self.predicted_labels = npy.zeros((20000,20,20))
-			self.save_model(e)
+
 
 	############################
 	# Pixel labels: 
