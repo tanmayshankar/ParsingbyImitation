@@ -214,9 +214,11 @@ class hierarchical():
 					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
 					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
 					# 		self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
+					
+					categorical_prob_softmax = copy.deepcopy(self.y_gradients)
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[1:] = copy.deepcopy(self.y_gradients[:-1])
-					# categorical_prob_softmax = copy.deepcopy(self.y_gradients)
+					
 
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
@@ -248,7 +250,7 @@ class hierarchical():
 					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
 					# 				self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
 		
-					# categorical_prob_softmax = copy.deepcopy(self.x_gradients)
+					categorical_prob_softmax = copy.deepcopy(self.x_gradients)
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[1:] = copy.deepcopy(self.x_gradients[:-1])
 
