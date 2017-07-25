@@ -6,8 +6,8 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 20
-		self.num_images = 20000
+		self.num_epochs = 1
+		self.num_images = 5000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
@@ -214,9 +214,11 @@ class hierarchical():
 					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
 					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
 					# 		self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
+					
+					categorical_prob_softmax = copy.deepcopy(self.y_gradients)
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[1:] = copy.deepcopy(self.y_gradients[:-1])
-					# categorical_prob_softmax = copy.deepcopy(self.y_gradients)
+					
 
 					epsilon = 0.00001
 					categorical_prob_softmax+=epsilon
@@ -248,7 +250,7 @@ class hierarchical():
 					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
 					# 				self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
 		
-					# categorical_prob_softmax = copy.deepcopy(self.x_gradients)
+					categorical_prob_softmax = copy.deepcopy(self.x_gradients)
 					categorical_prob_softmax[0] = 0.
 					categorical_prob_softmax[1:] = copy.deepcopy(self.x_gradients[:-1])
 
@@ -569,17 +571,17 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
-		print("HI!")
+		print("Loading Model.")
 		model_file = str(sys.argv[3])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	# hierarchical_model.meta_training(train=False)
-	hierarchical_model.meta_training(train=True)
+	hierarchical_model.meta_training(train=False)
+	# hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)

@@ -509,16 +509,16 @@ class hierarchical():
 				print("_________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i)	
 				self.initialize_tree()
-				# self.construct_parse_tree(i)	
-				self.construct_parse_tree(image_list[i])
-				# self.compute_rewards(i)
-				self.compute_rewards(image_list[i])
+				self.construct_parse_tree(i)	
+				# self.construct_parse_tree(image_list[i])
+				self.compute_rewards(i)
+				# self.compute_rewards(image_list[i])
 				self.propagate_rewards()
 				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
 
 				if train:
-					# self.backprop(i,e)
-					self.backprop(image_list[i],e)
+					self.backprop(i,e)
+					# self.backprop(image_list[i],e)
 
 			if train:
 				npy.save("parse_{0}.npy".format(e),self.predicted_labels)
