@@ -207,7 +207,7 @@ class hierarchical():
 				categorical_prob_softmax = npy.zeros((self.image_size))
 				categorical_prob_softmax[1:] = copy.deepcopy(self.y_gradients)
 				# categorical_prob_softmax = copy.deepcopy(self.y_gradients)
-				epsilon = 0.005
+				epsilon = 0.0001
 				categorical_prob_softmax+=epislon
 				categorical_prob_softmax[[0,-1]] = 0.
 				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
@@ -232,7 +232,7 @@ class hierarchical():
 				categorical_prob_softmax = npy.zeros((self.image_size))
 				categorical_prob_softmax[1:] = copy.deepcopy(self.x_gradients)
 				# categorical_prob_softmax = copy.deepcopy(self.x_gradients)
-				epsilon = 0.005
+				epsilon = 0.0001
 				categorical_prob_softmax+=epislon
 				categorical_prob_softmax[[0,-1]] = 0.
 				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
