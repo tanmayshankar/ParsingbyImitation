@@ -1,13 +1,34 @@
 #!/usr/bin/env python
 from headers import *
-from state_class import *
+
+# Define a class for the parse tree / rule / etc? 
+class parse_tree_node():
+	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
+		self.label = label
+		self.x = x
+		self.y = y
+		self.w = w
+		self.h = h
+		self.backward_index = backward_index
+		self.rule_applied = rule_applied
+		self.split = split
+		self.reward = 0.
+		self.categorical_probabilities = npy.ones((1,20))/20
+
+	def disp(self):
+		print("Label:", self.label)
+		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
+		print("Backward Index:",self.backward_index)
+		print("Reward:",self.reward)
+		print("Rule:",self.rule_applied,"Split:",self.split)
+		print("____________________________________________")
 
 class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 1
-		self.num_images = 5000
+		self.num_epochs = 20
+		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
@@ -80,12 +101,6 @@ class hierarchical():
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
 		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
-		# Adding split stream.
-		self.fcs2_l1_shape = 80
-		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
-		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
-		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
-
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
 		# Now we have shifted to the 4 rule version of this: 
@@ -94,44 +109,23 @@ class hierarchical():
 		self.fcs1_output_shape = 1*self.number_primitives+5
 		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
 		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
-		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')		
-		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='rule_softmax')
-
-		# Adding second FC layer for sampling splits from a categorical distribution.
-		self.fcs2_output_shape = self.image_size
-		self.W_fcs2_l2 = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,self.fcs2_output_shape],stddev=0.1),name='W_fcs2_l2')
-		self.b_fcs2_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_output_shape]),name='b_fcs2_l2')
-		self.fcs2_presoftmax = tf.add(tf.matmul(self.fcs2_l1,self.W_fcs2_l2),self.b_fcs2_l2,name='fcs2_presoftmax')
-
-		# self.categorical_likelihood = tf.nn.softmax(self.fcs2_presoftmax,name='split_softmax')
-		# self.categorical_likelihood = tf.nn.sigmoid(self.fcs2_presoftmax,name='split_softmax')
-
-		# self.categorical_prior = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_prior')
-		# self.categorical_posterior = tf.add(self.categorical_prior,self.categorical_likelihood,name='categorical_posterior')
-
-		# self.prior_weight = 0.
-		# This is the categorical posterior combining the prior and likelihood.
-		# self.categorical_posterior_presoftmax = tf.add(self.prior_weight*self.categorical_prior,self.categorical_likelihood,name='categorical_posterior_presoftmax')
+		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
+		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
 		
-		self.categorical_probabilities = tf.nn.softmax(self.fcs2_presoftmax,name='categorical_probabilities')
-		# self.categorical_probabilities = tf.nn.softmax(self.categorical_posterior_presoftmax,name='categorical_probabilities')
-
-		# self.categorical_probabilities = tf.add(self.prior_weight*self.categorical_prior,self.categorical_likelihood,name='categorical_probabilities')
-
 		# Vector of probabilities along ONE dimension.
-		# self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
-		self.split_dist = tf.contrib.distributions.Categorical(probs=self.categorical_probabilities,allow_nan_stats=False)
+		self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
+		self.split_dist = tf.contrib.distributions.Categorical(probs=self.categorical_probabilities)
 		
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
 		# We evaluate this to retrieve a sample goal / split location. 
-		# self.sample_split = self.split_dist.sample()
+		self.sample_split = self.split_dist.sample()
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.int32,shape=(None),name='sampled_split')
 
 		# Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=(self.fcs1_output_shape),name='target_rule')
+		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
@@ -172,6 +166,7 @@ class hierarchical():
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
+		self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
@@ -209,33 +204,21 @@ class hierarchical():
 				counter = 0
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use y_gradient
-				while (split_location<=0)or(split_location>=self.state.h):				
-					
-					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
-					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-					# 		self.categorical_prior: self.y_gradients.reshape((1,20))})[0]
-					
-					categorical_prob_softmax = copy.deepcopy(self.y_gradients)
-					categorical_prob_softmax[0] = 0.
-					categorical_prob_softmax[1:] = copy.deepcopy(self.y_gradients[:-1])
-					
-
-					epsilon = 0.00001
-					categorical_prob_softmax+=epsilon
-					categorical_prob_softmax[0] = 0.
-					categorical_prob_softmax[-1] = 0.
-					categorical_prob_softmax /= categorical_prob_softmax.sum()
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
-
-					counter +=1
-					# print("PREINT:",split_location,self.state.h)
+				categorical_prob_softmax = npy.zeros((self.image_size))
+				categorical_prob_softmax[1:] = copy.deepcopy(self.y_gradients)
+				# categorical_prob_softmax = copy.deepcopy(self.y_gradients)
+				categorical_prob_softmax[[0,-1]] = 0.
+				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
+				
+				while (split_location<=0)or(split_location>=self.state.h):
+					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
+					# print(split_location,self.state.h,int(float(self.state.h*split_location)/20))
 					if split_location>=10:
 						split_location = int(npy.floor(float(self.state.h*split_location)/20))
 					else:
-						split_location = int(npy.ceil(float(self.state.h*split_location)/20))		
-
-					# print("POSTINT:",split_location,self.state.h)
-
+						split_location = int(npy.ceil(float(self.state.h*split_location)/20))
+										
+			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
@@ -244,32 +227,22 @@ class hierarchical():
 				counter = 0
 
 				# REMEMBER, h is along y, w is along x (transposed), # FOR THESE RULES, use x_gradient
-				while (split_location<=0)or(split_location>=self.state.w):				
-
-					# categorical_prob_softmax = self.sess.run(self.categorical_probabilities, 
-					# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),
-					# 				self.categorical_prior: self.x_gradients.reshape((1,20))})[0]			
-		
-					categorical_prob_softmax = copy.deepcopy(self.x_gradients)
-					categorical_prob_softmax[0] = 0.
-					categorical_prob_softmax[1:] = copy.deepcopy(self.x_gradients[:-1])
-
-					epsilon = 0.00001
-					categorical_prob_softmax+=epsilon
-					categorical_prob_softmax[0] = 0.
-					categorical_prob_softmax[-1] = 0.
-					categorical_prob_softmax /= categorical_prob_softmax.sum()
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)				
-
-					counter +=1
-					# print("PREINT:",split_location,self.state.w)
+				categorical_prob_softmax = npy.zeros((self.image_size))
+				categorical_prob_softmax[1:] = copy.deepcopy(self.x_gradients)
+				# categorical_prob_softmax = copy.deepcopy(self.x_gradients)
+				categorical_prob_softmax[[0,-1]] = 0.
+				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
+							
+				
+				while (split_location<=0)or(split_location>=self.state.w):
+					split_location = npy.random.choice(range(20),p=categorical_prob_softmax)
+					# print(split_location,self.state.w,int(float(self.state.w*split_location)/20))
 					if split_location>=10:
 						split_location = int(npy.floor(float(self.state.w*split_location)/20))
 					else:
 						split_location = int(npy.ceil(float(self.state.w*split_location)/20))
-
-					# print("POSTINT:",split_location,self.state.w)
-			
+					
+				
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -277,7 +250,7 @@ class hierarchical():
 			# Update current parse tree with split location and rule applied.
 			self.parse_tree[self.current_parsing_index].split=split_location
 			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
-			self.parse_tree[self.current_parsing_index].categorical_prior[0] = categorical_prob_softmax
+			self.parse_tree[self.current_parsing_index].categorical_probabilities[0] = categorical_prob_softmax
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 			self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
@@ -371,11 +344,12 @@ class hierarchical():
 			# Pick up correct portion of image.
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-			self.x_gradients, self.y_gradients = npy.gradient(self.resized_image)
+
+			self.x_gradients = npy.diff(self.resized_image,axis=0)
+			self.y_gradients = npy.diff(self.resized_image,axis=1)	
+
 			self.x_gradients = abs(self.x_gradients).sum(axis=1)
 			self.y_gradients = abs(self.y_gradients).sum(axis=0)
-			self.x_gradients /= self.x_gradients.max()
-			self.y_gradients /= self.y_gradients.max()
 
 			rule_weight = 0
 			split_weight = 0
@@ -391,8 +365,8 @@ class hierarchical():
 				# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
-						self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split})
-							# self.categorical_prior: self.y_gradients.reshape((1,20))})
+					self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split, \
+					self.categorical_probabilities: self.parse_tree[j].categorical_probabilities})
 
 			# print("LOSS VALUES:",rule_loss, split_loss)
 				# rule_loss, split_loss, total_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.total_loss, self.train], \
@@ -422,11 +396,12 @@ class hierarchical():
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-			self.x_gradients, self.y_gradients = npy.gradient(self.resized_image)
+			
+			self.x_gradients = npy.diff(self.resized_image,axis=0)
+			self.y_gradients = npy.diff(self.resized_image,axis=1)	
+			
 			self.x_gradients = abs(self.x_gradients).sum(axis=1)
 			self.y_gradients = abs(self.y_gradients).sum(axis=0)
-			self.x_gradients /= self.x_gradients.max()
-			self.y_gradients /= self.y_gradients.max()
 
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
@@ -499,32 +474,61 @@ class hierarchical():
 		if not(train):
 			self.num_epochs=1
 	
+		# for e in range(self.num_epochs):	
+		# 	# For all images
+		# 	for i in range(self.num_images):		
+				
+		# 		print("#________________________________________________________________#")
+		# 		print("Epoch:",e,"Training Image:",i)
+		# 		print("#________________________________________________________________#")
+
+		# 		# Intialize the parse tree for this image.=
+		# 		
+		# 		self.initialize_tree()
+		# 		self.construct_parse_tree(i)	
+		# 		self.compute_rewards(i)
+		# 		self.propagate_rewards()
+		# 		print("Parsing Image:",i)
+		# 		print("TOTAL REWARD:",self.parse_tree[0].reward)
+		# 		if train:
+		# 			self.backprop(i,e)
+		# 	if train:
+		# 		npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+		# 	else:
+		# 		npy.save("validation.npy".format(e),self.predicted_labels)
+		# 	self.predicted_labels = npy.zeros((20000,20,20))
+		# 	self.save_model(e)
+
 		for e in range(self.num_epochs):	
-			# For all images
+
+			image_list = range(self.num_images)
+			npy.random.shuffle(image_list)
+
 			for i in range(self.num_images):		
 				
-
-				# Intialize the parse tree for this image.=
-				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
+				print("_________________________________________________________________")
+				print("Epoch:",e,"Training Image:",i)	
 				self.initialize_tree()
-				self.construct_parse_tree(i)	
-				self.compute_rewards(i)
+				# self.construct_parse_tree(i)	
+				self.construct_parse_tree(image_list[i])
+				# self.compute_rewards(i)
+				self.compute_rewards(image_list[i])
 				self.propagate_rewards()
-
-				print("#________________________________________________________________#")
-				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
+				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
 
 				if train:
-					self.backprop(i,e)
+					# self.backprop(i,e)
+					self.backprop(image_list[i],e)
+
 			if train:
-				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
-				self.save_model(e)
+				npy.save("parse_{0}.npy".format(e),self.predicted_labels)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
 			
-			self.evaluate()
 			self.predicted_labels = npy.zeros((20000,20,20))
-			
+			self.save_model(e)
+
+
 
 	############################
 	# Pixel labels: 
@@ -532,6 +536,14 @@ class hierarchical():
 	# 1 for shape with primitive 1
 	# 2 for region with no primitive (not to be painted)
 	############################
+
+	def map_rules_to_indices(self, rule_index):
+		if (rule_index<=3):
+			return [0,0]
+		if (rule_index==4):
+			return 1
+		if (rule_index==5):
+			return 2
 
 	############################
 	# Rule numbers:
@@ -544,29 +556,10 @@ class hierarchical():
 	############################
 
 	def preprocess_images_labels(self):
-		noise = 0.2*(2*npy.random.rand(self.num_images,self.image_size,self.image_size)-1)
+		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
 		self.images[npy.where(self.images==2)]=-1
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
-
-	def map_rules_to_indices(self, rule_index):
-		if (rule_index<=3):
-			return [0,0]
-		if (rule_index==4):
-			return 1
-		if (rule_index==5):
-			return 2
-
-	def evaluate(self):
-
-		pred_label = copy.deepcopy(self.predicted_labels)
-		pred_label[npy.where(pred_label==2)]=-1
-
-		print("The image correlation:")
-		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
-		print("Wrong pixel fraction:")
-		print(abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
-
 
 def main(args):
 
@@ -584,17 +577,21 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 1
+	load = 0
 	if load:
-		print("Loading Model.")
+		print("HI!")
 		model_file = str(sys.argv[3])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	hierarchical_model.meta_training(train=False)
-	# hierarchical_model.meta_training(train=True)
+	# hierarchical_model.meta_training(train=False)
+	hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
+
+
+
+
