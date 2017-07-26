@@ -188,6 +188,8 @@ class hierarchical():
 			self.sess.run(init)
 
 	def save_model(self, model_index):
+		if not(os.path.isdir("saved_models")):
+			os.mkdir("saved_models")
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
@@ -234,8 +236,11 @@ class hierarchical():
 						print("State: H",self.state.h)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.h))
+
 				# print("Split: ",split_location,split_cov)
 				# print("Split: ",split_location)
+
+				split_copy = copy.deepcopy(split_location)
 				split_location = int(self.state.h*split_location)
 		
 				# Create splits.
@@ -256,6 +261,7 @@ class hierarchical():
 				# print("Split: ",split_location,split_cov)
 				# print("Split: ",split_location)
 				# Scale split location.
+				split_copy = copy.deepcopy(split_location)
 				split_location = int(self.state.w*split_location)
 
 				# Create splits.
@@ -263,7 +269,7 @@ class hierarchical():
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				
 			# Update current parse tree with split location and rule applied.
-			self.parse_tree[self.current_parsing_index].split=split_location
+			self.parse_tree[self.current_parsing_index].split=split_copy
 			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
