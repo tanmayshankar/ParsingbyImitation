@@ -79,7 +79,7 @@ class hierarchical():
 		# self.fc_input_shape = 5*5*self.conv5_num_filters
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
-		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
+		# Going to split into 2 streams: RULE, SPLIT
 		self.fcs1_l1_shape = 120
 		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
@@ -87,19 +87,29 @@ class hierarchical():
 
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
-		# Now we have shifted to the 4 rule version of this: 
-		# Horizontal split rule into two shapes / # Vertical split rule into two shapes / # Assignment rule to region with primitive /	# Assignment rule to region without primitive.
-
+		# Working with 6 rules: 2 assignment and 4 split rules.
 		self.fcs1_output_shape = 1*self.number_primitives+5
 		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
 		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
 		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
 		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
+			
+		# NOW STARTING THE SPLIT STEAM:		
+		self.fcs2_l1_shape = 50
+		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
+		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
+		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
+
+		# Split output.
+		self.W_split = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,2],stddev=0.1),name='W_split')
+		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
 		
-		# Vector of probabilities along ONE dimension.
-		self.categorical_probabilities = tf.placeholder(tf.float32,shape=(None,self.image_size),name='categorical_probabilities')
-		self.split_dist = tf.contrib.distributions.Categorical(probs=self.categorical_probabilities)
-		
+		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
+		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
+		self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
+
+		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
+		# self.sample_split = self.split_dist.sample()
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.int32,shape=(None),name='sampled_split')
 
@@ -144,6 +154,8 @@ class hierarchical():
 			self.sess.run(init)
 
 	def save_model(self, model_index):
+		if not(os.path.isdir("saved_models")):
+			os.mkdir("saved_models")
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
