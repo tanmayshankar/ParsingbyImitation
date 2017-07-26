@@ -518,10 +518,13 @@ class hierarchical():
 					self.backprop(i,e)
 			if train:
 				npy.save("halfparsed_clean3_{0}.npy".format(e),self.predicted_labels)
+				self.save_model(e)
 			else:
 				npy.save("validation.npy".format(e),self.predicted_labels)
+			
+			self.evaluate()
 			self.predicted_labels = npy.zeros((20000,20,20))
-			self.save_model(e)
+			
 
 	############################
 	# Pixel labels: 
@@ -553,6 +556,16 @@ class hierarchical():
 			return 1
 		if (rule_index==5):
 			return 2
+
+	def evaluate(self):
+
+		pred_label = copy.deepcopy(self.predicted_labels)
+		pred_label[npy.where(pred_label==2)]=-1
+
+		print("The image correlation:")
+		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
+		print("Wrong pixel fraction:")
+		print(abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
 
 
 def main(args):
