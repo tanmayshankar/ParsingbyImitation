@@ -170,6 +170,8 @@ class hierarchical():
 			self.sess.run(init)
 
 	def save_model(self, model_index):
+		if not(os.path.isdir("saved_models")):
+			os.mkdir("saved_models")
 		save_path = self.saver.save(self.sess,'saved_models/net6_conv5_model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
@@ -384,16 +386,22 @@ class hierarchical():
 
 			# MUST PARSE EVERY NODE
 			# If shape:
+			# if self.parse_tree[j].label==0:
+			# 	# If split rule.
+			# 	# if self.parse_tree[j].rule_applied<=5:
+			# 	if self.parse_tree[j].rule_applied<=1:
+			# 		split_weight = self.parse_tree[j].reward
+			# 		rule_weight = self.parse_tree[j].reward
+			# 		target_rule[self.parse_tree[j].rule_applied] = 1.
+			# 	# If rule 2 or rule 3.
+			# 	if self.parse_tree[j].rule_applied>=2:
+			# 		rule_weight = self.parse_tree[j].reward
+
 			if self.parse_tree[j].label==0:
-				# If split rule.
-				# if self.parse_tree[j].rule_applied<=5:
-				if self.parse_tree[j].rule_applied<=1:
+				rule_weight = self.parse_tree[j].reward
+				target_rule[self.parse_tree[j].rule_applied] = 1.
+				if self.parse_tree[j].rule_applied<=3:
 					split_weight = self.parse_tree[j].reward
-					rule_weight = self.parse_tree[j].reward
-					target_rule[self.parse_tree[j].rule_applied] = 1.
-				# If rule 2 or rule 3.
-				if self.parse_tree[j].rule_applied>=2:
-					rule_weight = self.parse_tree[j].reward
 
 			# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
