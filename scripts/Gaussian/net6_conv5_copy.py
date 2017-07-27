@@ -504,9 +504,6 @@ class hierarchical():
 			for i in range(self.num_images):
 			# for i in range(20):
 				
-				print("#________________________________________________________________")
-				print("Epoch:",e,"Training Image:",i)
-				print("#________________________________________________________________")
 
 				# for r in range(len(self.parse_tree)):
 				# 	print("Printing Node",r)
@@ -530,8 +527,8 @@ class hierarchical():
 
 				# for j in range(len(self.parse_tree)):
 				# 	self.parse_tree[j].disp()
-				print("Parsing Image:",i)
-				print("TOTAL REWARD:",self.parse_tree[0].reward)
+				print("#___________________________________________________________________________")
+				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 				# print("Backprop.")
 				self.backprop(i)
 				# print("TOTAL REWARD:",self.parse_tree[0].reward)
