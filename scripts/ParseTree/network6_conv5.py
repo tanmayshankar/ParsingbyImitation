@@ -101,7 +101,7 @@ class hierarchical():
 		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
 		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
-		self.fcs2_l1_shape = 30
+		self.fcs2_l1_shape = 50
 		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
 		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
 		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
@@ -128,7 +128,7 @@ class hierarchical():
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice)
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
 		# self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice[0,1]),0.2)
-		self.split_cov = 0.25
+		self.split_cov = 0.2
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
@@ -234,6 +234,8 @@ class hierarchical():
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.h))
 						print(rule_probabilities[0])
+
+				split_copy = copy.deepcopy(split_location)
 				split_location = int(self.state.h*split_location)
 			
 				# Create splits.
@@ -253,6 +255,7 @@ class hierarchical():
 						print("Split location:",int(split_location*self.state.w))
 						print(rule_probabilities[0])
 				# Scale split location.
+				split_copy = copy.deepcopy(split_location)
 				split_location = int(self.state.w*split_location)
 
 				# Create splits.
@@ -260,7 +263,7 @@ class hierarchical():
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				
 			# Update current parse tree with split location and rule applied.
-			self.parse_tree[self.current_parsing_index].split=split_location
+			self.parse_tree[self.current_parsing_index].split=split_copy
 			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
