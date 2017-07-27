@@ -128,7 +128,7 @@ class hierarchical():
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice)
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
 		# self.split_cov = tf.add(tf.nn.softplus(self.fcs2_preslice[0,1]),0.2)
-		self.split_cov = 0.2
+		self.split_cov = 0.1
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
