@@ -108,7 +108,7 @@ class hierarchical():
 
 		# Split output.
 		self.W_split = tf.Variable(tf.truncated_normal([self.splitfc_l1_shape,2],stddev=0.1),name='W_split')
-		self.b_split = tf.Variable(tf.constant(0.,shape=[2]),name='b_split')
+		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
 		
 		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
@@ -260,7 +260,7 @@ class hierarchical():
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter += 1
 
-					split_copy = split_location
+					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.h
 
 					if inter_split>(self.image_size/2):
@@ -293,7 +293,7 @@ class hierarchical():
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter += 1
 
-					split_copy = split_location
+					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.w
 
 					if inter_split>(self.image_size/2):
