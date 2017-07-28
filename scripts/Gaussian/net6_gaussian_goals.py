@@ -327,15 +327,6 @@ class hierarchical():
 			self.current_parsing_index+=1						
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 
-	def parse_primitive_terminal(self):
-		# Sample a goal location.
-		# start_location, goal_location = self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-		# start_location *= npy.array([self.state.w,self.state.h])
-		# goal_location *= npy.array([self.state.w,self.state.h])
-		# self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
-		# self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
-		self.current_parsing_index+=1
-
 	def propagate_rewards(self):
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
@@ -391,45 +382,16 @@ class hierarchical():
 			self.parse_tree[self.current_parsing_index].goal = goal_copy
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		# To make sure parse tree is being assigned the reward value in case 
+		# state is creating a copy of the parse_tree_node object rather than referencing.
+		self.parse_tree[self.current_parsing_index].reward = self.state.reward
 		self.current_parsing_index+=1
-
-	# def terminal_reward_nostartgoal(self, image_index):
-
-	# 	if self.state.label==1:
-	# 		self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
-
-	# 	self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-
-	def compute_rewards(self, image_index):
-		# For all terminal symbols only.
-		# Rectange intersection
-		self.painted_image = -npy.ones((self.image_size,self.image_size))
-	
-		for j in range(len(self.parse_tree)):
-			# Assign state.
-			self.state = copy.deepcopy(self.parse_tree[j])
-
-			# For every node in the tree, we know the ground truth image labels.
-			# We will compute the reward as:
-			# To be painted (-1 for no, 1 for yes)
-			# Whether it was painted (-1 for no or 1 for yes)
-
-			# If it is a region with a primitive.
-			# if self.parse_tree[j].label==1:
-			if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
-				self.terminal_reward_nostartgoal(image_index)
-
-
-			self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
 
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 
 		# NOW CHANGING TO 4 RULE SYSTEM.
 		target_rule = npy.zeros(self.rulefc_output_shape)
-		start = npy.zeros(2)
-		goal = npy.zeros(2)
-		# previous_goal = npy.zeros(2)
 
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
@@ -453,7 +415,7 @@ class hierarchical():
 				rule_weight = self.parse_tree[j].reward
 				target_rule[self.parse_tree[j].rule_applied] = 1.
 
-				# Nested, since a split rule may only be applied on a non-terminal.
+				# Nested, since a split rule may only be applied on a non-terminal.	
 				if self.parse_tree[j].rule_applied<=3:
 					split_weight = self.parse_tree[j].reward				
 
@@ -565,8 +527,10 @@ class hierarchical():
 			for i in range(self.num_images):
 
 				self.initialize_tree()
-				self.construct_parse_tree(i)
-				self.compute_rewards(i)
+				self.construct_parse_tree(i)				
+				# Rewards are assigned while parsing terminal symbols in this case;
+				# No need to separately compute the rewards; only propagate them. 
+				# self.compute_rewards(i)
 				self.propagate_rewards()
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
