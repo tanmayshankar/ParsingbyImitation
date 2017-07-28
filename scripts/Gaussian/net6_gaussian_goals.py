@@ -113,6 +113,7 @@ class hierarchical():
 		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
 		self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
+		self.split_cov = 0.1*npy.ones(2)
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Sampling a split. Remember, this should still just be defining an operation, not actually sampling.
