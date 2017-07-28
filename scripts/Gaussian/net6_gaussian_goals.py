@@ -275,8 +275,8 @@ class hierarchical():
 
 					if counter>25:
 						print("State: H",self.state.h)
-						print("Split fraction:",split_location)
-						print("Split location:",int(split_location*self.state.h))
+						print("Split fraction:",split_copy)
+						print("Split location:",split_location)
 
 				# split_copy = copy.deepcopy(split_location)
 				# split_location = int(self.state.h*split_location)
@@ -309,8 +309,8 @@ class hierarchical():
 				# 	counter+=1
 					if counter>25:
 						print("State: W",self.state.w)
-						print("Split fraction:",split_location)
-						print("Split location:",int(split_location*self.state.w))
+						print("Split fraction:",split_copy)
+						print("Split location:",split_location)
 
 				# # Scale split location.
 				# split_copy = copy.deepcopy(split_location)
