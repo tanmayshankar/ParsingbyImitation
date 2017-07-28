@@ -14,11 +14,8 @@ class parse_tree_node():
 		self.rule_applied = rule_applied
 		self.split = split
 		self.reward = 0.
-		# self.split_prior = npy.ones((1,20))/20
-		self.categorical_prior = npy.ones((1,20))/20
-
-		self.gradient_policy_probability = 1.
-		self.network_policy_probability = 1.
+		self.start = start
+		self.goal = goal
 
 	def disp(self):
 		print("Label:", self.label)
