@@ -418,7 +418,7 @@ class hierarchical():
 			# if self.parse_tree[j].label==1:
 			if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
 				self.terminal_reward_nostartgoal(image_index)
-				
+
 
 			self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
 
@@ -427,6 +427,10 @@ class hierarchical():
 
 		# NOW CHANGING TO 4 RULE SYSTEM.
 		target_rule = npy.zeros(self.rulefc_output_shape)
+		start = npy.zeros(2)
+		goal = npy.zeros(2)
+		# previous_goal = npy.zeros(2)
+
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
@@ -439,20 +443,29 @@ class hierarchical():
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
-			rule_weight = 0
-			split_weight = 0
+			rule_weight = 0.
+			split_weight = 0.
+			startgoal_weight = 0.
 			target_rule = npy.zeros(self.rulefc_output_shape)
 
 			if self.parse_tree[j].label==0:
+				
 				rule_weight = self.parse_tree[j].reward
 				target_rule[self.parse_tree[j].rule_applied] = 1.
+
+				# Nested, since a split rule may only be applied on a non-terminal.
 				if self.parse_tree[j].rule_applied<=3:
-					split_weight = self.parse_tree[j].reward
+					split_weight = self.parse_tree[j].reward				
+
+			if self.parse_tree[j].label==1:
+				startgoal_weight = self.parse_tree[j].reward
 
 			# Here ,we only backprop for shapes, since we only choose actions for shapese.
-				rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
-					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
-						 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
+			rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
+				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
+					 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
+						 self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
+						 	self.startgoal_return_weight: startgoal_weight, self.sampled_split: self.parse_tree[j].split})
 
 			# print("LOSS VALUES:",rule_loss, split_loss)
 
@@ -482,16 +495,11 @@ class hierarchical():
 				self.parse_nonterminal(image_index)
 
 			# If the current non-terminal is a region assigned a particular primitive.
-			if (self.state.label==1):
-				# print("________  PARSING TERMINAL")
-				self.parse_primitive_terminal()
-			
-			if (self.state.label==2):
-				self.current_parsing_index+=1
-
-			# if (self.predicted_labels[image_index]==1).any():
-			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
-			
+			if (self.state.label==1) or (self.state.label==2):	
+				self.parse_terminal()
+				
+			# Update data for plots
+			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
@@ -572,8 +580,8 @@ class hierarchical():
 			else: 
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
-			self.predicted_labels = npy.zeros((20000,20,20))
-			
+			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
+			self.painted_images = npy.zeros((self.num_images,self.image_size,self.image_size))
 
 	############################
 	# Pixel labels: 
