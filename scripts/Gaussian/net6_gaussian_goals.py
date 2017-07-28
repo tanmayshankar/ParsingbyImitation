@@ -16,7 +16,7 @@ class hierarchical():
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-		
+
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
 		# Initializing the session.
@@ -354,11 +354,17 @@ class hierarchical():
 			start_copy = copy.deepcopy(start_location)
 			goal_copy = copy.deepcopy(goal_location)
 
-			start_location *= npy.array([self.state.w,self.state.h])
+ 			start_location *= npy.array([self.state.w,self.state.h])
 			goal_location *= npy.array([self.state.w,self.state.h])
+
+			# print("START / GOAL: ")
+			# print(start_copy, start_location, goal_copy, goal_location)
+
 			self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
 			self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
 			
+			self.state = self.parse_tree[self.current_parsing_index]
+
 			# Compute the angle and the length of the start-goal line. 
 			angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
 			length = npy.linalg.norm(self.state.goal-self.state.start)
@@ -462,7 +468,8 @@ class hierarchical():
 				self.parse_terminal(image_index)
 				
 			# Update data for plots
-			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
+			# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
+			self.alternate_painted_image[npy.where(self.painted_image==1)]=1.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
@@ -595,7 +602,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 0
 	if load:
