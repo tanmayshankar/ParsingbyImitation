@@ -376,7 +376,7 @@ class hierarchical():
 				for y in range(int(self.state.y), bounding_height):
 					if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
 						self.painted_image[x,y] = 1
-						self.painted_images[image_index,x,y] = 1
+						self.painted_image[image_index,x,y] = 1
 
 			self.parse_tree[self.current_parsing_index].start = start_copy
 			self.parse_tree[self.current_parsing_index].goal = goal_copy
