@@ -545,7 +545,7 @@ class hierarchical():
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
-			self.painted_images = npy.zeros((self.num_images,self.image_size,self.image_size))
+			self.painted_image = npy.zeros((self.num_images,self.image_size,self.image_size))
 
 	############################
 	# Pixel labels: 
