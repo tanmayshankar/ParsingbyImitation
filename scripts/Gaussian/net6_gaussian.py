@@ -106,12 +106,12 @@ class hierarchical():
 		
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
-		self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])
-
+		self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
-		# self.sample_split = self.split_dist.sample()
+
+		self.sample_split = self.split_dist.sample()
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
-		self.sampled_split = tf.placeholder(tf.int32,shape=(None),name='sampled_split')
+		self.sampled_split = tf.placeholder(tf.float32,shape=(None),name='sampled_split')
 
 		# Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
@@ -201,15 +201,18 @@ class hierarchical():
 				categorical_prob_softmax[[0,-1]] = 0.
 				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 				
-				while (split_location<=0)or(split_location>=self.state.h):
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
-					# print(split_location,self.state.h,int(float(self.state.h*split_location)/self.image_size))
-					if split_location>=10:
-						split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
-					else:
-						split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
-										
-			
+				while (split_location<=0)or(split_location>=1):
+					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax).astype(float)
+					split_location /= self.image_size
+
+				# while (split_location<=0)or(split_location>=self.state.h):
+				# 	split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
+				# 	# print(split_location,self.state.h,int(float(self.state.h*split_location)/self.image_size))
+				# 	if split_location>=10:
+				# 		split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
+				# 	else:
+				# 		split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
+													
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
@@ -222,16 +225,18 @@ class hierarchical():
 				categorical_prob_softmax[[0,-1]] = 0.
 				categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 							
-				
-				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
-					# print(split_location,self.state.w,int(float(self.state.w*split_location)/self.image_size))
-					if split_location>=10:
-						split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
-					else:
-						split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
-					
-				
+				while (split_location<=0)or(split_location>=1):
+					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax).astype(float)
+					split_location /= self.image_size
+
+				# while (split_location<=0)or(split_location>=self.state.w):
+				# 	split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
+				# 	# print(split_location,self.state.w,int(float(self.state.w*split_location)/self.image_size))
+				# 	if split_location>=10:
+				# 		split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
+				# 	else:
+				# 		split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
+								
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)

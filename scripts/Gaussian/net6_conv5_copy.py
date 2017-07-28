@@ -1,27 +1,6 @@
 #!/usr/bin/env python
 from headers import *
-
-# Define a class for the parse tree / rule / etc? 
-class parse_tree_node():
-	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
-		self.label = label
-		self.x = x
-		self.y = y
-		self.w = w
-		self.h = h
-		self.backward_index = backward_index
-		self.rule_applied = rule_applied
-		self.split = split
-		self.reward = 0.
-
-	def disp(self):
-		print("Label:", self.label)
-		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
-
-		print("Backward Index:",self.backward_index)
-		print("Reward:",self.reward)
-		print("Rule:",self.rule_applied,"Split:",self.split)
-		print("____________________________________________")
+from state_class import *
 
 class hierarchical():
 
@@ -79,14 +58,19 @@ class hierarchical():
 		# Layer 4
 		self.W_conv4 = tf.Variable(tf.truncated_normal([self.conv4_size,self.conv4_size,self.conv3_num_filters,self.conv4_num_filters],stddev=0.1),name='W_conv4')
 		self.b_conv4 = tf.Variable(tf.constant(0.1,shape=[self.conv4_num_filters]),name='b_conv4')
-		self.conv4 = tf.add(tf.nn.conv2d(self.relu_conv3,self.W_conv4,strides=[1,1,1,1],padding='VALID'),self.b_conv4,name='conv4')
+		if self.image_size == 20:
+			self.conv4 = tf.add(tf.nn.conv2d(self.relu_conv3,self.W_conv4,strides=[1,1,1,1],padding='VALID'),self.b_conv4,name='conv4')
+		else:
+			self.conv4 = tf.add(tf.nn.conv2d(self.relu_conv3,self.W_conv4,strides=[1,2,2,1],padding='VALID'),self.b_conv4,name='conv4')
 		self.relu_conv4 = tf.nn.relu(self.conv4)
 
 		# Layer 5
 		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
 		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
-		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
-		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')
+		if self.image_size == 20:
+			self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
+		else:
+			self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')	
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
@@ -173,12 +157,13 @@ class hierarchical():
 		save_path = self.saver.save(self.sess,'saved_models/net6_conv5_model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
+		# Intialize the parse tree for this image.=
+		self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
 
-	def insert_node(self, state, index):
-	
+	def insert_node(self, state, index):	
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
@@ -233,7 +218,6 @@ class hierarchical():
 						print("State: H",self.state.h)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.h))
-						print(rule_probabilities[0])
 
 				split_copy = copy.deepcopy(split_location)
 				split_location = int(self.state.h*split_location)
@@ -253,7 +237,7 @@ class hierarchical():
 						print("State: W",self.state.w)
 						print("Split fraction:",split_location)
 						print("Split location:",int(split_location*self.state.w))
-						print(rule_probabilities[0])
+
 				# Scale split location.
 				split_copy = copy.deepcopy(split_location)
 				split_location = int(self.state.w*split_location)
@@ -324,16 +308,9 @@ class hierarchical():
 	def terminal_reward_nostartgoal(self, image_index):
 
 		if self.state.label==1:
-			# for x in range(int(self.state.x),int(self.state.x+self.state.w)):
-			# 	for y in range(int(self.state.y),int(self.state.y+self.state.h)):
-			# 		self.painted_image[x,y] = 1
-
-			# CHANGING PAINTING CONSTANT TO 2
 			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		# self.state.reward = -(abs(self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]-self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h])).sum()		
-
 
 	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
@@ -371,29 +348,11 @@ class hierarchical():
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-
-			# Pick up correct portion of image.
-			# self.image_input = self.images[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]
-
-
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			rule_weight = 0
 			split_weight = 0
 			target_rule = npy.zeros(self.fcs1_output_shape)
-
-			# MUST PARSE EVERY NODE
-			# If shape:
-			# if self.parse_tree[j].label==0:
-			# 	# If split rule.
-			# 	# if self.parse_tree[j].rule_applied<=5:
-			# 	if self.parse_tree[j].rule_applied<=1:
-			# 		split_weight = self.parse_tree[j].reward
-			# 		rule_weight = self.parse_tree[j].reward
-			# 		target_rule[self.parse_tree[j].rule_applied] = 1.
-			# 	# If rule 2 or rule 3.
-			# 	if self.parse_tree[j].rule_applied>=2:
-			# 		rule_weight = self.parse_tree[j].reward
 
 			if self.parse_tree[j].label==0:
 				rule_weight = self.parse_tree[j].reward
@@ -447,100 +406,85 @@ class hierarchical():
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
-			# self.fig.suptitle("Processing Image: {0}".format(image_index))
-			# self.sc1.set_data(self.alternate_predicted_labels)
-			# # self.sc1.set_data(self.predicted_labels[image_index])
-			# self.sc2.set_data(self.true_labels[image_index])
-			# # self.sc3.set_data(self.painted_image)
-			# self.sc3.set_data(self.alternate_painted_image)
-			# self.sc4.set_data(self.images[image_index])
-			# self.fig.canvas.draw()
-			# plt.pause(0.005)
+			self.update_plot_data(image_index)
 
-		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].disp()
+	def update_plot_data(self, image_index):
+		if self.plot:
+			self.fig.suptitle("Processing Image: {0}".format(image_index))
+			self.sc1.set_data(self.alternate_predicted_labels)
+			self.sc2.set_data(self.true_labels[image_index])
+			self.sc3.set_data(self.alternate_painted_image)
+			self.sc4.set_data(self.images[image_index])
+			self.fig.canvas.draw()
+			plt.pause(0.001)
 
-	def meta_training(self):
+	def define_plots(self):
+
+		image_index = 0
+		if self.plot:
+			self.fig, self.ax = plt.subplots(1,4,sharey=True)
+			self.fig.show()
+			
+			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
+			self.sc1.set_clim([0,2])
+			# self.fig.colorbar(sc1, self.ax=self.ax[0])
+			self.ax[0].set_title("Predicted Labels")
+			self.ax[0].set_adjustable('box-forced')
+
+			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
+			self.sc2.set_clim([-1,1])
+			# self.fig.colorbar(sc2, self.ax=self.ax[1])
+			self.ax[1].set_title("True Labels")
+			self.ax[1].set_adjustable('box-forced')
+
+			self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
+			self.sc3.set_clim([-1,1])
+			# self.fig.colorbar(sc3, self.ax=self.ax[2])
+			self.ax[2].set_title("Painted Image")
+			self.ax[2].set_adjustable('box-forced')
+
+			self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
+			self.sc4.set_clim([-1,1])
+			# self.fig.colorbar(sc4,self.ax=self.ax[3])
+			self.ax[3].set_title("Actual Image")
+			self.ax[3].set_adjustable('box-forced')
+			# plt.draw()
+			self.fig.canvas.draw()
+			plt.pause(0.001)
+	
+	def meta_training(self,train=True):
 
 		image_index = 0
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
-		# self.fig, self.ax = plt.subplots(1,4,sharey=True)
-		# # plt.ion()
-		# # plt.show()
-		# self.fig.show()
-		
-		# self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
-		# self.sc1.set_clim([0,2])
-		# # self.fig.colorbar(sc1, self.ax=self.ax[0])
-		# self.ax[0].set_title("Predicted Labels")
-		# self.ax[0].set_adjustable('box-forced')
 
-		# self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
-		# self.sc2.set_clim([-1,1])
-		# # self.fig.colorbar(sc2, self.ax=self.ax[1])
-		# self.ax[1].set_title("True Labels")
-		# self.ax[1].set_adjustable('box-forced')
+		self.define_plots()
 
-		# self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
-		# self.sc3.set_clim([-1,1])
-		# # self.fig.colorbar(sc3, self.ax=self.ax[2])
-		# self.ax[2].set_title("Painted Image")
-		# self.ax[2].set_adjustable('box-forced')
-
-		# self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
-		# self.sc4.set_clim([-1,1])
-		# # self.fig.colorbar(sc4,self.ax=self.ax[3])
-		# self.ax[3].set_title("Actual Image")
-		# self.ax[3].set_adjustable('box-forced')
-		# # plt.draw()
-		# self.fig.canvas.draw()
-		# plt.pause(0.001)
+		# For all epochs
+		if not(train):
+			self.num_epochs=1
 
 		# For all epochs
 		for e in range(self.num_epochs):
-		# for e in range(2):
-			
-			# For all images
 			for i in range(self.num_images):
-			# for i in range(20):
-				
 
-				# for r in range(len(self.parse_tree)):
-				# 	print("Printing Node",r)
-				# 	self.parse_tree[r].disp()
-
-				# Intialize the parse tree for this image.=
-				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
 				self.initialize_tree()
-
 				self.construct_parse_tree(i)
-				
-				# WHEN THE PARSE IS COMPLETE, 
-				# First just execute the set of trajectories in parse tree, by traversing the LEAF NODES in the order they appear in the tree (DFS-LR)
-				# REsolve goals into global frame.
-						
-				#compute rewards for the chosen actions., then propagate them through the tree.
-				# print("Computing Rewards.")
 				self.compute_rewards(i)
-				# print("Propagating Rewards.")
 				self.propagate_rewards()
-
-				# for j in range(len(self.parse_tree)):
-				# 	self.parse_tree[j].disp()
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
-				# print("Backprop.")
-				self.backprop(i)
-				# print("TOTAL REWARD:",self.parse_tree[0].reward)
 
-				# self.sc1.set_data(self.predicted_labels[i])
-				# self.sc2.set_data(self.true_labels[i])
-				# self.sc3.set_data(self.painted_image)
-				# self.sc4.set_data(self.images[i])
-				# self.fig.canvas.draw()
-			npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
+				if train:
+					self.backprop(i)
+
+			if train:
+				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
+				self.save_model(e)
+			else: 
+				npy.save("validation.npy".format(e),self.predicted_labels)
+
 			self.predicted_labels = npy.zeros((20000,20,20))
-			self.save_model(e)
+			
 
 	############################
 	# Pixel labels: 
@@ -574,7 +518,6 @@ class hierarchical():
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
 
-
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
@@ -591,8 +534,18 @@ def main(args):
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
+	
+	load = 0
+	if load:
+		print("HI!")
+		model_file = str(sys.argv[3])
+		hierarchical_model.initialize_tensorflow_model(sess,model_file)
+	else:
+		hierarchical_model.initialize_tensorflow_model(sess)
+
 	# CALL TRAINING
-	hierarchical_model.meta_training()
+	# hierarchical_model.meta_training(train=False)
+	hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
