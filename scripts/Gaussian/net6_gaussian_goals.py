@@ -458,7 +458,7 @@ class hierarchical():
 
 			# If the current non-terminal is a region assigned a particular primitive.
 			if (self.state.label==1) or (self.state.label==2):	
-				self.parse_terminal()
+				self.parse_terminal(image_index)
 				
 			# Update data for plots
 			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
