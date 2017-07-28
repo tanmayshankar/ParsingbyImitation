@@ -273,10 +273,10 @@ class hierarchical():
 				# 	split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 				# 	counter+=1
 
-				# 	if counter>25:
-				# 		print("State: H",self.state.h)
-				# 		print("Split fraction:",split_location)
-				# 		print("Split location:",int(split_location*self.state.h))
+					if counter>25:
+						print("State: H",self.state.h)
+						print("Split fraction:",split_location)
+						print("Split location:",int(split_location*self.state.h))
 
 				# split_copy = copy.deepcopy(split_location)
 				# split_location = int(self.state.h*split_location)
@@ -301,14 +301,16 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(inter_split))
 
+					
+
 				# # SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				# while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
 				# 	split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 				# 	counter+=1
-				# 	if counter>25:
-				# 		print("State: W",self.state.w)
-				# 		print("Split fraction:",split_location)
-				# 		print("Split location:",int(split_location*self.state.w))
+					if counter>25:
+						print("State: W",self.state.w)
+						print("Split fraction:",split_location)
+						print("Split location:",int(split_location*self.state.w))
 
 				# # Scale split location.
 				# split_copy = copy.deepcopy(split_location)
