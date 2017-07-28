@@ -80,63 +80,106 @@ class hierarchical():
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
-		# Now not using the start and goal
-		self.fcs1_l1_shape = 120
-		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
-		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
-		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
-		self.fcs2_l1_shape = 50
-		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
-		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
-		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
+		##########################
+		# CREATING THE RULE STREAM
+		##########################
+		self.rulefc_l1_shape = 120
+		self.W_rulefc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.rulefc_l1_shape],stddev=0.1),name='W_rulefc_l1')
+		self.b_rulefc_l1 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_l1_shape]),name='b_rulefc_l1')
+		self.rulefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_rulefc_l1),self.b_rulefc_l1),name='rulefc_l1')
 
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
-		# Now we have shifted to the 4 rule version of this: 
-		# Horizontal split rule into two shapes
-		# Vertical split rule into two shapes
-		# Assignment rule to region with primitive.
-		# Assignment rule to region without primitive.
-
-		self.fcs1_output_shape = 1*self.number_primitives+5
-		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
-		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
-		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
-		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
+		self.rulefc_output_shape = 1*self.number_primitives+5
+		self.W_rulefc_l2 = tf.Variable(tf.truncated_normal([self.rulefc_l1_shape,self.rulefc_output_shape],stddev=0.1),name='W_rulefc_l2')
+		self.b_rulefc_l2 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_output_shape]),name='b_rulefc_l2')
+		self.rulefc_presoftmax = tf.add(tf.matmul(self.rulefc_l1,self.W_rulefc_l2),self.b_rulefc_l2,name='rulefc_presoftmax')
+		self.rule_probabilities = tf.nn.softmax(self.rulefc_presoftmax,name='softmax')
 		
+		#########################
+		# CREATING A SPLIT STREAM
+		#########################
+		self.splitfc_l1_shape = 50
+		self.W_splitfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.splitfc_l1_shape],stddev=0.1),name='W_splitfc_l1')		
+		self.b_splitfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.splitfc_l1_shape]),name='b_splitfc_l1')
+		self.splitfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_splitfc_l1),self.b_splitfc_l1),name='splitfc_l1')		
+
 		# Split output.
-		self.W_split = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,2],stddev=0.1),name='W_split')
+		self.W_split = tf.Variable(tf.truncated_normal([self.splitfc_l1_shape,2],stddev=0.1),name='W_split')
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
 		
-		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
-		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
-		self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
+		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
+		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
+		self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
-		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
-		# We evaluate this to retrieve a sample goal / split location. 
+		# Sampling a split. Remember, this should still just be defining an operation, not actually sampling.
 		self.sample_split = self.split_dist.sample()
-
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.float32,shape=(None),name='sampled_split')
+
+		##########################
+		# CREATING THE GOAL STREAM
+		##########################
+		self.goalfc_l1_shape = 30
+		self.W_goalfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.goalfc_l1_shape],stddev=0.1),name='W_goalfc_l1')		
+		self.b_goalfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.goalfc_l1_shape]),name='b_goalfc_l1')
+		self.goalfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_goalfc_l1),self.b_goalfc_l1),name='goalfc_l1')		
+
+		# Goal output.
+		self.W_goal = tf.Variable(tf.truncated_normal([self.goalfc_l1_shape,4],stddev=0.1),name='W_goal')
+		self.b_goal = tf.Variable(tf.constant(0.1,shape=[4]),name='b_goal')
+		self.goalfc_preslice = tf.matmul(self.goalfc_l1,self.W_goal)+self.b_goal
+		self.goal_mean = tf.nn.sigmoid(self.goalfc_preslice[0,:2])
+		self.goal_cov = tf.nn.softplus(self.goalfc_preslice[0,2:])+0.05
+
+		###########################
+		# CREATING THE START STREAM
+		###########################
+		self.startfc_l1_shape = 30
+		self.W_startfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.startfc_l1_shape],stddev=0.1),name='W_startfc_l1')
+		self.b_startfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.startfc_l1_shape]),name='b_startfc_l1')
+		self.startfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_startfc_l1),self.b_startfc_l1),name='startfc_l1')				
+
+		# Start output.
+		self.W_start = tf.Variable(tf.truncated_normal([self.startfc_l1_shape,4],stddev=0.1),name='W_start')
+		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
+		self.startfc_preslice = tf.matmul(self.startfc_l1,self.W_start)+self.b_start
+		self.start_mean = tf.nn.sigmoid(self.startfc_preslice[0,:2])
+		self.start_cov = tf.nn.softplus(self.startfc_preslice[0,2:])+0.05
+
+		# Creating start and goal distributions.
+		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
+		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_diag=self.start_cov)
+
+		self.sample_goal = self.goal_dist.sample()
+		self.sample_start = self.start_dist.sample()
+
+		self.sampled_goal = tf.placeholder(tf.float32,shape=(2),name='sampled_goal')
+		self.sampled_start = tf.placeholder(tf.float32,shape=(2),name='sampled_start')
+		self.previous_goal = tf.placeholder(tf.float32,shape=(2),name='previous_goal')
 
 		# Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
+		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None),name='startgoal_return_weight')
+		self.target_rule = tf.placeholder(tf.float32,shape=( self.rulefc_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
 
 		# NO NEGATIVE SIGN HERE
-		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
- 
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rulefc_presoftmax),self.rule_return_weight) 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
+		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
+		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.startgoal_return_weight)
+		# The start loss is the negative log probability of the chosen start, weighted byt he return obtained.
+		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
 		# The total loss is the sum of individual losses.
-		self.total_loss = self.rule_loss + self.split_loss
+		self.total_loss = self.rule_loss + self.split_loss + self.start_loss + self.goal_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
@@ -164,7 +207,8 @@ class hierarchical():
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
 
-	def insert_node(self, state, index):	
+	def insert_node(self, state, index):
+		# Insert node into the parse tree.
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
@@ -193,7 +237,7 @@ class hierarchical():
 		# print(rule_probabilities[0])
 
 		rule_probabilities/=rule_probabilities.sum()
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+		selected_rule = npy.random.choice(range(self.rulefc_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
 		# print("Selected Rule:",selected_rule)
@@ -306,12 +350,55 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
-	def terminal_reward_nostartgoal(self, image_index):
+	def parse_terminal(self, image_index):
+		
+		# If terminal with primitive assigned:
+		if (self.state.label==1):
+			
+			# Sample a goal location and start location.
+			start_location, goal_location, start_mean, goal_mean = self.sess.run([self.sample_start,self.sample_goal, \
+				self.start_mean, self.goal_mean],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+			
+			start_copy = copy.deepcopy(start_location)
+			goal_copy = copy.deepcopy(goal_location)
 
-		if self.state.label==1:
-			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
+			start_location *= npy.array([self.state.w,self.state.h])
+			goal_location *= npy.array([self.state.w,self.state.h])
+			self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
+			self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
+			
+			# Compute the angle and the length of the start-goal line. 
+			angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
+			length = npy.linalg.norm(self.state.goal-self.state.start)
+
+			# Create a rectangle for the paintbrush.
+			rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+
+			# Rotate it.	
+			rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]],use_radians=True)
+
+			coords = npy.array(list(rotated_rect.exterior.coords)[0:4])
+			bounding_height = int(npy.ceil(max(self.state.y+self.state.h,npy.max(coords[:,1]))))
+			bounding_width = int(npy.ceil(max(self.state.x+self.state.w,npy.max(coords[:,0]))))
+
+			for x in range(int(self.state.x),bounding_width):
+				for y in range(int(self.state.y), bounding_height):
+					if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
+						self.painted_image[x,y] = 1
+						self.painted_images[image_index,x,y] = 1
+
+			self.parse_tree[self.current_parsing_index].start = start_copy
+			self.parse_tree[self.current_parsing_index].goal = goal_copy
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		self.current_parsing_index+=1
+
+	# def terminal_reward_nostartgoal(self, image_index):
+
+	# 	if self.state.label==1:
+	# 		self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
+
+	# 	self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
 	def compute_rewards(self, image_index):
 		# For all terminal symbols only.
@@ -331,6 +418,7 @@ class hierarchical():
 			# if self.parse_tree[j].label==1:
 			if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
 				self.terminal_reward_nostartgoal(image_index)
+				
 
 			self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
 
@@ -338,7 +426,7 @@ class hierarchical():
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 
 		# NOW CHANGING TO 4 RULE SYSTEM.
-		target_rule = npy.zeros(self.fcs1_output_shape)
+		target_rule = npy.zeros(self.rulefc_output_shape)
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
@@ -353,7 +441,7 @@ class hierarchical():
 
 			rule_weight = 0
 			split_weight = 0
-			target_rule = npy.zeros(self.fcs1_output_shape)
+			target_rule = npy.zeros(self.rulefc_output_shape)
 
 			if self.parse_tree[j].label==0:
 				rule_weight = self.parse_tree[j].reward
