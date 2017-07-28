@@ -301,7 +301,7 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(inter_split))
 
-					
+
 
 				# # SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				# while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
@@ -576,12 +576,13 @@ class hierarchical():
 
 			if train:
 				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
+				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
-			self.painted_images = npy.zeros((self.num_images,self.image_size,self.image_size))
+			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
 	############################
 	# Pixel labels: 
