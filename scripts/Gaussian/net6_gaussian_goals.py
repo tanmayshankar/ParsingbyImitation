@@ -15,7 +15,8 @@ class hierarchical():
 		self.true_labels = []
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
-
+		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
+		
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
 		# Initializing the session.
@@ -376,7 +377,7 @@ class hierarchical():
 				for y in range(int(self.state.y), bounding_height):
 					if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
 						self.painted_image[x,y] = 1
-						self.painted_image[image_index,x,y] = 1
+						self.painted_images[image_index,x,y] = 1
 
 			self.parse_tree[self.current_parsing_index].start = start_copy
 			self.parse_tree[self.current_parsing_index].goal = goal_copy
@@ -545,7 +546,7 @@ class hierarchical():
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
-			self.painted_image = npy.zeros((self.num_images,self.image_size,self.image_size))
+			self.painted_images = npy.zeros((self.num_images,self.image_size,self.image_size))
 
 	############################
 	# Pixel labels: 
