@@ -134,7 +134,8 @@ class hierarchical():
 		self.b_goal = tf.Variable(tf.constant(0.1,shape=[4]),name='b_goal')
 		self.goalfc_preslice = tf.matmul(self.goalfc_l1,self.W_goal)+self.b_goal
 		self.goal_mean = tf.nn.sigmoid(self.goalfc_preslice[0,:2])
-		self.goal_cov = tf.nn.softplus(self.goalfc_preslice[0,2:])+0.05
+		# self.goal_cov = tf.nn.softplus(self.goalfc_preslice[0,2:])+0.05
+		self.goal_cov = 0.1
 
 		###########################
 		# CREATING THE START STREAM
@@ -149,7 +150,8 @@ class hierarchical():
 		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
 		self.startfc_preslice = tf.matmul(self.startfc_l1,self.W_start)+self.b_start
 		self.start_mean = tf.nn.sigmoid(self.startfc_preslice[0,:2])
-		self.start_cov = tf.nn.softplus(self.startfc_preslice[0,2:])+0.05
+		# self.start_cov = tf.nn.softplus(self.startfc_preslice[0,2:])+0.05
+		self.start_cov = 0.1
 
 		# Creating start and goal distributions.
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
@@ -200,7 +202,7 @@ class hierarchical():
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
-		save_path = self.saver.save(self.sess,'saved_models/net6_conv5_model_{0}.ckpt'.format(model_index))
+		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
 		# Intialize the parse tree for this image.=
@@ -419,8 +421,8 @@ class hierarchical():
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 		# To make sure parse tree is being assigned the reward value in case 
-		# state is creating a copy of the parse_tree_node object rather than referencing.
-		self.parse_tree[self.current_parsing_index].reward = self.state.reward
+		# state is creating a copy of the parse_tree_node object rather than referencing- but IT IS REFERENCING
+		# self.parse_tree[self.current_parsing_index].reward = self.state.reward
 		self.current_parsing_index+=1
 
 	def backprop(self, image_index):
