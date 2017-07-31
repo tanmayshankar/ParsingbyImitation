@@ -97,9 +97,9 @@ for i in range(num_images):
 				# If vertical split rule.
 				if rule==0 or rule==2:
 					# split = int(float(state.h)/2)
-					# split = npy.random.choice(range(image_size))
+					split = npy.random.choice(range(image_size))
 
-					split = npy.random.choice(range(minimum_split_width,image_size - minimum_split_width))
+					# split = npy.random.choice(range(minimum_split_width,image_size - minimum_split_width))
 
 					# print("PRE:",split)
 					if split>=image_size/2:
@@ -113,9 +113,9 @@ for i in range(num_images):
 				if rule==1 or rule==3:
 					
 					# print("PRE:",split)
-					# split = npy.random.choice(range(image_size))
-					
-					split = npy.random.choice(range(minimum_split_width,image_size - minimum_split_width))
+					split = npy.random.choice(range(image_size))
+
+					# split = npy.random.choice(range(minimum_split_width,image_size - minimum_split_width))
 					if split>=image_size/2:
 						split = int(npy.floor(float(state.w*split)/image_size))
 					else:
