@@ -211,7 +211,8 @@ class hierarchical():
 			if ((selected_rule==0) or (selected_rule==2)):
 				counter = 0				
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
+				# while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
+				while (split_location<=0)or(split_location>=self.state.h):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
 
@@ -239,7 +240,8 @@ class hierarchical():
 			if ((selected_rule==1) or (selected_rule==3)):
 				counter = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
+				# while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
+				while (split_location<=0)or(split_location>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
 					
