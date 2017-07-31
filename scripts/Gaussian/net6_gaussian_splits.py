@@ -215,13 +215,21 @@ class hierarchical():
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
 
-					if counter>25:
-						print("State: H",self.state.h)
-						print("Split fraction:",split_location)
-						print("Split location:",int(split_location*self.state.h))
+					split_copy = copy.deepcopy(split_location)
+					inter_split = split_location*self.state.h
 
-				split_copy = copy.deepcopy(split_location)
-				split_location = int(self.state.h*split_location)
+					if inter_split>(self.image_size/2):
+						split_location = int(npy.floor(inter_split))
+					else:
+						split_location = int(npy.ceil(inter_split))
+
+					if counter>25:
+						print("State: W",self.state.h)
+						print("Split fraction:",split_copy)
+						print("Split location:",split_location)
+						
+				# split_copy = copy.deepcopy(split_location)
+				# split_location = int(self.state.h*split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -234,14 +242,23 @@ class hierarchical():
 				while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
+					
+					split_copy = copy.deepcopy(split_location)
+					inter_split = split_location*self.state.w
+
+					if inter_split>(self.image_size/2):
+						split_location = int(npy.floor(inter_split))
+					else:
+						split_location = int(npy.ceil(inter_split))
+
 					if counter>25:
 						print("State: W",self.state.w)
-						print("Split fraction:",split_location)
-						print("Split location:",int(split_location*self.state.w))
+						print("Split fraction:",split_copy)
+						print("Split location:",split_location)
 
-				# Scale split location.
-				split_copy = copy.deepcopy(split_location)
-				split_location = int(self.state.w*split_location)
+				# # Scale split location.
+				# split_copy = copy.deepcopy(split_location)
+				# split_location = int(self.state.w*split_location)
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
