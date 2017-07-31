@@ -6,8 +6,8 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 20
-		self.num_images = 20000
+		self.num_epochs = 1
+		self.num_images = 5000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth=2
@@ -475,7 +475,7 @@ class hierarchical():
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 
-				if train:
+				if train:	
 					self.backprop(i)
 
 			if train:
@@ -484,7 +484,8 @@ class hierarchical():
 			else: 
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
-			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
+			self.evaluate()
+			self.predicted_labels = npy.zeros((self.num_images, self.image_size, self.image_size))
 			
 
 	############################
@@ -519,6 +520,16 @@ class hierarchical():
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
 
+	def evaluate(self):
+
+		pred_label = copy.deepcopy(self.predicted_labels)
+		pred_label[npy.where(pred_label==2)]=-1
+
+		print("The image correlation:")
+		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
+		print("Pixel accuracy:")
+		print(1-abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
+
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
@@ -545,8 +556,8 @@ def main(args):
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	# hierarchical_model.meta_training(train=False)
-	hierarchical_model.meta_training(train=True)
+	hierarchical_model.meta_training(train=False)
+	# hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
