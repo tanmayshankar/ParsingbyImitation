@@ -114,7 +114,7 @@ class hierarchical():
 		self.primitivefc_l1_shape = 50
 		self.W_primitivefc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.primitivefc_l1_shape],stddev=0.1),name='W_primitivefc_l1')
 		self.b_primitivefc_l1 = tf.Variable(tf.constant(0.1,shape=[self.primitivefc_l1_shape]),name='b_primitivefc_l1')
-		self.primitivefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_primitivefc_l1)),name='primitivefc_l1')
+		self.primitivefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_primitivefc_l1),self.b_primitivefc_l1),name='primitivefc_l1')
 
 		self.W_primitivefc_l2 = tf.Variable(tf.truncated_normal([self.primitivefc_l1_shape, self.number_primitives],stddev=0.1),name='W_primitivefc_l2')
 		self.b_primitivefc_l2 = tf.Variable(tf.constant(0.1,shape=[self.number_primitives]),name='b_primitivefc_l2')
