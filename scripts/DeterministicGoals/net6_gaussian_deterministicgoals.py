@@ -303,7 +303,7 @@ class hierarchical():
 			self.current_parsing_index+=1						
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 
-	def parse_primitive_terminal(self):
+	def parse_primitive_terminal(self, image_index):
 		# Sample a goal location.
 
 		# If it is a region to be painted and assigned a primitive:
@@ -413,7 +413,7 @@ class hierarchical():
 
 			# If the current non-terminal is a region assigned a particular primitive.
 			if (self.state.label==1) or (self.state.label==2):
-				self.parse_primitive_terminal()
+				self.parse_primitive_terminal(image_index)
 			
 			# if (self.predicted_labels[image_index]==1).any():
 			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
