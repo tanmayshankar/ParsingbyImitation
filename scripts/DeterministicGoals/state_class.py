@@ -16,6 +16,7 @@ class parse_tree_node():
 		self.reward = 0.
 		self.start = start
 		self.goal = goal
+		self.primitive = -1
 
 	def disp(self):
 		print("Label:", self.label)
