@@ -92,7 +92,7 @@ class hierarchical():
 		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
 
 		# 2nd FC layer: RULE Output:
-		self.number_primitives = 1
+		self.number_primitives = 4
 		# Now we have shifted to the 4 rule version of this: 
 		# Horizontal split rule into two shapes
 		# Vertical split rule into two shapes
@@ -170,9 +170,6 @@ class hierarchical():
 	def parse_nonterminal(self, image_index):
 		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 	
-		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
-		# Should it be an epsilon-greedy policy? 
-
 		# SAMPLING A SPLIT LOCATION
 		split_location = -1
 
@@ -228,9 +225,6 @@ class hierarchical():
 						print("State: W",self.state.h)
 						print("Split fraction:",split_copy)
 						print("Split location:",split_location)
-
-				# split_copy = copy.deepcopy(split_location)
-				# split_location = int(self.state.h*split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -257,10 +251,6 @@ class hierarchical():
 						print("State: W",self.state.w)
 						print("Split fraction:",split_copy)
 						print("Split location:",split_location)
-
-				# # Scale split location.
-				# split_copy = copy.deepcopy(split_location)
-				# split_location = int(self.state.w*split_location)
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -304,11 +294,10 @@ class hierarchical():
 
 	def parse_primitive_terminal(self):
 		# Sample a goal location.
-		# start_location, goal_location = self.sess.run([self.sample_start,self.sample_goal],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-		# start_location *= npy.array([self.state.w,self.state.h])
-		# goal_location *= npy.array([self.state.w,self.state.h])
-		# self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
-		# self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
+
+		if (self.state.label==1):
+
+		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 		self.current_parsing_index+=1
 
 	def propagate_rewards(self):
@@ -329,33 +318,33 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)			
 
-	def terminal_reward_nostartgoal(self, image_index):
+	# def terminal_reward_nostartgoal(self, image_index):
 
-		if self.state.label==1:
-			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
+	# 	if self.state.label==1:
+	# 		self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
 
-		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+	# 	self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
-	def compute_rewards(self, image_index):
-		# For all terminal symbols only.
-		# Rectange intersection
-		self.painted_image = -npy.ones((self.image_size,self.image_size))
+	# def compute_rewards(self, image_index):
+	# 	# For all terminal symbols only.
+	# 	# Rectange intersection
+	# 	self.painted_image = -npy.ones((self.image_size,self.image_size))
 	
-		for j in range(len(self.parse_tree)):
-			# Assign state.
-			self.state = copy.deepcopy(self.parse_tree[j])
+	# 	for j in range(len(self.parse_tree)):
+	# 		# Assign state.
+	# 		self.state = copy.deepcopy(self.parse_tree[j])
 
-			# For every node in the tree, we know the ground truth image labels.
-			# We will compute the reward as:
-			# To be painted (-1 for no, 1 for yes)
-			# Whether it was painted (-1 for no or 1 for yes)
+	# 		# For every node in the tree, we know the ground truth image labels.
+	# 		# We will compute the reward as:
+	# 		# To be painted (-1 for no, 1 for yes)
+	# 		# Whether it was painted (-1 for no or 1 for yes)
 
-			# If it is a region with a primitive.
-			# if self.parse_tree[j].label==1:
-			if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
-				self.terminal_reward_nostartgoal(image_index)
+	# 		# If it is a region with a primitive.
+	# 		# if self.parse_tree[j].label==1:
+	# 		if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
+	# 			self.terminal_reward_nostartgoal(image_index)
 
-			self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
+	# 		self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
 
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
@@ -493,7 +482,7 @@ class hierarchical():
 
 				self.initialize_tree()
 				self.construct_parse_tree(i)
-				self.compute_rewards(i)
+				# self.compute_rewards(i)
 				self.propagate_rewards()
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
