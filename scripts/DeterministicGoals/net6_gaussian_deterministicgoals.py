@@ -367,7 +367,7 @@ class hierarchical():
 
 			rule_weight = 0
 			split_weight = 0
-			primtive_weight = 0
+			primitive_weight = 0
 			target_rule = npy.zeros(self.rulefc_output_shape)
 			target_primitive = npy.zeros(self.number_primitives)
 
@@ -378,7 +378,7 @@ class hierarchical():
 					split_weight = self.parse_tree[j].reward
 
 			if self.parse_tree[j].label==1:
-				primtive_weight = self.parse_tree[j].reward
+				primitive_weight = self.parse_tree[j].reward
 				target_primitive[self.parse_tree[j].primitive] = 1.				
 
 			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
