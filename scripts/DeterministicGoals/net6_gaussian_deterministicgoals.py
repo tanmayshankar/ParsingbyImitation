@@ -327,6 +327,7 @@ class hierarchical():
 
 			if (selected_primitive==2) or (selected_primitive==3):
 				upper = min(self.state.x+self.state.w,self.state.x+self.paintwidth)
+				self.painted_image[self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
 				self.painted_images[image_index, self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
 
 			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
@@ -419,8 +420,8 @@ class hierarchical():
 				self.parse_primitive_terminal(image_index)
 			
 			# if (self.predicted_labels[image_index]==1).any():
-			self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
-			
+			# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
+			self.alternate_painted_image[npy.where(self.painted_image==1)]=1.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
 
@@ -551,7 +552,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 0
 	if load:
