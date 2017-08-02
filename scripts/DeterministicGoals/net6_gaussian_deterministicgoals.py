@@ -326,6 +326,9 @@ class hierarchical():
 				upper = min(self.state.x+self.state.w,self.state.x+self.paintwidth)
 				self.painted_image[self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
 
+			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
+			# self.state.primitive = selected_primitive
+
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 		self.current_parsing_index+=1
 
@@ -347,39 +350,9 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)			
 
-	# def terminal_reward_nostartgoal(self, image_index):
-
-	# 	if self.state.label==1:
-	# 		self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
-
-	# 	self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-
-	# def compute_rewards(self, image_index):
-	# 	# For all terminal symbols only.
-	# 	# Rectange intersection
-	# 	self.painted_image = -npy.ones((self.image_size,self.image_size))
-	
-	# 	for j in range(len(self.parse_tree)):
-	# 		# Assign state.
-	# 		self.state = copy.deepcopy(self.parse_tree[j])
-
-	# 		# For every node in the tree, we know the ground truth image labels.
-	# 		# We will compute the reward as:
-	# 		# To be painted (-1 for no, 1 for yes)
-	# 		# Whether it was painted (-1 for no or 1 for yes)
-
-	# 		# If it is a region with a primitive.
-	# 		# if self.parse_tree[j].label==1:
-	# 		if self.parse_tree[j].label==1 or self.parse_tree[j].label==2:
-	# 			self.terminal_reward_nostartgoal(image_index)
-
-	# 		self.parse_tree[j].reward = copy.deepcopy(self.state.reward)
-
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 
-		# NOW CHANGING TO 4 RULE SYSTEM.
-		target_rule = npy.zeros(self.rulefc_output_shape)
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
@@ -394,7 +367,9 @@ class hierarchical():
 
 			rule_weight = 0
 			split_weight = 0
+			primtive_weight = 0
 			target_rule = npy.zeros(self.rulefc_output_shape)
+			target_primitive = npy.zeros(self.number_primitives)
 
 			if self.parse_tree[j].label==0:
 				rule_weight = self.parse_tree[j].reward
@@ -402,12 +377,13 @@ class hierarchical():
 				if self.parse_tree[j].rule_applied<=3:
 					split_weight = self.parse_tree[j].reward
 
-			# Here ,we only backprop for shapes, since we only choose actions for shapese.
-				rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
-					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
-						 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
+			if self.parse_tree[j].label==1:
+				primtive_weight = self.parse_tree[j].reward
+				target_primitive[self.parse_tree[j].primitive] = 1.				
 
-			# print("LOSS VALUES:",rule_loss, split_loss)
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
+				self.sampled_split: self.parse_tree[j].split, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
+					self.primitive_return_weight: primitive_weight, self.target_primitive: target_primitive})
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -415,6 +391,7 @@ class hierarchical():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.alternate_painted_image = -npy.ones((self.image_size,self.image_size))
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
+		
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
 	
 			# Forward pass of the rule policy- basically picking which rule.
@@ -523,7 +500,6 @@ class hierarchical():
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			
-
 	############################
 	# Pixel labels: 
 	# 0 for shape
@@ -571,7 +547,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 0
 	if load:
