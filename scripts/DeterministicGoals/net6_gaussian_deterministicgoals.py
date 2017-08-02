@@ -15,6 +15,7 @@ class hierarchical():
 		self.true_labels = []
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
+		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -322,10 +323,11 @@ class hierarchical():
 			if (selected_primitive==0) or (selected_primitive==1):
 				upper = min(self.state.y+self.state.h, self.state.y+self.paintwidth)
 				self.painted_image[self.state.x: self.state.x+self.state.w, self.state.y:upper] = 1.
+				self.painted_images[image_index, self.state.x: self.state.x+self.state.w, self.state.y:upper] = 1.
 
 			if (selected_primitive==2) or (selected_primitive==3):
 				upper = min(self.state.x+self.state.w,self.state.x+self.paintwidth)
-				self.painted_image[self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
+				self.painted_images[image_index, self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
 
 			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
 			# self.state.primitive = selected_primitive
@@ -495,12 +497,13 @@ class hierarchical():
 
 			if train:
 				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
+				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
 				npy.save("validation.npy".format(e),self.predicted_labels)
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
-			
+			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 	############################
 	# Pixel labels: 
 	# 0 for shape
