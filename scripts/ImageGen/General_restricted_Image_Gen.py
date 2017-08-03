@@ -57,13 +57,13 @@ class parse_tree_node():
 
 num_images = 20000
 
-# image_size = 50
-# minimum_split_width = 5
-# max_width = 30
+image_size = 50
+minimum_split_width = 5
+max_width = 30
 
-image_size = 20
-minimum_split_width = 3
-max_width = 18
+# image_size = 20
+# minimum_split_width = 3
+# max_width = 18
 
 images = npy.zeros((num_images,image_size,image_size))
 
@@ -140,4 +140,4 @@ for i in range(num_images):
 
 		current_parsing_index+=1
 
-npy.save("Images_20_general.npy",images)
+npy.save("Images_50_genres.npy",images)
