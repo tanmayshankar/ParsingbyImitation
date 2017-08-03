@@ -135,7 +135,7 @@ class hierarchical():
 		self.goalfc_preslice = tf.matmul(self.goalfc_l1,self.W_goal)+self.b_goal
 		self.goal_mean = tf.nn.sigmoid(self.goalfc_preslice[0,:2])
 		# self.goal_cov = tf.nn.softplus(self.goalfc_preslice[0,2:])+0.05
-		self.goal_cov = 0.1
+		self.goal_cov = 0.1*npy.ones(2)
 
 		###########################
 		# CREATING THE START STREAM
@@ -151,7 +151,7 @@ class hierarchical():
 		self.startfc_preslice = tf.matmul(self.startfc_l1,self.W_start)+self.b_start
 		self.start_mean = tf.nn.sigmoid(self.startfc_preslice[0,:2])
 		# self.start_cov = tf.nn.softplus(self.startfc_preslice[0,2:])+0.05
-		self.start_cov = 0.1
+		self.start_cov = 0.1*npy.ones(2)
 
 		# Creating start and goal distributions.
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
@@ -168,7 +168,7 @@ class hierarchical():
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
 		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None),name='startgoal_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=( self.rulefc_output_shape),name='target_rule')
+		self.target_rule = tf.placeholder(tf.float32,shape=(self.rulefc_output_shape),name='target_rule')
 
 		# Defining the loss for each of the 3 streams, rule, split and goal.
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
