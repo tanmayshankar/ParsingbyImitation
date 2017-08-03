@@ -10,7 +10,7 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=2
+		self.paintwidth=4
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
@@ -373,6 +373,11 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
+		# Non-linearizing rewards.
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)			
+
+
 	def parse_terminal(self, image_index):
 		
 		# If terminal with primitive assigned:
@@ -635,6 +640,7 @@ def main(args):
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
+
 	
 	load = 0
 	if load:
