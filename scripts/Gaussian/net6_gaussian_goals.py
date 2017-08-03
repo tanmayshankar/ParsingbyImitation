@@ -135,7 +135,7 @@ class hierarchical():
 		self.goalfc_preslice = tf.matmul(self.goalfc_l1,self.W_goal)+self.b_goal
 		self.goal_mean = tf.nn.sigmoid(self.goalfc_preslice[0,:2])
 		# self.goal_cov = tf.nn.softplus(self.goalfc_preslice[0,2:])+0.05
-		self.goal_cov = 0.1*npy.ones(2)
+		self.goal_cov = 0.1*npy.ones(2,dtype=npy.float32)
 
 		###########################
 		# CREATING THE START STREAM
@@ -151,7 +151,7 @@ class hierarchical():
 		self.startfc_preslice = tf.matmul(self.startfc_l1,self.W_start)+self.b_start
 		self.start_mean = tf.nn.sigmoid(self.startfc_preslice[0,:2])
 		# self.start_cov = tf.nn.softplus(self.startfc_preslice[0,2:])+0.05
-		self.start_cov = 0.1*npy.ones(2)
+		self.start_cov = 0.1*npy.ones(2,dtype=npy.float32)
 
 		# Creating start and goal distributions.
 		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
