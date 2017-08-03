@@ -318,7 +318,7 @@ class hierarchical():
 			# For primitive 1, horizontal brush stroke from right to left.
 			# For primitive 2, vertical brush stroke from top to bottom.
 			# For primitive 3, vertical brush stroke from bottom to top.
-			print("Selected Primitive:",selected_primitive)
+			# print("Selected Primitive:",selected_primitive)
 			# Horizontal primitives are identical
 			if (selected_primitive==0) or (selected_primitive==1):
 				upper = min(self.state.y+self.state.h, self.state.y+self.paintwidth)
