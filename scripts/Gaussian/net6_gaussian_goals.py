@@ -10,7 +10,7 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=4
+		self.paintwidth=5
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
