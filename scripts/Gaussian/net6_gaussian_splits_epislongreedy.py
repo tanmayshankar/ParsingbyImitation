@@ -132,7 +132,7 @@ class hierarchical():
 		self.initial_epislon = 0.95
 		self.final_epsilon = 0.05
 		self.decay_epochs = 5
-		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/self.decay_epochs
+		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epislon = 0.
 		
 
