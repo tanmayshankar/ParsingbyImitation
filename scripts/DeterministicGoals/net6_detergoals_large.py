@@ -139,6 +139,10 @@ class hierarchical():
 
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
+
+		print("HEllOOO")
+		print(self.rulefc_presoftmax)
+		print(self.target_rule)
 		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rulefc_presoftmax),self.rule_return_weight)
  
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
