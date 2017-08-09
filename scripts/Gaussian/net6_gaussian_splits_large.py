@@ -79,7 +79,7 @@ class hierarchical():
 			self.fc_input_shape = 5*5*self.conv5_num_filters
 		else:
 			self.fc_input_shape = 10*10*self.conv5_num_filters
-			
+
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
@@ -181,7 +181,7 @@ class hierarchical():
 
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 3
+		self.minimum_width = 5
 		# print(rule_probabilities[0])
 		
 		epislon = 1e-5
