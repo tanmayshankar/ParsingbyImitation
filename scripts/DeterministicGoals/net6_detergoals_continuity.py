@@ -10,7 +10,7 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=5
+		self.paintwidth = int(sys.argv[3])
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
@@ -76,31 +76,29 @@ class hierarchical():
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
-		# self.fc_input_shape = 10*10*self.conv5_num_filters
-		self.fc_input_shape = 5*5*self.conv5_num_filters
+		if self.image_size==20:
+			self.fc_input_shape = 5*5*self.conv5_num_filters
+		else:
+			self.fc_input_shape = 10*10*self.conv5_num_filters
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
-
-		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
-
-		##########################
-		# CREATING THE RULE STREAM
-		##########################
+		
+		#Splitting into 3 streams: Choosing Rules, Splits, and Primitives		
+		
+		# STARTING RULE STREAM:
+		# Now not using the start and goal
 		self.rulefc_l1_shape = 120
 		self.W_rulefc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.rulefc_l1_shape],stddev=0.1),name='W_rulefc_l1')
 		self.b_rulefc_l1 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_l1_shape]),name='b_rulefc_l1')
 		self.rulefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_rulefc_l1),self.b_rulefc_l1),name='rulefc_l1')
 
-		# 2nd FC layer: RULE Output:
-		self.number_primitives = 1
-		self.rulefc_output_shape = 1*self.number_primitives+5
+		# self.rulefc_output_shape = 1*self.number_primitives+5
+		self.rulefc_output_shape = 6
 		self.W_rulefc_l2 = tf.Variable(tf.truncated_normal([self.rulefc_l1_shape,self.rulefc_output_shape],stddev=0.1),name='W_rulefc_l2')
 		self.b_rulefc_l2 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_output_shape]),name='b_rulefc_l2')
 		self.rulefc_presoftmax = tf.add(tf.matmul(self.rulefc_l1,self.W_rulefc_l2),self.b_rulefc_l2,name='rulefc_presoftmax')
 		self.rule_probabilities = tf.nn.softmax(self.rulefc_presoftmax,name='softmax')
-		
-		#########################
-		# CREATING A SPLIT STREAM
-		#########################
+
+		# STARTING SPLIT STREAM:
 		self.splitfc_l1_shape = 50
 		self.W_splitfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.splitfc_l1_shape],stddev=0.1),name='W_splitfc_l1')		
 		self.b_splitfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.splitfc_l1_shape]),name='b_splitfc_l1')
@@ -109,81 +107,50 @@ class hierarchical():
 		# Split output.
 		self.W_split = tf.Variable(tf.truncated_normal([self.splitfc_l1_shape,2],stddev=0.1),name='W_split')
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
-		
 		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
-		self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
+		# self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
 		self.split_cov = 0.1
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
-		# Sampling a split. Remember, this should still just be defining an operation, not actually sampling.
+		# STARTING PRIMITIVE STREAM:		
+		self.number_primitives = 4
+		self.primitivefc_l1_shape = 50
+		self.W_primitivefc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.primitivefc_l1_shape],stddev=0.1),name='W_primitivefc_l1')
+		self.b_primitivefc_l1 = tf.Variable(tf.constant(0.1,shape=[self.primitivefc_l1_shape]),name='b_primitivefc_l1')
+		self.primitivefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_primitivefc_l1),self.b_primitivefc_l1),name='primitivefc_l1')
+
+		self.W_primitivefc_l2 = tf.Variable(tf.truncated_normal([self.primitivefc_l1_shape, self.number_primitives],stddev=0.1),name='W_primitivefc_l2')
+		self.b_primitivefc_l2 = tf.Variable(tf.constant(0.1,shape=[self.number_primitives]),name='b_primitivefc_l2')
+		self.primitivefc_presoftmax = tf.add(tf.matmul(self.primitivefc_l1,self.W_primitivefc_l2),self.b_primitivefc_l2,name='primitivefc_presoftmax')
+		self.primitive_probabilities = tf.nn.softmax(self.primitivefc_presoftmax,name='primitive_softmax')
+
+		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
+		# We evaluate this to retrieve a sample goal / split location. 
 		self.sample_split = self.split_dist.sample()
+
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.float32,shape=(None),name='sampled_split')
-
-		##########################
-		# CREATING THE GOAL STREAM
-		##########################
-		self.goalfc_l1_shape = 30
-		self.W_goalfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.goalfc_l1_shape],stddev=0.1),name='W_goalfc_l1')		
-		self.b_goalfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.goalfc_l1_shape]),name='b_goalfc_l1')
-		self.goalfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_goalfc_l1),self.b_goalfc_l1),name='goalfc_l1')		
-
-		# Goal output.
-		self.W_goal = tf.Variable(tf.truncated_normal([self.goalfc_l1_shape,4],stddev=0.1),name='W_goal')
-		self.b_goal = tf.Variable(tf.constant(0.1,shape=[4]),name='b_goal')
-		self.goalfc_preslice = tf.matmul(self.goalfc_l1,self.W_goal)+self.b_goal
-		self.goal_mean = tf.nn.sigmoid(self.goalfc_preslice[0,:2])
-		# self.goal_cov = tf.nn.softplus(self.goalfc_preslice[0,2:])+0.05
-		self.goal_cov = 0.1*npy.ones(2,dtype=npy.float32)
-
-		###########################
-		# CREATING THE START STREAM
-		###########################
-		self.startfc_l1_shape = 30
-		self.W_startfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.startfc_l1_shape],stddev=0.1),name='W_startfc_l1')
-		self.b_startfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.startfc_l1_shape]),name='b_startfc_l1')
-		self.startfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_startfc_l1),self.b_startfc_l1),name='startfc_l1')				
-
-		# Start output.
-		self.W_start = tf.Variable(tf.truncated_normal([self.startfc_l1_shape,4],stddev=0.1),name='W_start')
-		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
-		self.startfc_preslice = tf.matmul(self.startfc_l1,self.W_start)+self.b_start
-		self.start_mean = tf.nn.sigmoid(self.startfc_preslice[0,:2])
-		# self.start_cov = tf.nn.softplus(self.startfc_preslice[0,2:])+0.05
-		self.start_cov = 0.1*npy.ones(2,dtype=npy.float32)
-
-		# Creating start and goal distributions.
-		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
-		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_diag=self.start_cov)
-
-		self.sample_goal = self.goal_dist.sample()
-		self.sample_start = self.start_dist.sample()
-
-		self.sampled_goal = tf.placeholder(tf.float32,shape=(2),name='sampled_goal')
-		self.sampled_start = tf.placeholder(tf.float32,shape=(2),name='sampled_start')
-		self.previous_goal = tf.placeholder(tf.float32,shape=(2),name='previous_goal')
 
 		# Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
-		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None),name='startgoal_return_weight')
+		self.primitive_return_weight = tf.placeholder(tf.float32,shape=(None),name='primitive_return_weight')
 		self.target_rule = tf.placeholder(tf.float32,shape=(self.rulefc_output_shape),name='target_rule')
+		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives),name='target_primitive')
 
-		# Defining the loss for each of the 3 streams, rule, split and goal.
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
-
-		# NO NEGATIVE SIGN HERE
-		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rulefc_presoftmax),self.rule_return_weight) 
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rulefc_presoftmax),self.rule_return_weight)
+ 
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
-		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
-		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.startgoal_return_weight)
-		# The start loss is the negative log probability of the chosen start, weighted byt he return obtained.
-		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
+
+		# Primitive loss
+		self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_probabilities),self.primitive_return_weight)
+
 		# The total loss is the sum of individual losses.
-		self.total_loss = self.rule_loss + self.split_loss + self.start_loss + self.goal_loss
+		self.total_loss = self.rule_loss + self.split_loss + self.primitive_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
@@ -211,16 +178,12 @@ class hierarchical():
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
 
-	def insert_node(self, state, index):
-		# Insert node into the parse tree.
+	def insert_node(self, state, index):	
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
 		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 	
-		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
-		# Should it be an epsilon-greedy policy? 
-
 		# SAMPLING A SPLIT LOCATION
 		split_location = -1
 
@@ -258,10 +221,11 @@ class hierarchical():
 			# if (selected_rule==0):		
 			if ((selected_rule==0) or (selected_rule==2)):
 				counter = 0				
-
+				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
+				# while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
 				while (split_location<=0)or(split_location>=self.state.h):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-					counter += 1
+					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.h
@@ -271,18 +235,10 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(inter_split))
 
-				# # SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				# while (int(self.state.h*split_location)<=0)or(int(self.state.h*split_location)>=self.state.h):
-				# 	split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-				# 	counter+=1
-
 					if counter>25:
-						print("State: H",self.state.h)
+						print("State: W",self.state.h)
 						print("Split fraction:",split_copy)
 						print("Split location:",split_location)
-
-				# split_copy = copy.deepcopy(split_location)
-				# split_location = int(self.state.h*split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -291,11 +247,12 @@ class hierarchical():
 			# if (selected_rule==1):			
 			if ((selected_rule==1) or (selected_rule==3)):
 				counter = 0
-
+				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
+				# while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
 				while (split_location<=0)or(split_location>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-					counter += 1
-
+					counter+=1
+					
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.w
 
@@ -304,20 +261,10 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(inter_split))
 
-
-
-				# # SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				# while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
-				# 	split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-				# 	counter+=1
 					if counter>25:
 						print("State: W",self.state.w)
 						print("Split fraction:",split_copy)
 						print("Split location:",split_location)
-
-				# # Scale split location.
-				# split_copy = copy.deepcopy(split_location)
-				# split_location = int(self.state.w*split_location)
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -343,6 +290,7 @@ class hierarchical():
 			self.current_parsing_index+=1
 
 		elif selected_rule>=4:
+			# Now even with the different primitives we don't need more than 6 rules; since choice of primitive is independent of assignment of primitive.
 
 			# Create a parse tree node object.
 			s1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
@@ -358,6 +306,37 @@ class hierarchical():
 			self.insert_node(s1,self.current_parsing_index+1)
 			self.current_parsing_index+=1						
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+
+	def parse_primitive_terminal(self, image_index):
+		# Sample a goal location.
+
+		# If it is a region to be painted and assigned a primitive:
+		if (self.state.label==1):
+
+			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})	
+			selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
+
+			# For primitive 0, horizontal brush stroke from left to right. 
+			# For primitive 1, horizontal brush stroke from right to left.
+			# For primitive 2, vertical brush stroke from top to bottom.
+			# For primitive 3, vertical brush stroke from bottom to top.
+			# print("Selected Primitive:",selected_primitive)
+			# Horizontal primitives are identical
+			if (selected_primitive==0) or (selected_primitive==1):
+				upper = min(self.state.y+self.state.h, self.state.y+self.paintwidth)
+				self.painted_image[self.state.x: self.state.x+self.state.w, self.state.y:upper] = 1.
+				self.painted_images[image_index, self.state.x: self.state.x+self.state.w, self.state.y:upper] = 1.
+
+			if (selected_primitive==2) or (selected_primitive==3):
+				upper = min(self.state.x+self.state.w,self.state.x+self.paintwidth)
+				self.painted_image[self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
+				self.painted_images[image_index, self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
+
+			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
+			# self.state.primitive = selected_primitive
+
+		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		self.current_parsing_index+=1
 
 	def propagate_rewards(self):
 
@@ -377,64 +356,8 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)			
 
-
-	def parse_terminal(self, image_index):
-		
-		# If terminal with primitive assigned:
-		if (self.state.label==1):
-			
-			# Sample a goal location and start location.
-			start_location, goal_location, start_mean, goal_mean = self.sess.run([self.sample_start,self.sample_goal, \
-				self.start_mean, self.goal_mean],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-			
-			start_copy = copy.deepcopy(start_location)
-			goal_copy = copy.deepcopy(goal_location)
-
- 			start_location *= npy.array([self.state.w,self.state.h])
-			goal_location *= npy.array([self.state.w,self.state.h])
-
-			# print("START / GOAL: ")
-			# print(start_copy, start_location, goal_copy, goal_location)
-
-			self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
-			self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
-			
-			self.state = self.parse_tree[self.current_parsing_index]
-
-			# Compute the angle and the length of the start-goal line. 
-			angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
-			length = npy.linalg.norm(self.state.goal-self.state.start)
-
-			# Create a rectangle for the paintbrush.
-			rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
-
-			# Rotate it.	
-			rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]],use_radians=True)
-
-			coords = npy.array(list(rotated_rect.exterior.coords)[0:4])
-			bounding_height = int(npy.ceil(max(self.state.y+self.state.h,npy.max(coords[:,1]))))
-			bounding_width = int(npy.ceil(max(self.state.x+self.state.w,npy.max(coords[:,0]))))
-
-			for x in range(int(self.state.x),bounding_width):
-				for y in range(int(self.state.y), bounding_height):
-					if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
-						self.painted_image[x,y] = 1
-						self.painted_images[image_index,x,y] = 1
-
-			self.parse_tree[self.current_parsing_index].start = start_copy
-			self.parse_tree[self.current_parsing_index].goal = goal_copy
-
-		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		# To make sure parse tree is being assigned the reward value in case 
-		# state is creating a copy of the parse_tree_node object rather than referencing- but IT IS REFERENCING
-		# self.parse_tree[self.current_parsing_index].reward = self.state.reward
-		self.current_parsing_index+=1
-
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
-
-		# NOW CHANGING TO 4 RULE SYSTEM.
-		target_rule = npy.zeros(self.rulefc_output_shape)
 
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
@@ -448,31 +371,25 @@ class hierarchical():
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
-			rule_weight = 0.
-			split_weight = 0.
-			startgoal_weight = 0.
+			rule_weight = 0
+			split_weight = 0
+			primitive_weight = 0
 			target_rule = npy.zeros(self.rulefc_output_shape)
+			target_primitive = npy.zeros(self.number_primitives)
 
 			if self.parse_tree[j].label==0:
-				
 				rule_weight = self.parse_tree[j].reward
 				target_rule[self.parse_tree[j].rule_applied] = 1.
-
-				# Nested, since a split rule may only be applied on a non-terminal.	
 				if self.parse_tree[j].rule_applied<=3:
-					split_weight = self.parse_tree[j].reward				
+					split_weight = self.parse_tree[j].reward
 
 			if self.parse_tree[j].label==1:
-				startgoal_weight = self.parse_tree[j].reward
+				primitive_weight = self.parse_tree[j].reward
+				target_primitive[self.parse_tree[j].primitive] = 1.				
 
-			# Here ,we only backprop for shapes, since we only choose actions for shapese.
-			rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
-				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
-					 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
-						 self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
-						 	self.startgoal_return_weight: startgoal_weight, self.sampled_split: self.parse_tree[j].split})
-
-			# print("LOSS VALUES:",rule_loss, split_loss)
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
+				self.sampled_split: self.parse_tree[j].split, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
+					self.primitive_return_weight: primitive_weight, self.target_primitive: target_primitive})
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -480,6 +397,7 @@ class hierarchical():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.alternate_painted_image = -npy.ones((self.image_size,self.image_size))
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
+		
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
 	
 			# Forward pass of the rule policy- basically picking which rule.
@@ -500,10 +418,10 @@ class hierarchical():
 				self.parse_nonterminal(image_index)
 
 			# If the current non-terminal is a region assigned a particular primitive.
-			if (self.state.label==1) or (self.state.label==2):	
-				self.parse_terminal(image_index)
-				
-			# Update data for plots
+			if (self.state.label==1) or (self.state.label==2):
+				self.parse_primitive_terminal(image_index)
+			
+			# if (self.predicted_labels[image_index]==1).any():
 			# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
 			self.alternate_painted_image[npy.where(self.painted_image==1)]=1.
 			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
@@ -571,9 +489,7 @@ class hierarchical():
 			for i in range(self.num_images):
 
 				self.initialize_tree()
-				self.construct_parse_tree(i)				
-				# Rewards are assigned while parsing terminal symbols in this case;
-				# No need to separately compute the rewards; only propagate them. 
+				self.construct_parse_tree(i)
 				# self.compute_rewards(i)
 				self.propagate_rewards()
 				print("#___________________________________________________________________________")
@@ -591,7 +507,6 @@ class hierarchical():
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-
 	############################
 	# Pixel labels: 
 	# 0 for shape
@@ -640,7 +555,6 @@ def main(args):
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
-
 	
 	load = 0
 	if load:
