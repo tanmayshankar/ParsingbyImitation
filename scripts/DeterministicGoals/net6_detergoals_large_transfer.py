@@ -555,10 +555,10 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
 		print("HI!")
-		model_file = str(sys.argv[3])
+		model_file = str(sys.argv[4])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
