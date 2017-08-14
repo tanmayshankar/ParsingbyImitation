@@ -10,8 +10,9 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth = int(sys.argv[3])
-		self.minimum_width = self.paintwidth
+		# self.paintwidth = int(sys.argv[3])
+		self.paintwidth = 5
+		self.minimum_width = 2
 		self.images = []
 		self.true_labels = []
 		self.image_size = 50
@@ -536,13 +537,13 @@ class hierarchical():
 		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
 		self.images[npy.where(self.images==2)]=-1
 		self.true_labels[npy.where(self.true_labels==2)]=-1
-		self.true_labels[npy.where(self.true_labels==1)]=1.5
+		self.true_labels[npy.where(self.true_labels==1)]=2.
 		self.images += noise
 
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="0,3")
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
