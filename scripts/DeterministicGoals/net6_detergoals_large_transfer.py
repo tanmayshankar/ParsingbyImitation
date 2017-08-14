@@ -87,30 +87,30 @@ class hierarchical():
 		
 		# STARTING RULE STREAM:
 		# Now not using the start and goal
-		self.rulefc_l1_shape = 120
-		self.W_rulefc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.rulefc_l1_shape],stddev=0.1),name='W_rulefc_l1')
-		self.b_rulefc_l1 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_l1_shape]),name='b_rulefc_l1')
-		self.rulefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_rulefc_l1),self.b_rulefc_l1),name='rulefc_l1')
+		self.fcs1_l1_shape = 120
+		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
+		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
+		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
-		# self.rulefc_output_shape = 1*self.number_primitives+5
-		self.rulefc_output_shape = 6
-		self.W_rulefc_l2 = tf.Variable(tf.truncated_normal([self.rulefc_l1_shape,self.rulefc_output_shape],stddev=0.1),name='W_rulefc_l2')
-		self.b_rulefc_l2 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_output_shape]),name='b_rulefc_l2')
-		self.rulefc_presoftmax = tf.add(tf.matmul(self.rulefc_l1,self.W_rulefc_l2),self.b_rulefc_l2,name='rulefc_presoftmax')
-		self.rule_probabilities = tf.nn.softmax(self.rulefc_presoftmax,name='softmax')
+		# self.fcs1_output_shape = 1*self.number_primitives+5
+		self.fcs1_output_shape = 6
+		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
+		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
+		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
+		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
 
 		# STARTING SPLIT STREAM:
-		self.splitfc_l1_shape = 50
-		self.W_splitfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.splitfc_l1_shape],stddev=0.1),name='W_splitfc_l1')		
-		self.b_splitfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.splitfc_l1_shape]),name='b_splitfc_l1')
-		self.splitfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_splitfc_l1),self.b_splitfc_l1),name='splitfc_l1')		
+		self.fcs2_l1_shape = 50
+		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
+		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
+		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
 
 		# Split output.
-		self.W_split = tf.Variable(tf.truncated_normal([self.splitfc_l1_shape,2],stddev=0.1),name='W_split')
+		self.W_split = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,2],stddev=0.1),name='W_split')
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
-		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
-		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
-		# self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
+		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
+		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
+		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
 		self.split_cov = 0.1
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
@@ -137,12 +137,12 @@ class hierarchical():
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
 		self.primitive_return_weight = tf.placeholder(tf.float32,shape=(None),name='primitive_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=(self.rulefc_output_shape),name='target_rule')
+		self.target_rule = tf.placeholder(tf.float32,shape=(self.fcs1_output_shape),name='target_rule')
 		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives),name='target_primitive')
 
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
-		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rulefc_presoftmax),self.rule_return_weight)
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
  
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
@@ -203,7 +203,7 @@ class hierarchical():
 		# print(rule_probabilities[0])
 
 		rule_probabilities/=rule_probabilities.sum()
-		selected_rule = npy.random.choice(range(self.rulefc_output_shape),p=rule_probabilities[0])
+		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
 		# print("Selected Rule:",selected_rule)
@@ -373,7 +373,7 @@ class hierarchical():
 			rule_weight = 0
 			split_weight = 0
 			primitive_weight = 0
-			target_rule = npy.zeros(self.rulefc_output_shape)
+			target_rule = npy.zeros(self.fcs1_output_shape)
 			target_primitive = npy.zeros(self.number_primitives)
 
 			if self.parse_tree[j].label==0:
