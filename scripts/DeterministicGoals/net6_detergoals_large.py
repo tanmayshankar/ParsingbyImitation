@@ -11,6 +11,7 @@ class hierarchical():
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = int(sys.argv[3])
+		self.minimum_width = self.paintwidth
 		self.images = []
 		self.true_labels = []
 		self.image_size = 50
@@ -189,8 +190,6 @@ class hierarchical():
 
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 2
-		# print(rule_probabilities[0])
 		
 		epislon = 1e-5
 		rule_probabilities += epislon
