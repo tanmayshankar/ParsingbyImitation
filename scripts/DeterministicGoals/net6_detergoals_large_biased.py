@@ -536,7 +536,7 @@ class hierarchical():
 		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
 		self.images[npy.where(self.images==2)]=-1
 		self.true_labels[npy.where(self.true_labels==2)]=-1
-		self.true_labels[npy.where(self.true_labels==1)]=2
+		self.true_labels[npy.where(self.true_labels==1)]=1.5
 		self.images += noise
 
 def main(args):
