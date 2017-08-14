@@ -114,8 +114,6 @@ class hierarchical():
 		self.split_cov = 0.1
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
-		if model_file:
-			self.saver.restore(self.sess,model_file)
 
 		# STARTING PRIMITIVE STREAM:		
 		self.number_primitives = 4
@@ -172,6 +170,9 @@ class hierarchical():
 
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
+		if model_file:
+			self.saver.restore(self.sess,model_file)
+
 
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
