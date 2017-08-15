@@ -135,9 +135,9 @@ class hierarchical():
 		# #################################
 
 		# Creating a saver object to save models.
-		# self.saver = tf.train.Saver(max_to_keep=None)
-		# if model_file:
-		# 	self.saver.restore(self.sess,model_file)
+		self.saver = tf.train.Saver(max_to_keep=None)
+		if model_file:
+			self.saver.restore(self.sess,model_file)
 
 		# STARTING PRIMITIVE STREAM:		
 		self.number_primitives = 4
@@ -187,7 +187,7 @@ class hierarchical():
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
 		
-		self.saver = tf.train.Saver(max_to_keep=None)		
+		# self.saver = tf.train.Saver(max_to_keep=None)		
 		if model_file:
 			self.saver.restore(self.sess, model_file)
 		# if model_file:
