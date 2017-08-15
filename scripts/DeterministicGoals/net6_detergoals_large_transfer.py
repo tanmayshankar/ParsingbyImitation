@@ -188,6 +188,7 @@ class hierarchical():
 		# 	saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
 		# 	saver.restore(self.sess, model_file)
 		# #################################
+		self.saver = tf.train.Saver(max_to_keep=None)			
 		
 		if model_file:
 			self.saver.restore(self.sess,model_file)
