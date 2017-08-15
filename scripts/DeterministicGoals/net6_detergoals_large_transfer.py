@@ -194,6 +194,10 @@ class hierarchical():
 
 		self.sess.run(tf.initialize_variables([self.train.get_slot(loss, name) for name in self.train.get_slot_names()]))
 		self.sess.run(tf.initialize_variables(['W_primitivefc_l1','W_primitivefc_l2','b_primitivefc_l1','b_primitivefc_l2']))
+
+		if model_file:
+			self.saver.restore(self.sess,model_file)
+
 		# self.sess.run(tf.initialize_variables(tf.report_uninitialized_variables(tf.global_variables())))
 
 	def save_model(self, model_index):
