@@ -579,7 +579,6 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	# hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
@@ -597,6 +596,7 @@ def main(args):
 		print("MODEL FILE:",model_file)
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
+		print("Training from scratch")
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
