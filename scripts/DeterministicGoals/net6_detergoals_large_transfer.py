@@ -189,7 +189,7 @@ class hierarchical():
 			saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
 			saver.restore(self.sess, model_file)
 		#################################
-		self.sess.run(tf.initialize_variables([self.optimizer.get_slot(loss, name) for name in self.optimizer.get_slot_names()]))
+		self.sess.run(tf.initialize_variables([self.optimizer.get_slot(self.total_loss, name) for name in self.optimizer.get_slot_names()]))
 		self.sess.run(tf.initialize_variables(['W_primitivefc_l1','W_primitivefc_l2','b_primitivefc_l1','b_primitivefc_l2']))
 
 		# self.sess.run(tf.initialize_variables(tf.report_uninitialized_variables(tf.global_variables())))
