@@ -188,12 +188,9 @@ class hierarchical():
 		self.sess.run(init)
 		
 		# self.saver = tf.train.Saver(max_to_keep=None)		
-		if model_file:
-			self.saver.restore(self.sess, model_file)
 		# if model_file:
-		# 	self.saver.restore(self.sess,model_file)
-		# self.sess.run(tf.initialize_variables(tf.report_uninitialized_variables(tf.global_variables())))
-
+		# 	self.saver.restore(self.sess, model_file)
+		
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
