@@ -162,7 +162,8 @@ class hierarchical():
 		self.total_loss = self.rule_loss + self.split_loss + self.primitive_loss
 
 		# Creating a training operation to minimize the total loss.
-		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
+		self.optimizer = tf.train.AdamOptimizer(1e-4)
+		self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
