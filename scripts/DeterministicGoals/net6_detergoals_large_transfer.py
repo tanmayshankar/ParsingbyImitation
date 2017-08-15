@@ -2,6 +2,7 @@
 from headers import *
 from state_class import *
 
+
 class hierarchical():
 
 	def __init__(self):
@@ -113,7 +114,30 @@ class hierarchical():
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
 		self.split_cov = 0.1
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
+		
+		#################################
+		if model_file:
+			# DEFINING CUSTOM LOADER:
+			reader = tf.train.NewCheckpointReader(model_file)
+			saved_shapes = reader.get_variable_to_shape_map()
+			var_names = sorted([(var.name, var.name.split(':')[0]) for var in tf.global_variables()
+				if var.name.split(':')[0] in saved_shapes])
+			restore_vars = []
+			name2var = dict(zip(map(lambda x:x.name.split(':')[0], tf.global_variables()), tf.global_variables()))
+			with tf.variable_scope('', reuse=True):
+				for var_name, saved_var_name in var_names:
+					curr_var = name2var[saved_var_name]
+					var_shape = curr_var.get_shape().as_list()
+					if var_shape == saved_shapes[saved_var_name]:
+						restore_vars.append(curr_var)
+			saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
+			saver.restore(self.sess, model_file)
+		#################################
 
+		# Creating a saver object to save models.
+		# self.saver = tf.train.Saver(max_to_keep=None)
+		# if model_file:
+		# 	self.saver.restore(self.sess,model_file)
 
 		# STARTING PRIMITIVE STREAM:		
 		self.number_primitives = 4
@@ -159,20 +183,15 @@ class hierarchical():
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
-		# Creating a saver object to save models.
-		self.saver = tf.train.Saver(max_to_keep=None)
-
-		# if model_file:
-		# 	self.saver.restore(self.sess,model_file)
-		# else:
-		# 	init = tf.global_variables_initializer()
-		# 	self.sess.run(init)
 
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
+		
 		if model_file:
-			self.saver.restore(self.sess,model_file)
-
+			saver.restore(self.sess, model_file)
+		# if model_file:
+		# 	self.saver.restore(self.sess,model_file)
+		# self.sess.run(tf.initialize_variables(tf.report_uninitialized_variables(tf.global_variables())))
 
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
@@ -548,12 +567,12 @@ class hierarchical():
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="0,3")
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess)
+	# hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
@@ -561,11 +580,14 @@ def main(args):
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
+	print("HELLO")
 	
 	load = 1
+
 	if load:
 		print("HI!")
 		model_file = str(sys.argv[4])
+		print("MODEL FILE:",model_file)
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
