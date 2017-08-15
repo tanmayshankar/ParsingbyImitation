@@ -184,12 +184,12 @@ class hierarchical():
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
 
-		init = tf.global_variables_initializer()
-		self.sess.run(init)
+		# init = tf.global_variables_initializer()
+		# self.sess.run(init)
 		
 		# self.saver = tf.train.Saver(max_to_keep=None)		
-		# if model_file:
-		# 	self.saver.restore(self.sess, model_file)
+		if model_file:
+			self.saver.restore(self.sess, model_file)
 		
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
