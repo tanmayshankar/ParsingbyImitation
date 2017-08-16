@@ -194,6 +194,7 @@ class hierarchical():
 		# print(rule_probabilities[0])
 
 		rule_probabilities/=rule_probabilities.sum()
+		
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
@@ -318,7 +319,7 @@ class hierarchical():
 		# This is actually the return accumulated by any particular decision.
 
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
-		self.gamma = 0.90
+		self.gamma = 1.0
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
@@ -551,7 +552,6 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
