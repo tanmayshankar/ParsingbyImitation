@@ -148,8 +148,10 @@ class hierarchical():
 		self.saver = tf.train.Saver(max_to_keep=None)
 
 		if model_file:
+			print("Restoring saved model.")
 			self.saver.restore(self.sess,model_file)
 		else:
+			print("Initializing from scratch.")
 			init = tf.global_variables_initializer()
 			self.sess.run(init)
 
