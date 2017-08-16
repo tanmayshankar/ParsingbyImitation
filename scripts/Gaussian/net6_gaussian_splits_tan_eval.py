@@ -148,7 +148,7 @@ class hierarchical():
 		self.saver = tf.train.Saver(max_to_keep=None)
 
 		if model_file:
-			print("Restoring saved model.")
+			print("Restoring saved model:",model_file)
 			self.saver.restore(self.sess,model_file)
 		else:
 			print("Initializing from scratch.")
@@ -564,8 +564,8 @@ def main(args):
 	print("TENSORFLOW VERSION:", tf.__version__)	
 	load = 1
 	if load:
-		print("HI!")
-		model_file = str(sys.argv[3])
+		
+		model_file = str(sys.argv[3])		
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
