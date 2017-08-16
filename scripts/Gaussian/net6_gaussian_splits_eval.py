@@ -7,10 +7,11 @@ class hierarchical():
 	def __init__(self):
 
 		self.num_epochs = 1
-		self.num_images = 5000
+		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=2
+		self.paintwidth = 2
+		self.minimum_width = 2
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
@@ -178,7 +179,7 @@ class hierarchical():
 
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 3
+
 		# print(rule_probabilities[0])
 		
 		epislon = 1e-5
@@ -193,8 +194,8 @@ class hierarchical():
 		# print(rule_probabilities[0])
 
 		rule_probabilities/=rule_probabilities.sum()
-		# selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
-		selected_rule = npy.argmax(rule_probabilities[0])
+		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+		# selected_rule = npy.argmax(rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
 		# print("Selected Rule:",selected_rule)
@@ -325,6 +326,10 @@ class hierarchical():
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+
+
+
+
 
 	def terminal_reward_nostartgoal(self, image_index):
 
@@ -558,7 +563,6 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
