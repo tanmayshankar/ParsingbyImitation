@@ -196,8 +196,8 @@ class hierarchical():
 		# print(rule_probabilities[0])
 
 		rule_probabilities/=rule_probabilities.sum()
-		
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+		selected_rule = npy.argmax(rule_probabilities[0])
+		# selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
 
 		# print("Selected Rule:",selected_rule)
