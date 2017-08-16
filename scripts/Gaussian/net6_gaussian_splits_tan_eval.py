@@ -561,7 +561,7 @@ def main(args):
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 1
-	
+	print("TENSORFLOW VERSION:", tf.__version__)	
 	load = 1
 	if load:
 		print("HI!")
