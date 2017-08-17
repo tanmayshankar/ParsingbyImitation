@@ -296,7 +296,7 @@ class hierarchical():
 	def parse_primitive_terminal(self, image_index):
 
 		continuity_term = 0
-		self.continuity_lambda = -0.1
+		self.continuity_lambda = -10
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
 
