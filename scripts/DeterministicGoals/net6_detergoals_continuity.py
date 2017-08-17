@@ -421,15 +421,15 @@ class hierarchical():
 			if (self.state.label==1) or (self.state.label==2):
 				self.parse_primitive_terminal(image_index)
 			
-			# if (self.predicted_labels[image_index]==1).any():
-			# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
-			self.alternate_painted_image[npy.where(self.painted_image==1)]=1.
-			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
-			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
-
 			self.update_plot_data(image_index)
 
 	def update_plot_data(self, image_index):
+		# if (self.predicted_labels[image_index]==1).any():
+			# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.			
+		self.alternate_painted_image[npy.where(self.painted_image==1)]=1.
+		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
+		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
+
 		if self.plot:
 			self.fig.suptitle("Processing Image: {0}".format(image_index))
 			self.sc1.set_data(self.alternate_predicted_labels)
@@ -557,7 +557,6 @@ def main(args):
 	
 	load = 0
 	if load:
-		print("HI!")
 		model_file = str(sys.argv[3])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
