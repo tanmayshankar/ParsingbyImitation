@@ -330,7 +330,7 @@ class hierarchical():
 			self.previous_goal = copy.deepcopy(self.current_goal)
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		print(continuity_term)
+		# print(continuity_term)
 		self.state.reward += continuity_term*self.continuity_lambda
 		self.current_parsing_index+=1
 
