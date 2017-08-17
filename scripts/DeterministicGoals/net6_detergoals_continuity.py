@@ -330,7 +330,7 @@ class hierarchical():
 			self.previous_goal = copy.deepcopy(self.current_goal)
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-
+		print(continuity_term)
 		self.state.reward += continuity_term*self.continuity_lambda
 		self.current_parsing_index+=1
 
@@ -562,7 +562,7 @@ def main(args):
 	load = 0
 	if load:
 		print("HI!")
-		model_file = str(sys.argv[3])
+		model_file = str(sys.argv[4])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
