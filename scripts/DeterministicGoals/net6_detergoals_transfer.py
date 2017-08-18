@@ -202,6 +202,7 @@ class hierarchical():
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
+		self.saver = tf.train.Saver(max_to_keep=None)
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
