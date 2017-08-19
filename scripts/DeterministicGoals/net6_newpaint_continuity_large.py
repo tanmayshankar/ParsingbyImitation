@@ -166,6 +166,7 @@ class hierarchical():
 				
 		#################################
 		if model_file:
+			print("RESTORING MODEL FROM:", model_file)
 			# DEFINING CUSTOM LOADER:
 			reader = tf.train.NewCheckpointReader(model_file)
 			saved_shapes = reader.get_variable_to_shape_map()
