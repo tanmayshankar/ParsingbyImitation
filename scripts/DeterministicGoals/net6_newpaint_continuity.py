@@ -161,14 +161,27 @@ class hierarchical():
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
-		# Creating a saver object to save models.
-		self.saver = tf.train.Saver(max_to_keep=None)
-
+		init = tf.global_variables_initializer()
+		self.sess.run(init)
+				
+		#################################
 		if model_file:
-			self.saver.restore(self.sess,model_file)
-		else:
-			init = tf.global_variables_initializer()
-			self.sess.run(init)
+			# DEFINING CUSTOM LOADER:
+			reader = tf.train.NewCheckpointReader(model_file)
+			saved_shapes = reader.get_variable_to_shape_map()
+			var_names = sorted([(var.name, var.name.split(':')[0]) for var in tf.global_variables()
+				if var.name.split(':')[0] in saved_shapes])
+			restore_vars = []
+			name2var = dict(zip(map(lambda x:x.name.split(':')[0], tf.global_variables()), tf.global_variables()))
+			with tf.variable_scope('', reuse=True):
+				for var_name, saved_var_name in var_names:
+					curr_var = name2var[saved_var_name]
+					var_shape = curr_var.get_shape().as_list()
+					if var_shape == saved_shapes[saved_var_name]:
+						restore_vars.append(curr_var)
+			saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
+			saver.restore(self.sess, model_file)
+		#################################
 
 		# Maintaining list of all goals and start locations. 
 		self.goal_list = []
@@ -177,6 +190,7 @@ class hierarchical():
 	def save_model(self, model_index):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
+		self.saver = tf.train.Saver(max_to_keep=None)			
 		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
