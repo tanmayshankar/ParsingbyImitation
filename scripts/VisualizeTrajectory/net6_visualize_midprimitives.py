@@ -337,6 +337,7 @@ class hierarchical():
 			# For primitive 3, vertical brush stroke from bottom to top. (at left)
 			# print("Selected Primitive:",selected_primitive)
 
+			# CHEATING, ONLY MODIFIED PRIMITIVE 0 because only that gets called.
 			if (selected_primitive==0):
 				self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
 				self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))

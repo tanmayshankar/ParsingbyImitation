@@ -342,15 +342,15 @@ class hierarchical():
 				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
 
 			if (selected_primitive==2):
-				self.start_list.append(npy.array([self.state.y,self.state.x]))
-				self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x]))
+				self.start_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
+				self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
 
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 
 			if (selected_primitive==3):
-				self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x]))
-				self.goal_list.append(npy.array([self.state.y,self.state.x]))
+				self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
+				self.goal_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
 
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]

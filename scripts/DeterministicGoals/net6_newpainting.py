@@ -239,9 +239,7 @@ class hierarchical():
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.h)
-						print("Split fraction:",split_copy)
-						print("Split location:",split_location)
+						print("State: H",self.state.h, "Split fraction:",split_copy, "Split location:",split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -265,9 +263,7 @@ class hierarchical():
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.w)
-						print("Split fraction:",split_copy)
-						print("Split location:",split_location)
+						print("State: W",self.state.w, "Split fraction:",split_copy, "Split location:",split_location)
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -342,15 +338,15 @@ class hierarchical():
 				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
 
 			if (selected_primitive==2):
-				self.start_list.append(npy.array([self.state.y,self.state.x]))
-				self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x]))
+				self.start_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
+				self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
 
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 
 			if (selected_primitive==3):
-				self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x]))
-				self.goal_list.append(npy.array([self.state.y,self.state.x]))
+				self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
+				self.goal_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
 
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
@@ -613,9 +609,9 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 1
+	hierarchical_model.plot = 0
 	
-	load = 1
+	load = 0
 	if load:
 		print("HI!")
 		model_file = str(sys.argv[4])
