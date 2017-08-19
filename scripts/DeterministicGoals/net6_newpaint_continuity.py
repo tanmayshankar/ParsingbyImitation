@@ -633,7 +633,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 1
 	if load:
