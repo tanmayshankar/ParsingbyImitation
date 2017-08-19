@@ -167,6 +167,7 @@ class hierarchical():
 		#################################
 		if model_file:
 			# DEFINING CUSTOM LOADER:
+			print("RESTORING MODEL FROM:", model_file)
 			reader = tf.train.NewCheckpointReader(model_file)
 			saved_shapes = reader.get_variable_to_shape_map()
 			var_names = sorted([(var.name, var.name.split(':')[0]) for var in tf.global_variables()
@@ -626,7 +627,7 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	# hierarchical_model.initialize_tensorflow_model(sess)
+	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
