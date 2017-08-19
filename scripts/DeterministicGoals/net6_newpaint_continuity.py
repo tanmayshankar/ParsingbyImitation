@@ -358,7 +358,7 @@ class hierarchical():
 				self.current_goal = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
 
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
-				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
+				self.painted_images[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 
 			if (selected_primitive==3):
 				# self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
@@ -368,7 +368,7 @@ class hierarchical():
 				self.current_goal = npy.array([self.state.y,self.state.x+self.state.w/2])
 
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
-				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
+				self.painted_images[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 
 			continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size)
 			self.previous_goal = copy.deepcopy(self.current_goal)
