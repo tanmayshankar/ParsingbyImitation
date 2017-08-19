@@ -370,8 +370,10 @@ class hierarchical():
 				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 
-			continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size**2)
+			continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size)
 			self.previous_goal = copy.deepcopy(self.current_goal)
+
+			print(continuity_term)
 
 			self.start_list.append(self.current_start)
 			self.goal_list.append(self.current_goal)
