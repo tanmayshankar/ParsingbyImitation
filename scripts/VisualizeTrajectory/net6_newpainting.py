@@ -325,41 +325,35 @@ class hierarchical():
 			# For primitive 2, vertical brush stroke from top to bottom. (at left)
 			# For primitive 3, vertical brush stroke from bottom to top. (at left)
 			# print("Selected Primitive:",selected_primitive)
-			# Horizontal primitives are identical
-			if (selected_primitive==0) or (selected_primitive==1):
-				upper = min(self.state.y+self.state.h, self.state.y+self.paintwidth)
-				self.painted_image[self.state.x: self.state.x+self.state.w, self.state.y:upper] = 1.
-				self.painted_images[image_index, self.state.x: self.state.x+self.state.w, self.state.y:upper] = 1.
 
-				# self.start_list.append(npy.array([self.state.x,self.state.y]))
-				# self.goal_list.append(npy.array([self.state.x+self.state.w,upper]))
-
-				# self.start_list.append(npy.array([self.state.y,self.state.x]))
-				# self.goal_list.append(npy.array([upper,self.state.x+self.state.w]))
-
-			if (selected_primitive==2) or (selected_primitive==3):
-				upper = min(self.state.x+self.state.w,self.state.x+self.paintwidth)
-				self.painted_image[self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
-				self.painted_images[image_index, self.state.x:upper, self.state.y:self.state.y+self.state.h] = 1.	
-
-				# self.start_list.append(npy.array([self.state.x,self.state.y]))
-				# self.goal_list.append(npy.array([upper,self.state.y+self.state.h]))
-
-				# self.start_list.append(npy.array([self.state.y,self.state.x]))
-				# self.goal_list.append(npy.array([self.state.y+self.state.h,upper]))
-			# print("SELECTED PRIMITIVE:", selected_primitive)
+			# MODIFYING TO PAINTING OUTSIDE THE CURRENT SEGMENT AS WELL AS MODIFYING TO MID SEGMENT:
 			if (selected_primitive==0):
-				self.start_list.append(npy.array([self.state.y,self.state.x]))
-				self.goal_list.append(npy.array([self.state.y,self.state.x+self.state.w]))
+				self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
+				self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
+
+				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
+				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
+				
 			if (selected_primitive==1):
-				self.start_list.append(npy.array([self.state.y,self.state.x+self.state.w]))
-				self.goal_list.append(npy.array([self.state.y,self.state.x]))
+				self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
+				self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
+
+				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
+				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
+
 			if (selected_primitive==2):
 				self.start_list.append(npy.array([self.state.y,self.state.x]))
 				self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x]))
+
+				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
+				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
+
 			if (selected_primitive==3):
 				self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x]))
 				self.goal_list.append(npy.array([self.state.y,self.state.x]))
+
+				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
+				self.painted_image[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
 
 			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
 			# self.state.primitive = selected_primitive
