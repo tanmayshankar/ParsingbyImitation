@@ -185,7 +185,7 @@ class hierarchical():
 
 		# print(rule_probabilities[0])
 		
-		epislon = 1e-5
+		epislon = 1e-3
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):

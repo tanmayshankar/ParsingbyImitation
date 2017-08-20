@@ -210,7 +210,7 @@ class hierarchical():
 		split_location = -1
 		
 		# Hard coding ban of splits for regions smaller than minimum width.		
-		epislon = 1e-5
+		epislon = 1e-3
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):

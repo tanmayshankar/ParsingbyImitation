@@ -175,18 +175,11 @@ class hierarchical():
 	def parse_nonterminal(self, image_index):
 		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 	
-		# THIS IS THE RULE POLICY: This is a probabilistic selection of the rule., completely random.
-		# Should it be an epsilon-greedy policy? 
-
-		# SAMPLING A SPLIT LOCATION
 		split_location = -1
 
-		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
-		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-
-		# print(rule_probabilities[0])
+		# Hard coding ban of SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH
 		
-		epislon = 1e-5
+		epislon = 1e-3
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):
@@ -195,14 +188,9 @@ class hierarchical():
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][[1,3]]=0.
 
-		# print(rule_probabilities[0])
-
 		rule_probabilities/=rule_probabilities.sum()
-		
 		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
 		indices = self.map_rules_to_indices(selected_rule)
-
-		# print("Selected Rule:",selected_rule)
 
 		# If it is a split rule:
 		if selected_rule<=3:
@@ -245,7 +233,6 @@ class hierarchical():
 			if ((selected_rule==1) or (selected_rule==3)):
 				counter = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
-				# while (int(self.state.w*split_location)<=0)or(int(self.state.w*split_location)>=self.state.w):
 				while (split_location<=0)or(split_location>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
