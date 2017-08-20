@@ -76,8 +76,11 @@ class hierarchical():
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
-		# self.fc_input_shape = 10*10*self.conv5_num_filters
-		self.fc_input_shape = 5*5*self.conv5_num_filters
+		if self.image_size==20:
+			self.fc_input_shape = 5*5*self.conv5_num_filters
+		else:
+			self.fc_input_shape = 10*10*self.conv5_num_filters
+
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
