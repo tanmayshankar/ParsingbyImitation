@@ -338,9 +338,9 @@ class hierarchical():
 				self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x])
 				self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
 
-				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
-				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
-				
+				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+
 			if (selected_primitive==1):
 				# self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
 				# self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
@@ -348,8 +348,8 @@ class hierarchical():
 				self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
 				self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x])
 
-				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
-				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)]
+				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
 
 			if (selected_primitive==2):
 				# self.start_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
@@ -358,9 +358,9 @@ class hierarchical():
 				self.current_start = npy.array([self.state.y,self.state.x+self.state.w/2])
 				self.current_goal = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
 
-				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
-				self.painted_images[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
-
+				self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+				self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+				
 			if (selected_primitive==3):
 				# self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
 				# self.goal_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
@@ -368,9 +368,9 @@ class hierarchical():
 				self.current_start = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
 				self.current_goal = npy.array([self.state.y,self.state.x+self.state.w/2])
 
-				self.painted_image[self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
-				self.painted_images[image_index, self.state.x+(self.state.w-self.paintwidth)/2:self.state.x+(self.state.w+self.paintwidth)/2, self.state.y:self.state.y+self.state.h]
-
+				self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+				self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+				
 			continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size)
 			self.previous_goal = copy.deepcopy(self.current_goal)
 
@@ -484,7 +484,8 @@ class hierarchical():
 	def update_plot_data(self, image_index):
 	
 		# if (self.predicted_labels[image_index]==1).any():
-		self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
+		# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
+		self.alternate_painted_image[npy.where(self.painted_images[image_index]==1)]=1.
 		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=1.
 		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=-1.
 
@@ -494,6 +495,7 @@ class hierarchical():
 			self.attention_plots()
 			self.sc2.set_data(self.mask)
 			self.sc3.set_data(self.images[image_index])
+			self.sc4.set_data(self.alternate_painted_image)
 
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
@@ -522,7 +524,7 @@ class hierarchical():
 	def define_plots(self):
 		image_index = 0
 		if self.plot:
-			self.fig, self.ax = plt.subplots(1,3,sharey=True)
+			self.fig, self.ax = plt.subplots(1,4,sharey=True)
 			self.fig.show()
 			
 			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -543,6 +545,11 @@ class hierarchical():
 			self.sc3.set_clim([-1,1.2])
 			self.ax[2].set_title("Actual Image")
 			self.ax[2].set_adjustable('box-forced')
+
+			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
+			self.sc4.set_clim([-1,1])
+			self.ax[3].set_title("Painted Image")
+			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
 			plt.pause(0.1)
@@ -582,8 +589,6 @@ class hierarchical():
 			else: 
 				npy.save("validation.npy".format(e),self.predicted_labels)
 				
-
-
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
@@ -634,7 +639,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 1
 	if load:
