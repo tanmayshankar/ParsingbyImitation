@@ -194,7 +194,7 @@ class hierarchical():
 		self.minimum_width = 3
 		# print(rule_probabilities[0])
 		
-		epislon = 1e-5
+		epislon = 1e-3
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):
@@ -233,7 +233,8 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.h
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
@@ -257,7 +258,8 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.w
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))

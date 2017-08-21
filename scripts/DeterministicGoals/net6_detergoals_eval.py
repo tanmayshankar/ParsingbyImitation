@@ -229,15 +229,14 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.h
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.h)
-						print("Split fraction:",split_copy)
-						print("Split location:",split_location)
+						print("State: H",self.state.h, "Split fraction:",split_copy, "Split location:",split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -255,16 +254,15 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.w
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.w)
-						print("Split fraction:",split_copy)
-						print("Split location:",split_location)
-
+						print("State: W",self.state.w, "Split fraction:",split_copy, "Split location:",split_location)
+						
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
