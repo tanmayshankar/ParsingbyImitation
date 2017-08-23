@@ -223,18 +223,14 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.h
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.h)
-						print("Split fraction:",split_copy)
-						print("Split location:",split_location)
-
-				# split_copy = copy.deepcopy(split_location)
-				# split_location = int(self.state.h*split_location)
+							print("State: H",self.state.h,"Split fraction:",split_copy,"Split location:",split_location)				# split_copy = copy.deepcopy(split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -252,15 +248,14 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.w
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.w)
-						print("Split fraction:",split_copy)
-						print("Split location:",split_location)
+						print("State: W",self.state.w,"Split fraction:",split_copy,"Split location:",split_location)
 
 				# # Scale split location.
 				# split_copy = copy.deepcopy(split_location)
@@ -321,7 +316,7 @@ class hierarchical():
 		# This is actually the return accumulated by any particular decision.
 
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
-		self.gamma = 0.98
+		self.gamma = 1.
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
@@ -555,6 +550,7 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
+	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
