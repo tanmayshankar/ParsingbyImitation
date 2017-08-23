@@ -10,8 +10,8 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth = 2
-		self.minimum_width = 2
+		self.paintwidth = int(sys.argv[3])
+		self.minimum_width = int(sys.argv[3])
 		self.images = []
 		self.true_labels = []
 		self.image_size = 50
@@ -562,7 +562,7 @@ def main(args):
 	load = 0
 	if load:
 		print("HI!")
-		model_file = str(sys.argv[3])
+		model_file = str(sys.argv[4])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
