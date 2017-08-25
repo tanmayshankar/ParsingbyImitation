@@ -323,8 +323,8 @@ class hierarchical():
 		if (self.state.label==1):
 
 			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})	
-			# selected_primitive = npy.random.choice(range(self.number_plsrimitives),p=primitive_probabilities[0])
-			selected_primitive = npy.argmax(primitive_probabilities[0])
+			selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
+			# selected_primitive = npy.argmax(primitive_probabilities[0])
 
 			# For primitive 0, horizontal brush stroke from left to right. (at bottom)
 			# For primitive 1, horizontal brush stroke from right to left. (at bottom)
