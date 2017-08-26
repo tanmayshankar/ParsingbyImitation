@@ -630,7 +630,7 @@ def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
 	# gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="3,0")
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="3,1")
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
@@ -642,7 +642,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 1
 	if load:
