@@ -424,7 +424,7 @@ class hierarchical():
 		print("STROKE TERM:",self.parse_tree[j].stroke_term)
 		print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
+			self.parse_tree[j].reward += self.parse_tree[j].stroke_term * self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
 
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
