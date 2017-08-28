@@ -383,6 +383,9 @@ class hierarchical():
 			# self.state.primitive = selected_primitive
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		print("CTERM:",continuity_term)
+		print("CTERM TIMES LAMBDA:",continuity_term*self.continuity_lambda)
+		print("ORIG REWARD:",self.state.reward)
 		self.state.reward += continuity_term*self.continuity_lambda	
 		self.current_parsing_index+=1
 
@@ -391,7 +394,7 @@ class hierarchical():
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
 		# This is actually the return accumulated by any particular decision.
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
-		self.gamma = 0.98
+		self.gamma = 1.
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
