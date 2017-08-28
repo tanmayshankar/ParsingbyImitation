@@ -422,7 +422,7 @@ class hierarchical():
 
 		print("ORIGINAL REWARD:",self.parse_tree[j].reward)
 		print("STROKE TERM:",self.parse_tree[j].stroke_term)
-		print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term
+		print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
 
