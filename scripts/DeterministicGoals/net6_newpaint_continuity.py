@@ -18,6 +18,9 @@ class hierarchical():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
+		self.stroke_lambda = 0.1
+		self.intermittent_lambda = -0.1
+
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
 		# Initializing the session.
@@ -404,9 +407,6 @@ class hierarchical():
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
 		self.gamma = 1.
 
-		self.stroke_lambda = 1.
-		self.intermittent_lambda = -1.
-
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
@@ -419,6 +419,7 @@ class hierarchical():
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
 
 			# Additional term for continuity. 
+			print(j)
 			print("ORIGINAL REWARD:",self.parse_tree[j].reward)
 			print("STROKE TERM:",self.parse_tree[j].stroke_term)
 			print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
