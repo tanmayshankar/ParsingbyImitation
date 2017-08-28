@@ -317,7 +317,11 @@ class hierarchical():
 	def parse_primitive_terminal(self, image_index):
 		# Sample a goal location.
 
-		continuity_term = 0.
+		# continuity_term = 0.
+
+		self.nonpaint_moving_term = 0.
+		self.strokelength_term = 0.
+
 		self.continuity_lambda = -1
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
@@ -373,7 +377,10 @@ class hierarchical():
 				self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
 				self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
 				
-			continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size)
+			# continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size)
+			self.nonpaint_moving_term = npy.linalg.norm(self.current_start-self.previous_goal)**2/((self.image_size)**2)
+			self.strokelength_term = npy.linalg.norm(self.current_goal-self.current_start)**2/((self.image_size)**2)
+
 			self.previous_goal = copy.deepcopy(self.current_goal)
 
 			self.start_list.append(self.current_start)
@@ -383,10 +390,11 @@ class hierarchical():
 			# self.state.primitive = selected_primitive
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		print("CTERM:",continuity_term)
-		print("CTERM TIMES LAMBDA:",continuity_term*self.continuity_lambda)
-		print("ORIG REWARD:",self.state.reward)
-		self.state.reward += continuity_term*self.continuity_lambda	
+		# self.state.reward += continuity_term*self.continuity_lambda	
+
+		self.state.stroke_term = copy.deepcopy(self.strokelength_term)
+		self.state.intermittent_term = copy.deepcopy(self.nonpaint_moving_term)
+
 		self.current_parsing_index+=1
 
 	def propagate_rewards(self):
@@ -395,6 +403,10 @@ class hierarchical():
 		# This is actually the return accumulated by any particular decision.
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
 		self.gamma = 1.
+
+		self.stroke_lambda = 1.
+		self.intermittent_lambda = -1.
+
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
@@ -404,7 +416,15 @@ class hierarchical():
 
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)			
+			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
+
+		# Additional term for continuity. 
+
+		print("ORIGINAL REWARD:",self.parse_tree[j].reward)
+		print("STROKE TERM:",self.parse_tree[j].stroke_term)
+		print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
 
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
@@ -704,3 +724,4 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
