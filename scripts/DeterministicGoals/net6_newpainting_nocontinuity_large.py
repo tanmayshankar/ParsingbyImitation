@@ -477,7 +477,7 @@ class hierarchical():
 
 		for j in range(self.current_parsing_index):
 			self.dummy_state = self.parse_tree[j]
-			self.mask[self.dummy_state.x:self.dummy_state.x+self.dummy_state.w,self.dummy_state.y:self.dummy_state.y+self.dummy_state.h] = -(self.backward_discount**j)
+		 	self.mask[self.dummy_state.x:self.dummy_state.x+self.dummy_state.w,self.dummy_state.y:self.dummy_state.y+self.dummy_state.h] = -(self.backward_discount**j)
 		
 		for j in range(self.current_parsing_index,len(self.parse_tree)):
 			self.dummy_state = self.parse_tree[j]
@@ -496,32 +496,74 @@ class hierarchical():
 			self.sc1.set_data(self.alternate_predicted_labels)
 			self.attention_plots()
 			self.sc2.set_data(self.mask)
+
+			# npy.save("Mask_{0}.npy".format(image_index),self.mask)
 			self.sc3.set_data(self.images[image_index])
 			self.sc4.set_data(self.alternate_painted_image)
 
+			# Plotting split line segments from the parse tree.
+			split_segs = []
+			for j in range(len(self.parse_tree)):
+
+				colors = ['r']
+
+				if self.parse_tree[j].label==0:
+					if (self.parse_tree[j].rule_applied==1) or (self.parse_tree[j].rule_applied==3):
+						
+						sc = self.parse_tree[j].split*self.parse_tree[j].w
+						if sc>(self.parse_tree[j].w/2):
+							sc = int(npy.floor(sc))
+						else:
+							sc = int(npy.ceil(sc))
+
+						# split_segs.append([[self.parse_tree[j].x+sc,self.parse_tree[j].y],[self.parse_tree[j].x+sc,self.parse_tree[j].y+self.parse_tree[j].h]])								
+						split_segs.append([[self.parse_tree[j].y,self.parse_tree[j].x+sc],[self.parse_tree[j].y+self.parse_tree[j].h,self.parse_tree[j].x+sc]])
+						
+					if (self.parse_tree[j].rule_applied==0) or (self.parse_tree[j].rule_applied==2):
+						
+						sc = self.parse_tree[j].split*self.parse_tree[j].h					
+						if sc>(self.parse_tree[j].h/2):
+							sc = int(npy.floor(sc))
+						else:
+							sc = int(npy.ceil(sc))
+
+						# split_segs.append([[self.parse_tree[j].x,self.parse_tree[j].y+sc],[self.parse_tree[j].x+self.parse_tree[j].w,self.parse_tree[j].y+sc]])															
+						split_segs.append([[self.parse_tree[j].y+sc,self.parse_tree[j].x],[self.parse_tree[j].y+sc,self.parse_tree[j].x+self.parse_tree[j].w]])
+
+				# print(split_segs)	
+			split_lines = LineCollection(split_segs, colors='k', linewidths=2)
+			split_lines2 = LineCollection(split_segs, colors='k',linewidths=2)
+			self.split_lines = self.ax[3].add_collection(split_lines)				
+			self.split_lines2 = self.ax[1].add_collection(split_lines2)
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
 				color_index = ['k']
+				linewidths = [1]
 
 				for i in range(len(self.goal_list)-1):
 					segs.append([self.start_list[i],self.goal_list[i]])
 					# Paint
 					color_index.append('y')
+					linewidths.append(5)
 					segs.append([self.goal_list[i],self.start_list[i+1]])
 					# Don't paint.
 					color_index.append('k')
+					linewidths.append(1)
 				# Add final segment.
 				segs.append([self.start_list[-1],self.goal_list[-1]])
 				color_index.append('y')
+				linewidths.append(5)
 
-				lines = LineCollection(segs, colors=color_index,linewidths=5)
+				lines = LineCollection(segs, colors=color_index,linewidths=linewidths)
 				self.lines = self.ax[0].add_collection(lines)
 
 				self.fig.canvas.draw()
-				plt.pause(0.5)
+				# raw_input("Press any key to continue.")
+				plt.pause(0.1)	
 				del self.ax[0].collections[-1]
-				# self.ax[0].collections = []
 
+			del self.ax[3].collections[-1]
+			del self.ax[1].collections[-1]
 
 	def define_plots(self):
 		image_index = 0
@@ -538,23 +580,26 @@ class hierarchical():
 			# self.ax[0].set_xlim(self.ax[0].get_xlim()[0]-0.5, self.ax[0].get_xlim()[1]+0.5) 
 			# self.ax[0].set_ylim(self.ax[0].get_ylim()[0]-0.5, self.ax[0].get_ylim()[1]+0.5) 
 
-			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
+			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
 			self.sc2.set_clim([-1,1])
 			self.ax[1].set_title("Parse Tree")
 			self.ax[1].set_adjustable('box-forced')
 
-			self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
+			self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
 			self.sc3.set_clim([-1,1.2])
 			self.ax[2].set_title("Actual Image")
 			self.ax[2].set_adjustable('box-forced')
 
-			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
+			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet') #, extent=[0,self.image_size,0,self.image_size],origin='lower')
 			self.sc4.set_clim([-1,1])
-			self.ax[3].set_title("Painted Image")
+			self.ax[3].set_title("Segmented Painted Image")
 			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
-			plt.pause(0.1)
+			plt.pause(0.1)	
 	
 	def meta_training(self,train=True):
 
