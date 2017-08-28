@@ -18,6 +18,9 @@ class parse_tree_node():
 		self.goal = goal
 		self.primitive = -1
 
+		self.stroke_term = 0.
+		self.intermittent_term = 0.
+
 	def disp(self):
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
