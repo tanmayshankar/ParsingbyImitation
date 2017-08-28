@@ -418,11 +418,11 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
 
-			# Additional term for continuity. 
-			print(j)
-			print("ORIGINAL REWARD:",self.parse_tree[j].reward)
-			print("STROKE TERM:",self.parse_tree[j].stroke_term)
-			print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
+			# # Additional term for continuity. 
+			# print(j)
+			# print("ORIGINAL REWARD:",self.parse_tree[j].reward)
+			# print("STROKE TERM:",self.parse_tree[j].stroke_term)
+			# print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
 		
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
