@@ -10,15 +10,14 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth = 3
-		self.minimum_width = 3
+		self.paintwidth = 2
+		self.minimum_width = 2
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
-
 
 		# Initializing the session.
 		self.sess = sess
@@ -131,13 +130,12 @@ class hierarchical():
 		self.target_rule = tf.placeholder(tf.float32,shape=( self.rulefc_output_shape),name='target_rule')
 
 		# Defining epislon and annealing rate for epislon.
-		self.initial_epislon = 0.95
+		self.initial_epislon = 1.
 		self.final_epsilon = 0.05
-		self.decay_epochs = 5
+		self.decay_epochs = 3
 		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epislon = 0.
 		
-
 		# Defining the loss for each of the 3 streams, rule, split and goal.
 		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
@@ -218,7 +216,8 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.h
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
@@ -241,7 +240,8 @@ class hierarchical():
 					split_copy = copy.deepcopy(split_location)
 					inter_split = split_location*self.state.w
 
-					if inter_split>(self.image_size/2):
+					# if inter_split>(self.image_size/2):
+					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
@@ -299,7 +299,7 @@ class hierarchical():
 		# This is actually the return accumulated by any particular decision.
 
 		# Now we are discounting based on the depth of the tree (not just sequence in episode)
-		self.gamma = 0.98
+		self.gamma = 1.0
 		for j in reversed(range(len(self.parse_tree))):	
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
@@ -314,7 +314,7 @@ class hierarchical():
 	def terminal_reward_nostartgoal(self, image_index):
 
 		if self.state.label==1:
-			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1
+			self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = 1.
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
