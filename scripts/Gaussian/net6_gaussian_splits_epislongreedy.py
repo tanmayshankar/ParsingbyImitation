@@ -114,7 +114,7 @@ class hierarchical():
 		
 		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
-		self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.01
+		self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
@@ -130,7 +130,7 @@ class hierarchical():
 		self.target_rule = tf.placeholder(tf.float32,shape=( self.rulefc_output_shape),name='target_rule')
 
 		# Defining epislon and annealing rate for epislon.
-		self.initial_epislon = 1.
+		self.initial_epislon = 0.7
 		self.final_epsilon = 0.05
 		self.decay_epochs = 3
 		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
