@@ -130,7 +130,7 @@ class hierarchical():
 		self.target_rule = tf.placeholder(tf.float32,shape=( self.rulefc_output_shape),name='target_rule')
 
 		# Defining epislon and annealing rate for epislon.
-		self.initial_epislon = 0.7
+		self.initial_epislon = 1.
 		self.final_epsilon = 0.05
 		self.decay_epochs = 3
 		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
