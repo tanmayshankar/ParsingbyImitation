@@ -145,7 +145,8 @@ class hierarchical():
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 
 		# Primitive loss
-		self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_probabilities),self.primitive_return_weight)
+		# self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_probabilities),self.primitive_return_weight)
+		self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitivefc_presoftmax),self.primitive_return_weight)
 
 		# The total loss is the sum of individual losses.
 		self.total_loss = self.rule_loss + self.split_loss + self.primitive_loss
@@ -461,7 +462,8 @@ class hierarchical():
 	def update_plot_data(self, image_index):
 	
 		# if (self.predicted_labels[image_index]==1).any():
-		self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
+		# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
+		self.alternate_painted_image[npy.where(self.painted_images[image_index]==1)]=1.
 		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=1.
 		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=-1.
 
@@ -471,6 +473,7 @@ class hierarchical():
 			self.attention_plots()
 			self.sc2.set_data(self.mask)
 			self.sc3.set_data(self.images[image_index])
+			self.sc4.set_data(self.alternate_painted_image)
 
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
@@ -492,14 +495,12 @@ class hierarchical():
 
 				self.fig.canvas.draw()
 				plt.pause(0.5)
-				del self.ax[0].collections[-1]
-				# self.ax[0].collections = []
-
+				del self.ax[0].collections[-1]				
 
 	def define_plots(self):
 		image_index = 0
 		if self.plot:
-			self.fig, self.ax = plt.subplots(1,3,sharey=True)
+			self.fig, self.ax = plt.subplots(1,4,sharey=True)
 			self.fig.show()
 			
 			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -520,6 +521,11 @@ class hierarchical():
 			self.sc3.set_clim([-1,1.2])
 			self.ax[2].set_title("Actual Image")
 			self.ax[2].set_adjustable('box-forced')
+
+			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
+			self.sc4.set_clim([-1,1])
+			self.ax[3].set_title("Painted Image")
+			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
 			plt.pause(0.1)
@@ -557,9 +563,7 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				npy.save("validation.npy".format(e),self.predicted_labels)
-				
-
+				npy.save("validation.npy".format(e),self.predicted_labels)			
 
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
@@ -604,7 +608,6 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
@@ -615,15 +618,14 @@ def main(args):
 	
 	load = 0
 	if load:
-		print("HI!")
 		model_file = str(sys.argv[4])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	hierarchical_model.meta_training(train=False)
-	# hierarchical_model.meta_training(train=True)
+	# hierarchical_model.meta_training(train=False)
+	hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)

@@ -151,7 +151,8 @@ class hierarchical():
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 
 		# Primitive loss
-		self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_probabilities),self.primitive_return_weight)
+		# self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_probabilities),self.primitive_return_weight)
+		self.primitive_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitivefc_presoftmax),self.primitive_return_weight)
 
 		# The total loss is the sum of individual losses.
 		self.total_loss = self.rule_loss + self.split_loss + self.primitive_loss
@@ -210,7 +211,7 @@ class hierarchical():
 		split_location = -1
 		
 		# Hard coding ban of splits for regions smaller than minimum width.		
-		epislon = 1e-3
+		epislon = 1e-5
 		rule_probabilities += epislon
 
 		if (self.state.h<=self.minimum_width):
