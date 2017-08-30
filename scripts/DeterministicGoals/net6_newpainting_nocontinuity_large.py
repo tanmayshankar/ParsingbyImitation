@@ -431,6 +431,7 @@ class hierarchical():
 					split_weight = self.parse_tree[j].reward
 
 			if self.parse_tree[j].label==1:
+				print("Backprop for a primitive")
 				primitive_weight = self.parse_tree[j].reward
 				target_primitive[self.parse_tree[j].primitive] = 1.				
 
