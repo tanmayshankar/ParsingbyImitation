@@ -2,7 +2,6 @@
 from headers import *
 from state_class import *
 
-
 class hierarchical():
 
 	def __init__(self):
@@ -115,13 +114,6 @@ class hierarchical():
 		self.split_cov = 0.1
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 		
-
-
-		# Creating a saver object to save models.
-		# self.saver = tf.train.Saver(max_to_keep=None)
-		# if model_file:
-		# 	self.saver.restore(self.sess,model_file)
-
 		# STARTING PRIMITIVE STREAM:		
 		self.number_primitives = 4
 		self.primitivefc_l1_shape = 50
