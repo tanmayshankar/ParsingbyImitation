@@ -580,7 +580,7 @@ def main(args):
 	hierarchical_model.plot = 0
 	print("HELLO")
 	
-	load = 0
+	load = 1
 
 	if load:
 		print("HI!")
