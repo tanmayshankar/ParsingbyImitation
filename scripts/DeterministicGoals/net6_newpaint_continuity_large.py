@@ -334,46 +334,86 @@ class hierarchical():
 			# print("Selected Primitive:",selected_primitive)
 
 			# MODIFYING TO PAINTING OUTSIDE THE CURRENT SEGMENT AS WELL AS MODIFYING TO MID SEGMENT:
-			if (selected_primitive==0):
-				# self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
-				# self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
+			# if (selected_primitive==0):
+			# 	# self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
+			# 	# self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
 
+			# 	self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x])
+			# 	self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
+
+			# 	self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+			# 	self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+
+			# if (selected_primitive==1):
+			# 	# self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
+			# 	# self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
+
+			# 	self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
+			# 	self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x])
+
+			# 	self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+			# 	self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+
+			# if (selected_primitive==2):
+			# 	# self.start_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
+			# 	# self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
+
+			# 	self.current_start = npy.array([self.state.y,self.state.x+self.state.w/2])
+			# 	self.current_goal = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
+
+			# 	self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+			# 	self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+				
+			# if (selected_primitive==3):
+			# 	# self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
+			# 	# self.goal_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
+
+			# 	self.current_start = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
+			# 	self.current_goal = npy.array([self.state.y,self.state.x+self.state.w/2])
+
+			# 	self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+			# 	self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
+
+			if (selected_primitive==0):
 				self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x])
 				self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
 
-				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
-				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+				lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
+				upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
+
+				self.painted_image[self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
+				self.painted_images[image_index, self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
 
 			if (selected_primitive==1):
-				# self.start_list.append(npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w]))
-				# self.goal_list.append(npy.array([self.state.y+self.state.h/2,self.state.x]))
-
 				self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
 				self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x])
 
-				self.painted_image[self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
-				self.painted_images[image_index, self.state.x:self.state.x+self.state.w, (self.state.y+(self.state.h-self.paintwidth)/2):(self.state.y+(self.state.h+self.paintwidth)/2)] = 1.
+				lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
+				upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
+
+				self.painted_image[self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
+				self.painted_images[image_index, self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
 
 			if (selected_primitive==2):
-				# self.start_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
-				# self.goal_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
-
 				self.current_start = npy.array([self.state.y,self.state.x+self.state.w/2])
-				self.current_goal = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
+				self.current_goal = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])				
 
-				self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
-				self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
-				
+				lower = max(self.state.x,self.state.x+(self.state.w-self.paintwidth)/2)				
+				upper = min(self.state.x+(self.state.w+self.paintwidth)/2,self.state.x+self.state.w)
+
+				self.painted_image[lower:upper, self.state.y:self.state.y+self.state.h] = 1.
+				self.painted_images[image_index,lower:upper, self.state.y:self.state.y+self.state.h] = 1.
+
 			if (selected_primitive==3):
-				# self.start_list.append(npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2]))
-				# self.goal_list.append(npy.array([self.state.y,self.state.x+self.state.w/2]))
-
 				self.current_start = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
 				self.current_goal = npy.array([self.state.y,self.state.x+self.state.w/2])
-
-				self.painted_image[(self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
-				self.painted_images[image_index, (self.state.x+(self.state.w-self.paintwidth)/2):(self.state.x+(self.state.w+self.paintwidth)/2), self.state.y:self.state.y+self.state.h] = 1.
 				
+				lower = max(self.state.x,self.state.x+(self.state.w-self.paintwidth)/2)				
+				upper = min(self.state.x+(self.state.w+self.paintwidth)/2,self.state.x+self.state.w)
+
+				self.painted_image[lower:upper, self.state.y:self.state.y+self.state.h] = 1.
+				self.painted_images[image_index,lower:upper, self.state.y:self.state.y+self.state.h] = 1.
+
 			continuity_term = npy.linalg.norm(self.current_start-self.previous_goal)/(self.image_size)
 			self.previous_goal = copy.deepcopy(self.current_goal)
 
