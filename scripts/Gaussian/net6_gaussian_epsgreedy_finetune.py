@@ -134,7 +134,7 @@ class hierarchical():
 		self.initial_epislon = 1.
 		self.final_epsilon = 0.05
 		self.decay_epochs = 0
-		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
+		# self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epislon = 0.
 		
 		# Defining the loss for each of the 3 streams, rule, split and goal.
