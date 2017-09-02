@@ -667,9 +667,12 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				npy.save("validation_1.npy".format(e),self.predicted_labels)
-				npy.save("valid_painting_1.npy",self.painted_images)
-				
+				suffix = str(sys.argv[6])
+				npy.save("validation_{0}.npy".format(suffix),self.predicted_labels)
+				npy.save("valid_painting_{0}.npy".format(suffix),self.painted_images)
+			
+			self.evaluate()
+
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
@@ -705,6 +708,23 @@ class hierarchical():
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
 
+	def evaluate(self):
+
+		pred_label = copy.deepcopy(self.predicted_labels)
+		pred_label[npy.where(pred_label==2)]=-1
+		
+		paintim = copy.deepcopy(self.painted_images)
+		paintim[npy.where(paintim==2)]=-1
+
+		print("Label correlation:")
+		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
+		print("Label accuracy:")
+		print(1-abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
+		print("Paint correlation:")
+		print((self.true_labels*paintim).sum()/((self.image_size**2)*self.num_images))
+		print("Paint accuracy:")
+		print(1-abs(self.true_labels-paintim).sum()/(2*(self.image_size**2)*self.num_images))
+
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
@@ -730,6 +750,7 @@ def main(args):
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
 
+	
 	# CALL TRAINING
 	hierarchical_model.meta_training(train=False)
 	# hierarchical_model.meta_training(train=True)
