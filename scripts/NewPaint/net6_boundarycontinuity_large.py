@@ -641,7 +641,7 @@ class hierarchical():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 
 		self.define_plots()
-
+		self.to_train = train
 		# For all epochs
 		if not(train):
 			self.num_epochs=1
