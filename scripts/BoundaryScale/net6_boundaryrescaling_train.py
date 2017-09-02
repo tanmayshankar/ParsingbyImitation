@@ -647,8 +647,7 @@ class hierarchical():
 
 		# For all epochs
 		for e in range(self.num_epochs):
-			# for i in range(self.num_images):
-			for i in range(1):
+			for i in range(self.num_images):
 
 				self.initialize_tree()
 				self.construct_parse_tree(i)
@@ -731,8 +730,8 @@ def main(args):
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	hierarchical_model.meta_training(train=False)
-	# hierarchical_model.meta_training(train=True)
+	# hierarchical_model.meta_training(train=False)
+	hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
