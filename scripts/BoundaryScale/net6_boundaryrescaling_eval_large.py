@@ -111,8 +111,8 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
-		self.split_cov = 0.1
-		# self.split_cov = 0.01
+		# self.split_cov = 0.1
+		self.split_cov = 0.001
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# STARTING PRIMITIVE STREAM:		
@@ -667,8 +667,9 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				npy.save("validation.npy".format(e),self.predicted_labels)
-				npy.save("valid_painting.npy",self.painted_images)
+				suffix = str(sys.argv[6])
+				npy.save("validation_{0}.npy".format(suffix),self.predicted_labels)
+				npy.save("valid_painting_{0}.npy".format(suffix),self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
@@ -704,6 +705,25 @@ class hierarchical():
 		self.images[npy.where(self.images==2)]=-1
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
+
+	def evaluate(self):
+
+		pred_label = copy.deepcopy(self.predicted_labels)
+		pred_label[npy.where(pred_label==2)]=-1
+		
+		paintim = copy.deepcopy(self.painted_images)
+		paintim[npy.where(paintim==2)]=-1
+
+		print("Label correlation:")
+		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
+		print("Label accuracy:")
+		print(1-abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
+		print("Paint correlation:")
+		print((self.true_labels*paintim).sum()/((self.image_size**2)*self.num_images))
+		print("Paint accuracy:")
+		print(1-abs(self.true_labels-paintim).sum()/(2*(self.image_size**2)*self.num_images))
+
+
 
 def main(args):
 
