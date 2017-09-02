@@ -253,8 +253,8 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(inter_split))
 
-					print("Y:",self.state.y,"H:",self.state.y,"Image Y:",self.imagey)
-					print("H SC:",split_copy,"SL:",split_location)
+					# print("Y:",self.state.y,"H:",self.state.y,"Image Y:",self.imagey)
+					# print("H SC:",split_copy,"SL:",split_location)
 
 					if counter>25:
 						print("State: H",self.state.h, "Split fraction:",split_copy, "Split location:",split_location)
@@ -281,8 +281,8 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(inter_split))
 					
-					print("X:",self.state.x,"W",self.state.w,"Image X:",self.imagex)
-					print("W SC:",split_copy,"SL:",split_location)
+					# print("X:",self.state.x,"W",self.state.w,"Image X:",self.imagex)
+					# print("W SC:",split_copy,"SL:",split_location)
 
 					if counter>25:
 						print("State: W",self.state.w, "Split fraction:",split_copy, "Split location:",split_location)
