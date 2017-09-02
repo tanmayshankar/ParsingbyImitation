@@ -18,8 +18,8 @@ class hierarchical():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.stroke_lambda = 0.1
-		self.intermittent_lambda = -0.1
+		self.stroke_lambda = 0.05
+		self.intermittent_lambda = -0.05
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -714,7 +714,7 @@ def main(args):
 
 	hierarchical_model = hierarchical()
 	hierarchical_model.initialize_tensorflow_model(sess)
-	
+
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
