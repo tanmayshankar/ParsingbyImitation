@@ -668,6 +668,7 @@ class hierarchical():
 				self.save_model(e)
 			else: 
 				npy.save("validation.npy".format(e),self.predicted_labels)
+				npy.save("valid_painting.npy",self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))

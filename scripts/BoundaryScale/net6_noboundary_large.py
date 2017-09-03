@@ -6,7 +6,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 1
+		self.num_epochs = 20
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
@@ -111,8 +111,8 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
-		# self.split_cov = 0.1
-		self.split_cov = 0.001
+		self.split_cov = 0.1
+		# self.split_cov = 0.01
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# STARTING PRIMITIVE STREAM:		
@@ -419,7 +419,7 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
-			boundary_width = 2
+			boundary_width = 0
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
 			lowery = max(0,self.state.y-boundary_width)
@@ -460,7 +460,7 @@ class hierarchical():
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
-			boundary_width = 2
+			boundary_width = 0
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
 			lowery = max(0,self.state.y-boundary_width)
@@ -584,8 +584,8 @@ class hierarchical():
 				self.lines = self.ax[0].add_collection(lines)
 
 				self.fig.canvas.draw()
-				# raw_input("Press any key to continue.")
-				plt.pause(0.5)	
+				raw_input("Press any key to continue.")
+				plt.pause(0.1)	
 				del self.ax[0].collections[-1]
 
 			del self.ax[3].collections[-1]
@@ -630,9 +630,9 @@ class hierarchical():
 			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
-			manager = plt.get_current_fig_manager()
-			manager.resize(*manager.window.maxsize())	
-			plt.pause(5)	
+			# manager = plt.get_current_fig_manager()
+			# manager.resize(*manager.window.maxsize())	
+			plt.pause(0.1)	
 	
 	def meta_training(self,train=True):
 
@@ -667,9 +667,8 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				suffix = str(sys.argv[6])
-				npy.save("validation_{0}.npy".format(suffix),self.predicted_labels)
-				npy.save("valid_painting_{0}.npy".format(suffix),self.painted_images)
+				npy.save("validation.npy".format(e),self.predicted_labels)
+				npy.save("valid_painting.npy",self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
@@ -706,25 +705,6 @@ class hierarchical():
 		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise
 
-	def evaluate(self):
-
-		pred_label = copy.deepcopy(self.predicted_labels)
-		pred_label[npy.where(pred_label==2)]=-1
-		
-		paintim = copy.deepcopy(self.painted_images)
-		paintim[npy.where(paintim==2)]=-1
-
-		print("Label correlation:")
-		print((self.true_labels*pred_label).sum()/((self.image_size**2)*self.num_images))
-		print("Label accuracy:")
-		print(1-abs(self.true_labels-pred_label).sum()/(2*(self.image_size**2)*self.num_images))
-		print("Paint correlation:")
-		print((self.true_labels*paintim).sum()/((self.image_size**2)*self.num_images))
-		print("Paint accuracy:")
-		print(1-abs(self.true_labels-paintim).sum()/(2*(self.image_size**2)*self.num_images))
-
-
-
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
@@ -741,9 +721,9 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 1
+	hierarchical_model.plot = 0
 	
-	load = 1
+	load = 0
 	if load:
 		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
@@ -751,8 +731,8 @@ def main(args):
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	hierarchical_model.meta_training(train=False)
-	# hierarchical_model.meta_training(train=True)
+	# hierarchical_model.meta_training(train=False)
+	hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
