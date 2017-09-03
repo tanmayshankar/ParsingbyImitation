@@ -14,7 +14,7 @@ class hierarchical():
 		self.minimum_width = self.paintwidth
 		self.images = []
 		self.true_labels = []
-		self.image_size = 20
+		self.image_size = 50
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
