@@ -722,7 +722,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 1
+	load = 0
 	if load:
 		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
