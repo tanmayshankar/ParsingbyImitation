@@ -490,15 +490,15 @@ class hierarchical():
 
 			for i in range(self.num_images):		
 				
-				print("_________________________________________________________________")
-				print("Epoch:",e,"Training Image:",i)	
+
 				self.initialize_tree()
 				self.construct_parse_tree(i)	
 				# self.construct_parse_tree(image_list[i])
 				self.compute_rewards(i)
 				# self.compute_rewards(image_list[i])
 				self.propagate_rewards()
-				print("Parsing Image:",i," Reward obtained:",self.parse_tree[0].reward)
+				print("_________________________________________________________________")
+				print("Epoch:",e,"Training Image:",i, "Reward obtained:",self.parse_tree[0].reward)
 
 				if train:
 					self.backprop(i,e)
