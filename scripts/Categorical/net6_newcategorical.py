@@ -31,7 +31,8 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=2
+		self.paintwidth = 2		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
+		self.minimum_width = 2
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
@@ -182,8 +183,6 @@ class hierarchical():
 		# SAMPLING A SPLIT LOCATION
 		split_location = -1
 
-		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 3 
 		
 		epislon = 1e-5
 		rule_probabilities += epislon
