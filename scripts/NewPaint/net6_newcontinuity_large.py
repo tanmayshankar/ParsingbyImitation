@@ -18,8 +18,8 @@ class hierarchical():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.stroke_lambda = 1.
-		self.intermittent_lambda = -1.
+		self.stroke_lambda = 0.5
+		self.intermittent_lambda = -0.5
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -434,14 +434,15 @@ class hierarchical():
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
 			# # Additional term for continuity. 
 		for j in range(len(self.parse_tree)):
-			print("PARSE TREE INDEX:",j)
-			print("STATE: ",self.parse_tree[j].disp())
-			print("ORIGINAL REWARD:",self.parse_tree[j].reward)
-			print("STROKE TERM:",self.parse_tree[j].stroke_term)
-			print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
-			
+			# print("PARSE TREE INDEX:",j)
+			# print("STATE: ",self.parse_tree[j].disp())
+			# print("ORIGINAL REWARD:",self.parse_tree[j].reward)
+			# print("STROKE TERM:",self.parse_tree[j].stroke_term)
+			# print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
+			# print("LAMBDA:",self.intermittent_lambda)
+			# print("MUL:",self.parse_tree[j].intermittent_term*self.intermittent_lambda)
 			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
-			print("MODIFIED REWARD:",self.parse_tree[j].reward)
+			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
