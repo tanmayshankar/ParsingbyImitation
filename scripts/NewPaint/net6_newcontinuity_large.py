@@ -18,8 +18,8 @@ class hierarchical():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.stroke_lambda = 1.
-		self.intermittent_lambda = -1.
+		self.stroke_lambda = 2.
+		self.intermittent_lambda = -2.
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
