@@ -732,9 +732,9 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
-	load = 0
+	load = 1
 	if load:
 		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
@@ -742,8 +742,8 @@ def main(args):
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	# hierarchical_model.meta_training(train=False)
-	hierarchical_model.meta_training(train=True)
+	hierarchical_model.meta_training(train=False)
+	# hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
