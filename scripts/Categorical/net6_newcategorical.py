@@ -304,7 +304,7 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
-		self.alpha = 1.2
+		self.alpha = 1.1
 		# AMPLIFICATION FACTOR FOR TAN
 
 		for j in range(len(self.parse_tree)):
