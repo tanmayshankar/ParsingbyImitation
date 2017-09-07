@@ -112,7 +112,7 @@ class hierarchical():
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
 		# self.split_cov = 0.1
-		self.split_cov = 0.01
+		self.split_cov = 0.001
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# STARTING PRIMITIVE STREAM:		
@@ -510,6 +510,7 @@ class hierarchical():
 				self.parse_primitive_terminal(image_index)
 			
 			self.update_plot_data(image_index)
+			# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
 
 	def attention_plots(self):
 
@@ -557,7 +558,6 @@ class hierarchical():
 							sc = int(npy.floor(sc))
 						else:
 							sc = int(npy.ceil(sc))
-
 						# split_segs.append([[self.parse_tree[j].x+sc,self.parse_tree[j].y],[self.parse_tree[j].x+sc,self.parse_tree[j].y+self.parse_tree[j].h]])								
 						split_segs.append([[self.parse_tree[j].y,self.parse_tree[j].x+sc],[self.parse_tree[j].y+self.parse_tree[j].h,self.parse_tree[j].x+sc]])
 						
@@ -641,7 +641,7 @@ class hierarchical():
 			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,+1,self.image_size+1],origin='lower')
 			self.sc3.set_clim([-1,1.2])
 			self.ax[2].set_title("Actual Image")
-			self.ax[2].plot([20,20,30,30],[10,40,10,40])
+			# self.ax[2].plot([20,20,30,30],[10,40,10,40])
 			self.ax[2].set_adjustable('box-forced')
 
 			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -651,7 +651,9 @@ class hierarchical():
 			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
-			plt.pause(0.1)	
+			manager = plt.get_current_fig_manager()
+			manager.resize(*manager.window.maxsize())	
+			plt.pause(10)	
 	
 	def meta_training(self,train=True):
 
@@ -667,6 +669,7 @@ class hierarchical():
 		# For all epochs
 		for e in range(self.num_epochs):
 			for i in range(self.num_images):
+			# for i in range(1):
 
 				self.initialize_tree()
 				self.construct_parse_tree(i)
@@ -686,7 +689,9 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				npy.save("validation.npy".format(e),self.predicted_labels)
+				modelindex = int(sys.argv[6])
+				npy.save("validation_{0}.npy".format(modelindex),self.predicted_labels)
+				npy.save("validation_painted_{0}.npy".format(modelindex),self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
@@ -739,7 +744,7 @@ def main(args):
 	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
 	
 	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
+	hierarchical_model.plot = 1
 	
 	load = 1
 	if load:
