@@ -548,7 +548,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
 		print("HI!")
 		model_file = str(sys.argv[5])
