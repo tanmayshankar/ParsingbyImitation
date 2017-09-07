@@ -114,7 +114,8 @@ class hierarchical():
 		
 		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
-		self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.05
+		# self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.001
+		self.split_cov = tf.placeholder(tf.float32,shape=(None),name='split_cov')
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Sampling a goal and a split. Remember, this should still just be defining an operation, not actually sampling.
@@ -132,7 +133,7 @@ class hierarchical():
 		# Defining epislon and annealing rate for epislon.
 		self.initial_epislon = 1.
 		self.final_epsilon = 0.05
-		self.decay_epochs = 3
+		self.decay_epochs = 4
 		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epislon = 0.
 		
@@ -178,7 +179,8 @@ class hierarchical():
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
-		rule_probability = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+
+		rule_probability = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_epislon/10.})
 	
 		split_location = -1
 
@@ -210,7 +212,7 @@ class hierarchical():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
 					
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_epislon/10.})
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
@@ -234,7 +236,7 @@ class hierarchical():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_epislon/10.})
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
@@ -369,7 +371,7 @@ class hierarchical():
 			# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
 					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
-						 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule})
+						 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, self.split_cov: self.annealed_epislon/10.})
 
 			# print("LOSS VALUES:",rule_loss, split_loss)
 
