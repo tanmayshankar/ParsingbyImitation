@@ -349,7 +349,7 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
-			boundary_width = 2
+			boundary_width = 0
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
 			lowery = max(0,self.state.y-boundary_width)
@@ -386,7 +386,7 @@ class hierarchical():
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
-			boundary_width = 2
+			boundary_width = 0
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
 			lowery = max(0,self.state.y-boundary_width)
