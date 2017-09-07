@@ -304,8 +304,11 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
+		self.alpha = 1.2
+		# AMPLIFICATION FACTOR FOR TAN
+
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)
+			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)
 
 	def terminal_reward_nostartgoal(self, image_index):
 
