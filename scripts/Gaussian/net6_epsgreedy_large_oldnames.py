@@ -10,11 +10,11 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth = 2
-		self.minimum_width = 2
+		self.paintwidth = int(sys.argv[3])
+		self.minimum_width = int(sys.argv[4])
 		self.images = []
 		self.true_labels = []
-		self.image_size = 20
+		self.image_size = 50
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
@@ -84,15 +84,15 @@ class hierarchical():
 
 		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
 		# Now not using the start and goal
-		self.rulefc_l1_shape = 120
-		self.W_rulefc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.rulefc_l1_shape],stddev=0.1),name='W_rulefc_l1')
-		self.b_rulefc_l1 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_l1_shape]),name='b_rulefc_l1')
-		self.rulefc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_rulefc_l1),self.b_rulefc_l1),name='rulefc_l1')
+		self.fcs1_l1_shape = 120
+		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
+		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
+		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
 
-		self.splitfc_l1_shape = 50
-		self.W_splitfc_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.splitfc_l1_shape],stddev=0.1),name='W_splitfc_l1')		
-		self.b_splitfc_l1 = tf.Variable(tf.constant(0.1,shape=[self.splitfc_l1_shape]),name='b_splitfc_l1')
-		self.splitfc_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_splitfc_l1),self.b_splitfc_l1),name='splitfc_l1')		
+		self.fcs2_l1_shape = 50
+		self.W_fcs2_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs2_l1_shape],stddev=0.1),name='W_fcs2_l1')		
+		self.b_fcs2_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs2_l1_shape]),name='b_fcs2_l1')
+		self.fcs2_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs2_l1),self.b_fcs2_l1),name='fcs2_l1')		
 
 		# 2nd FC layer: RULE Output:
 		self.number_primitives = 1
@@ -102,19 +102,19 @@ class hierarchical():
 		# Assignment rule to region with primitive.
 		# Assignment rule to region without primitive.
 
-		self.rulefc_output_shape = 1*self.number_primitives+5
-		self.W_rulefc_l2 = tf.Variable(tf.truncated_normal([self.rulefc_l1_shape,self.rulefc_output_shape],stddev=0.1),name='W_rulefc_l2')
-		self.b_rulefc_l2 = tf.Variable(tf.constant(0.1,shape=[self.rulefc_output_shape]),name='b_rulefc_l2')
-		self.rulefc_presoftmax = tf.add(tf.matmul(self.rulefc_l1,self.W_rulefc_l2),self.b_rulefc_l2,name='rulefc_presoftmax')
-		self.rule_probabilities = tf.nn.softmax(self.rulefc_presoftmax,name='softmax')
+		self.fcs1_output_shape = 1*self.number_primitives+5
+		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
+		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
+		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
+		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
 		
 		# Split output.
-		self.W_split = tf.Variable(tf.truncated_normal([self.splitfc_l1_shape,2],stddev=0.1),name='W_split')
+		self.W_split = tf.Variable(tf.truncated_normal([self.fcs2_l1_shape,2],stddev=0.1),name='W_split')
 		self.b_split = tf.Variable(tf.constant(0.1,shape=[2]),name='b_split')
 		
-		self.splitfc_preslice = tf.matmul(self.splitfc_l1,self.W_split)+self.b_split
-		self.split_mean = tf.nn.sigmoid(self.splitfc_preslice[0,0])
-		# self.split_cov = tf.nn.softplus(self.splitfc_preslice[0,1])+0.001
+		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
+		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
+		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.001
 		self.split_cov = tf.placeholder(tf.float32,shape=(None),name='split_cov')
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
@@ -128,7 +128,7 @@ class hierarchical():
 		# Defining training ops. 
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=( self.rulefc_output_shape),name='target_rule')
+		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
 
 		# Defining epislon and annealing rate for epislon.
 		self.initial_epislon = 1.
@@ -142,7 +142,7 @@ class hierarchical():
 		# Weighted by the return obtained. This is just the negative log probability of the selected action.
 
 		# NO NEGATIVE SIGN HERE
-		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rulefc_presoftmax),self.rule_return_weight)
+		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
  
 		# The split loss is the negative log probability of the chosen split, weighted by the return obtained.
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
@@ -186,8 +186,8 @@ class hierarchical():
 
 		# Calculating epislon greedy probabilities for rules.
 		greedy_index = npy.argmax(rule_probability[0])
-		rule_probabilities = npy.ones(self.rulefc_output_shape)*(self.annealed_epislon/self.rulefc_output_shape)
-		rule_probabilities[greedy_index] += 1-self.annealed_epislon+self.annealed_epislon/self.rulefc_output_shape
+		rule_probabilities = npy.ones(self.fcs1_output_shape)*(self.annealed_epislon/self.fcs1_output_shape)
+		rule_probabilities[greedy_index] += 1-self.annealed_epislon+self.annealed_epislon/self.fcs1_output_shape
 
 		# Hard coding ban of vertical splits when h==1, and of horizontal splits when w==1.
 		epislon = 1e-7
@@ -200,7 +200,7 @@ class hierarchical():
 			rule_probabilities[[1,3]]=0.
 
 		rule_probabilities/=rule_probabilities.sum()
-		selected_rule = npy.random.choice(range(self.rulefc_output_shape),p=rule_probabilities)
+		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities)
 		indices = self.map_rules_to_indices(selected_rule)
 
 		# If it is a split rule:
@@ -345,7 +345,7 @@ class hierarchical():
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 
 		# NOW CHANGING TO 4 RULE SYSTEM.
-		target_rule = npy.zeros(self.rulefc_output_shape)
+		target_rule = npy.zeros(self.fcs1_output_shape)
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
@@ -360,7 +360,7 @@ class hierarchical():
 
 			rule_weight = 0
 			split_weight = 0
-			target_rule = npy.zeros(self.rulefc_output_shape)
+			target_rule = npy.zeros(self.fcs1_output_shape)
 
 			if self.parse_tree[j].label==0:
 				rule_weight = self.parse_tree[j].reward
@@ -540,6 +540,7 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
+	hierarchical_model.initialize_tensorflow_model(sess)
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
@@ -548,10 +549,10 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
 		print("HI!")
-		model_file = str(sys.argv[3])
+		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)

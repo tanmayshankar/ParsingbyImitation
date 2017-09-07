@@ -444,6 +444,38 @@ class hierarchical():
 			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
 			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
+	def alternate_propagate_rewards(self):
+
+		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
+		# This is actually the return accumulated by any particular decision.
+		# Now we are discounting based on the depth of the tree (not just sequence in episode)
+		self.gamma = 1.
+
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+
+		# for j in range(len(self.parse_tree)):
+			# print("PARSE TREE INDEX:",j)
+			# print("STATE: ",self.parse_tree[j].disp())
+			# print("ORIGINAL REWARD:",self.parse_tree[j].reward)
+			# print("STROKE TERM:",self.parse_tree[j].stroke_term)
+			# print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
+			# print("LAMBDA:",self.intermittent_lambda)
+			# print("MUL:",self.parse_tree[j].intermittent_term*self.intermittent_lambda)
+			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
+
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
+
+		for j in reversed(range(len(self.parse_tree))):	
+			if (self.parse_tree[j].backward_index>=0):
+				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
+
+		# Non-linearizing rewards.
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
+			# # Additional term for continuity. 
+
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 		for j in range(len(self.parse_tree)):
@@ -665,7 +697,7 @@ class hierarchical():
 				self.initialize_tree()
 				self.construct_parse_tree(i)
 				# self.compute_rewards(i)
-				self.propagate_rewards()
+				self.alternate_propagate_rewards()
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 

@@ -10,11 +10,11 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth = 2
-		self.minimum_width = 2
+		self.paintwidth = int(sys.argv[3])
+		self.minimum_width = int(sys.argv[4])
 		self.images = []
 		self.true_labels = []
-		self.image_size = 20
+		self.image_size = 50
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
@@ -548,10 +548,10 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
 		print("HI!")
-		model_file = str(sys.argv[3])
+		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
