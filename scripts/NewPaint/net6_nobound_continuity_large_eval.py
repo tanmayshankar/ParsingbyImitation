@@ -673,7 +673,9 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				npy.save("validation.npy".format(e),self.predicted_labels)
+				modelindex = int(sys.argv[6])
+				npy.save("validation_{0}.npy".format(modelindex),self.predicted_labels)
+				npy.save("validation_painted_{0}.npy".format(modelindex),self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
