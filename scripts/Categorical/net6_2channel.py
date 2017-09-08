@@ -35,7 +35,7 @@ class hierarchical():
 		self.conv5_num_filters = 20
 
 		# Placeholders
-		self.input = tf.placeholder(tf.float32,shape=[2,self.image_size,self.image_size,1],name='input')
+		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,2],name='input')
 
 		# Convolutional layers: 
 		# Layer 1
