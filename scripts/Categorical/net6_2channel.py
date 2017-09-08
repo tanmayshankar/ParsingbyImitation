@@ -157,7 +157,7 @@ class hierarchical():
 
 	def parse_nonterminal(self, image_index):
 
-		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,2)})
+		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(2,self.image_size,self.image_size,1)})
 		# Should it be an epsilon-greedy policy? 
 
 		# SAMPLING A SPLIT LOCATION
@@ -365,13 +365,13 @@ class hierarchical():
 
 				# Here ,we only backprop for shapes, since we only choose actions for shapese.
 				merged_summaries, rule_loss, _ = self.sess.run([self.merge_summaries, self.rule_loss, self.train], \
-					feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
+					feed_dict={self.input: self.resized_image.reshape(2,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 					self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split, \
 					self.categorical_probabilities: self.parse_tree[j].categorical_probabilities})
 
 			# print("LOSS VALUES:",rule_loss, split_loss)
 				# rule_loss, split_loss, total_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.total_loss, self.train], \
-				# 	feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
+				# 	feed_dict={self.input: self.resized_image.reshape(2,self.image_size,self.image_size,1), self.rule_return_weight: rule_weight, \
 				# 	self.target_rule: target_rule, self.split_return_weight: split_weight, self.sampled_split: self.parse_tree[j].split})
 
 				self.writer.add_summary(merged_summaries, self.num_images*epoch+image_index)
