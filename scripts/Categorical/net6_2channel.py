@@ -561,6 +561,7 @@ def main(args):
 	load = 0
 	if load:
 		print("HI!")
+		print("Abhijat is kind of stupid")
 		model_file = str(sys.argv[3])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
