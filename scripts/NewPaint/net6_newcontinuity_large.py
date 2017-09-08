@@ -697,7 +697,8 @@ class hierarchical():
 				self.initialize_tree()
 				self.construct_parse_tree(i)
 				# self.compute_rewards(i)
-				self.alternate_propagate_rewards()
+				self.propagate_rewards()
+				# self.alternate_propagate_rewards()
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 
