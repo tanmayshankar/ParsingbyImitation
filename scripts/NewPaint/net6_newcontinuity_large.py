@@ -441,7 +441,10 @@ class hierarchical():
 			# print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
 			# print("LAMBDA:",self.intermittent_lambda)
 			# print("MUL:",self.parse_tree[j].intermittent_term*self.intermittent_lambda)
-			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
+
+			# self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
+			self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
+			
 			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 	def alternate_propagate_rewards(self):
