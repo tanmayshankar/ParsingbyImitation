@@ -23,6 +23,8 @@ class parse_tree_node():
 
 		self.boundaryscaled_split = 0
 
+		self.penalty = 0.
+
 	def disp(self):
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
