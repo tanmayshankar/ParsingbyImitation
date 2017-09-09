@@ -11,15 +11,14 @@ class hierarchical():
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = int(sys.argv[3])
-		self.minimum_width = int(sys.argv[4])
+		self.minimum_width = self.paintwidth
 		self.images = []
 		self.true_labels = []
 		self.image_size = 50
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.stroke_lambda = float(sys.argv[5])
-		self.intermittent_lambda = -float(sys.argv[6])
+		self.intermittent_lambda = -float(sys.argv[4])
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -774,7 +773,7 @@ def main(args):
 	
 	load = 0
 	if load:
-		model_file = str(sys.argv[7])
+		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
