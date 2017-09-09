@@ -11,15 +11,14 @@ class hierarchical():
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = int(sys.argv[3])
-		self.minimum_width = int(sys.argv[4])
+		self.minimum_width = self.paintwidth
 		self.images = []
 		self.true_labels = []
-		self.image_size = 50
+		self.image_size = int(sys.argv[2])
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.stroke_lambda = float(sys.argv[5])
-		self.intermittent_lambda = -float(sys.argv[6])
+		self.intermittent_lambda = -float(sys.argv[4])
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -114,7 +113,8 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
-		self.split_cov = 0.1
+		# self.split_cov = 0.1
+		self.split_cov = tf.placeholder(tf.float32,shape=(None),name='split_cov')
 		# self.split_cov = 0.01
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
@@ -143,6 +143,13 @@ class hierarchical():
 		self.primitive_return_weight = tf.placeholder(tf.float32,shape=(None),name='primitive_return_weight')
 		self.target_rule = tf.placeholder(tf.float32,shape=(self.fcs1_output_shape),name='target_rule')
 		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives),name='target_primitive')
+
+		# Defining epislon and annealing rate for epislon.
+		self.initial_variance = 0.1
+		self.final_variance = 0.01
+		self.decay_epochs = 2
+		self.annealing_rate = (self.initial_variance-self.final_variance)/(self.decay_epochs*self.num_images)
+		self.annealed_variance = 0.
 
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
@@ -211,7 +218,7 @@ class hierarchical():
 		self.parse_tree.insert(index,state)
 
 	def parse_nonterminal(self, image_index):
-		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_variance})
 	
 		split_location = -1
 		
@@ -244,7 +251,7 @@ class hierarchical():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_variance})
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
@@ -271,7 +278,8 @@ class hierarchical():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_variance})
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
@@ -343,7 +351,7 @@ class hierarchical():
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
 
-			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})	
+			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_cov: self.annealed_variance})	
 
 			if self.to_train:
 				selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
@@ -705,6 +713,12 @@ class hierarchical():
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 
+				if e<self.decay_epochs:
+					epsilon_index = e*self.num_images+i
+					self.annealed_variance = self.initial_variance-epsilon_index*self.annealing_rate
+				else: 
+					self.annealed_variance = self.final_epsilon
+
 				if train:
 					self.backprop(i)
 
@@ -765,14 +779,14 @@ def main(args):
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
-	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
+	hierarchical_model.true_labels = copy.deepcopy(hierarchical_model.images)
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
 	load = 0
 	if load:
-		model_file = str(sys.argv[7])
+		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
