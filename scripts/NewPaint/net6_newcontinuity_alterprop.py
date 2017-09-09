@@ -11,14 +11,14 @@ class hierarchical():
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = int(sys.argv[3])
-		self.minimum_width = int(sys.argv[4])
+		self.minimum_width = self.paintwidth
 		self.images = []
 		self.true_labels = []
-		self.image_size = 20
+		self.image_size = int(sys.argv[2])
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.intermittent_lambda = -float(sys.argv[5])
+		self.intermittent_lambda = -float(sys.argv[4])
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -770,14 +770,15 @@ def main(args):
 
 	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
 	hierarchical_model.images = npy.load(str(sys.argv[1]))	
-	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
+	# hierarchical_model.true_labels = npy.load(str(sys.argv[1]))
+	hierarchical_model.true_labels = copy.deepcopy(hierarchical_model.images)
 	
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
 	load = 0
 	if load:
-		model_file = str(sys.argv[6])
+		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
 	else:
 		hierarchical_model.initialize_tensorflow_model(sess)
