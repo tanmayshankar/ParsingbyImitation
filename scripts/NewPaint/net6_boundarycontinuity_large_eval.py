@@ -6,7 +6,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 20
+		self.num_epochs = 1
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
@@ -18,8 +18,8 @@ class hierarchical():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		self.stroke_lambda = 0.1
-		self.intermittent_lambda = -0.1
+		self.stroke_lambda = 0.05
+		self.intermittent_lambda = -0.05
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -114,8 +114,8 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
-		self.split_cov = 0.1
-		# self.split_cov = 0.01
+		# self.split_cov = 0.1
+		self.split_cov = 0.001
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# STARTING PRIMITIVE STREAM:		
@@ -434,21 +434,20 @@ class hierarchical():
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
 
 			# # Additional term for continuity. 
-		for j in range(len(self.parse_tree)):
 			# print(j)
 			# print("ORIGINAL REWARD:",self.parse_tree[j].reward)
 			# print("STROKE TERM:",self.parse_tree[j].stroke_term)
 			# print("INTERMITTENT TERM:",self.parse_tree[j].intermittent_term)
-			
+		
+		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward += self.parse_tree[j].stroke_term*self.stroke_lambda + self.parse_tree[j].intermittent_term*self.intermittent_lambda
-			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 		for j in range(len(self.parse_tree)):
 			self.state = self.parse_tree[j]
 			
-			boundary_width = 0
+			boundary_width = 2
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
 			lowery = max(0,self.state.y-boundary_width)
@@ -489,7 +488,7 @@ class hierarchical():
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
-			boundary_width = 0
+			boundary_width = 2
 			lowerx = max(0,self.state.x-boundary_width)
 			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
 			lowery = max(0,self.state.y-boundary_width)
@@ -516,7 +515,7 @@ class hierarchical():
 				self.parse_primitive_terminal(image_index)
 			
 			self.update_plot_data(image_index)
-			# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
+			# self.fig.savefig("Images/Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
 
 	def attention_plots(self):
 
@@ -568,8 +567,11 @@ class hierarchical():
 				# print(split_segs)	
 			split_lines = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines2 = LineCollection(split_segs, colors='k',linewidths=2)
-			self.split_lines = self.ax[3].add_collection(split_lines)				
-			self.split_lines2 = self.ax[1].add_collection(split_lines2)
+			split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
+			self.split_lines = self.ax[1].add_collection(split_lines)				
+			self.split_lines2 = self.ax[2].add_collection(split_lines2)
+			self.split_lines3 = self.ax[3].add_collection(split_lines3)
+
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
 				color_index = ['k']
@@ -594,11 +596,14 @@ class hierarchical():
 
 				self.fig.canvas.draw()
 				# raw_input("Press any key to continue.")
-				plt.pause(0.1)	
+				# plt.pause(0.1)	
+				plt.pause(1)	
 				del self.ax[0].collections[-1]
 
 			del self.ax[3].collections[-1]
+			del self.ax[2].collections[-1]
 			del self.ax[1].collections[-1]
+
 
 	def define_plots(self):
 		image_index = 0
@@ -634,7 +639,9 @@ class hierarchical():
 			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
-			plt.pause(0.1)	
+			manager = plt.get_current_fig_manager()
+			manager.resize(*manager.window.maxsize())	
+			plt.pause(10)	
 	
 	def meta_training(self,train=True):
 
@@ -642,6 +649,7 @@ class hierarchical():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 
 		self.define_plots()
+
 		self.to_train = train
 		# For all epochs
 		if not(train):
@@ -669,7 +677,9 @@ class hierarchical():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 				self.save_model(e)
 			else: 
-				npy.save("validation.npy".format(e),self.predicted_labels)
+				modelindex = int(sys.argv[6])
+				npy.save("validation_{0}.npy".format(modelindex),self.predicted_labels)
+				npy.save("validation_painted_{0}.npy".format(modelindex),self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
@@ -709,7 +719,8 @@ class hierarchical():
 def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="0,3")
+	# gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="0,3")
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="2,1")
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
@@ -723,7 +734,7 @@ def main(args):
 	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.plot = 0
 	
-	load = 0
+	load = 1
 	if load:
 		model_file = str(sys.argv[5])
 		hierarchical_model.initialize_tensorflow_model(sess,model_file)
@@ -731,8 +742,8 @@ def main(args):
 		hierarchical_model.initialize_tensorflow_model(sess)
 
 	# CALL TRAINING
-	# hierarchical_model.meta_training(train=False)
-	hierarchical_model.meta_training(train=True)
+	hierarchical_model.meta_training(train=False)
+	# hierarchical_model.meta_training(train=True)
 
 if __name__ == '__main__':
 	main(sys.argv)
