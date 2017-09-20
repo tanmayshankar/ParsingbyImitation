@@ -753,8 +753,9 @@ def main(args):
 
 	hierarchical_model.images = npy.load(args.images)
 	hierarchical_model.true_labels = copy.deepcopy(hierarchical_model.images)	
-	hierarchical_model.preprocess_images_labels()
 	hierarchical_model.image_size = args.size 
+	hierarchical_model.preprocess_images_labels()
+
 	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
 
