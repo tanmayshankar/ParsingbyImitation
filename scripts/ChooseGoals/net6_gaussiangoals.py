@@ -259,7 +259,7 @@ class hierarchical():
 		rule_probabilities/=rule_probabilities.sum()
 
 		if self.to_train:
-			selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
+			selected_rule = npy.random.choice(range(self.rulefc_output_shape),p=rule_probabilities[0])
 		if not(self.to_train):
 			selected_rule = npy.argmax(rule_probabilities[0])
 
@@ -406,8 +406,8 @@ class hierarchical():
 						self.painted_image[x,y] = 1.
 						self.painted_images[image_index,x,y] = 1.
 
-			self.parse_tree[self.current_parsing_index].start = copy.deepcopy(start_copy)
-			self.parse_tree[self.current_parsing_index].goal = copy.deepcopy(goal_copy)
+			self.parse_tree[self.current_parsing_index].start = copy.deepcopy(start_location)
+			self.parse_tree[self.current_parsing_index].goal = copy.deepcopy(goal_location)
 
 			self.nonpaint_moving_term = npy.linalg.norm(self.current_start-self.previous_goal)**2/((self.image_size)**2)
 
@@ -463,8 +463,9 @@ class hierarchical():
 
 			rule_weight = 0
 			split_weight = 0
-			primitive_weight = 0
-			target_rule = npy.zeros(self.fcs1_output_shape)
+			# primitive_weight = 0
+			startgoal_weight = 0
+			target_rule = npy.zeros(self.rulefc_output_shape)
 			target_primitive = npy.zeros(self.number_primitives)
 
 			if self.parse_tree[j].label==0:
@@ -474,12 +475,20 @@ class hierarchical():
 					split_weight = self.parse_tree[j].reward
 
 			if self.parse_tree[j].label==1:
-				primitive_weight = self.parse_tree[j].reward
-				target_primitive[self.parse_tree[j].primitive] = 1.				
+				# primitive_weight = self.parse_tree[j].reward
+				# target_primitive[self.parse_tree[j].primitive] = 1.			
+				startgoal_weight = self.parse_tree[j].reward
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
-				self.sampled_split: self.parse_tree[j].split, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
-					self.primitive_return_weight: primitive_weight, self.target_primitive: target_primitive})
+			# self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
+			# 	self.sampled_split: self.parse_tree[j].split, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
+			# 		self.primitive_return_weight: primitive_weight, self.target_primitive: target_primitive})
+
+			# Here ,we only backprop for shapes, since we only choose actions for shapese.
+			rule_loss, split_loss, _ = self.sess.run([self.rule_loss, self.split_loss, self.train], \
+				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
+					 self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
+						 self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
+						 	self.startgoal_return_weight: startgoal_weight, self.sampled_split: self.parse_tree[j].split})
 
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
@@ -656,7 +665,10 @@ class hierarchical():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 		self.minimum_width = self.paintwidth
-		self.define_plots()
+		
+		if self.plot:
+			self.define_plots()
+
 		self.to_train = train
 		# For all epochs
 		if not(train):
@@ -734,8 +746,8 @@ def parse_arguments():
 	parser.add_argument('--model',dest='model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--gpu',dest='gpu')
-	parser.add_argument('--plot',dest='plot',type=bool)
-	parser.add_argument('--train',dest='train',type=bool)
+	parser.add_argument('--plot',dest='plot',type=bool,default=False)
+	parser.add_argument('--train',dest='train',type=bool,default=True)
 
 	return parser.parse_args()
 
