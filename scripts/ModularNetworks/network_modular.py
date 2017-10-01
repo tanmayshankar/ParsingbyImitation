@@ -1,29 +1,6 @@
 #!/usr/bin/env python
 from headers import *
-
-# Define a class for the parse tree / rule / etc? 
-class parse_tree_node():
-	def __init__(self, label=-1, x=-1, y=-1,w=-1,h=-1,backward_index=-1,rule_applied=-1, split=-1, start=npy.array([-1,-1]), goal=npy.array([-1,-1])):
-		self.label = label
-		self.x = x
-		self.y = y
-		self.w = w
-		self.h = h
-		self.backward_index = backward_index
-		self.rule_applied = rule_applied
-		self.split = split
-		self.start = start
-		self.goal = goal
-		self.reward = 0.
-
-	def disp(self):
-		print("Label:", self.label)
-		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
-		print("Start:",self.start,"Goal:",self.goal)
-		print("Backward Index:",self.backward_index)
-		print("Reward:",self.reward)
-		print("Rule:",self.rule_applied,"Split:",self.split)
-		print("____________________________________________")
+from state_class import *
 
 class hierarchical():
 
@@ -33,545 +10,207 @@ class hierarchical():
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
-		self.paintwidth=1
+		self.paintwidth = 2
+		self.minimum_width = self.paintwidth
 		self.images = []
 		self.true_labels = []
 		self.image_size = 20
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
-		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
-		# Initializing the session.
+		# Define a tensorflow session.
 		self.sess = sess
 
-		# Image size and other architectural parameters. 
-		self.conv1_size = 3	
-		self.conv1_num_filters = 20
-		self.conv2_size = 3	
-		self.conv2_num_filters = 20
-		self.conv3_size = 3	
-		self.conv3_num_filters = 20
-		self.conv4_size = 3	
-		self.conv4_num_filters = 20
-		self.conv5_size = 3	
-		self.conv5_num_filters = 20
+		# Number of layers. 
+		self.num_layers = 5
+		self.num_fc_layers = 2
+		self.conv_sizes = 3*npy.ones((self.num_layers),dtype=int)		
+		self.conv_num_filters = npy.array([1,20,20,20,20,20],dtype=int)
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
-
-		# Convolutional layers: 
-		# Layer 1
-		self.W_conv1 = tf.Variable(tf.truncated_normal([self.conv1_size,self.conv1_size, 1, self.conv1_num_filters],stddev=0.1),name='W_conv1')
-		self.b_conv1 = tf.Variable(tf.constant(0.1,shape=[self.conv1_num_filters]),name='b_conv1')
-		self.conv1 = tf.add(tf.nn.conv2d(self.input,self.W_conv1,strides=[1,1,1,1],padding='VALID'),self.b_conv1,name='conv1')
-		self.relu_conv1 = tf.nn.relu(self.conv1)
-
-		# Layer 2 
-		self.W_conv2 = tf.Variable(tf.truncated_normal([self.conv2_size,self.conv2_size,self.conv1_num_filters,self.conv2_num_filters],stddev=0.1),name='W_conv2')
-		self.b_conv2 = tf.Variable(tf.constant(0.1,shape=[self.conv2_num_filters]),name='b_conv2')
-		self.conv2 = tf.add(tf.nn.conv2d(self.relu_conv1,self.W_conv2,strides=[1,1,1,1],padding='VALID'),self.b_conv2,name='conv2')
-		self.relu_conv2 = tf.nn.relu(self.conv2)
-
-		# Layer 3
-		self.W_conv3 = tf.Variable(tf.truncated_normal([self.conv3_size,self.conv3_size,self.conv2_num_filters,self.conv3_num_filters],stddev=0.1),name='W_conv3')
-		self.b_conv3 = tf.Variable(tf.constant(0.1,shape=[self.conv3_num_filters]),name='b_conv3')
-		self.conv3 = tf.add(tf.nn.conv2d(self.relu_conv2,self.W_conv3,strides=[1,1,1,1],padding='VALID'),self.b_conv3,name='conv3')
-		self.relu_conv3 = tf.nn.relu(self.conv3)
-
-		# Layer 4
-		self.W_conv4 = tf.Variable(tf.truncated_normal([self.conv4_size,self.conv4_size,self.conv3_num_filters,self.conv4_num_filters],stddev=0.1),name='W_conv4')
-		self.b_conv4 = tf.Variable(tf.constant(0.1,shape=[self.conv4_num_filters]),name='b_conv4')
-		self.conv4 = tf.add(tf.nn.conv2d(self.relu_conv3,self.W_conv4,strides=[1,2,2,1],padding='VALID'),self.b_conv4,name='conv4')
-		self.relu_conv4 = tf.nn.relu(self.conv4)
-
-		# Layer 5
-		self.W_conv5 = tf.Variable(tf.truncated_normal([self.conv5_size,self.conv5_size,self.conv4_num_filters,self.conv5_num_filters],stddev=0.1),name='W_conv5')
-		self.b_conv5 = tf.Variable(tf.constant(0.1,shape=[self.conv5_num_filters]),name='b_conv5')
-		self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,2,2,1],padding='VALID'),self.b_conv5,name='conv5')
-		# self.conv5 = tf.add(tf.nn.conv2d(self.relu_conv4,self.W_conv5,strides=[1,1,1,1],padding='VALID'),self.b_conv5,name='conv5')
-		self.relu_conv5 = tf.nn.relu(self.conv5)
-
-		# Now going to flatten this and move to a fully connected layer.s
-
-		self.fc_input_shape = self.relu_conv5.shape[1]
-		self.fc_input_shape = 10*10*self.conv5_num_filters
-		# self.fc_input_shape = 5*5*self.conv5_num_filters
-		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
-
-		# Going to split into 4 streams: RULE, SPLIT, START and GOAL
-		# Now not using the start and goal
-		self.fcs1_l1_shape = 120
-		self.W_fcs1_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs1_l1_shape],stddev=0.1),name='W_fcs1_l1')
-		self.b_fcs1_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_l1_shape]),name='b_fcs1_l1')
-		self.fcs1_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs1_l1),self.b_fcs1_l1),name='fcs1_l1')
-
-		# 2nd FC layer: RULE Output:
-		self.number_primitives = 1
-		self.fcs1_output_shape = 1*self.number_primitives+5
-		self.W_fcs1_l2 = tf.Variable(tf.truncated_normal([self.fcs1_l1_shape,self.fcs1_output_shape],stddev=0.1),name='W_fcs1_l2')
-		self.b_fcs1_l2 = tf.Variable(tf.constant(0.1,shape=[self.fcs1_output_shape]),name='b_fcs1_l2')
-		self.fcs1_presoftmax = tf.add(tf.matmul(self.fcs1_l1,self.W_fcs1_l2),self.b_fcs1_l2,name='fcs1_presoftmax')
-		self.rule_probabilities = tf.nn.softmax(self.fcs1_presoftmax,name='softmax')
-
-		# Creating a saver object to save models.
-		self.saver = tf.train.Saver(max_to_keep=None)
-
-		if model_file:
-			self.saver.restore(self.sess,model_file)
-
-		# Pulling goal and start streams from the conv features rather than Stream 1 FC features;
-		# Conv features will retain spatial information.
 		
-		# Creating goal stream again.
-		self.fcs3_l1_shape = 30
-		self.W_fcs3_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs3_l1_shape],stddev=0.1),name='W_fcs3_l1')		
-		self.b_fcs3_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs3_l1_shape]),name='b_fcs3_l1')
-		self.fcs3_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs3_l1),self.b_fcs3_l1),name='fcs3_l1')		
+		############ CONV LAYERS #######################################################################
 
-		# Creating start stream again.	
-		self.fcs4_l1_shape = 30
-		self.W_fcs4_l1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fcs4_l1_shape],stddev=0.1),name='W_fcs4_l1')
-		self.b_fcs4_l1 = tf.Variable(tf.constant(0.1,shape=[self.fcs4_l1_shape]),name='b_fcs4_l1')
-		self.fcs4_l1 = tf.nn.relu(tf.add(tf.matmul(self.relu_conv5_flat,self.W_fcs4_l1),self.b_fcs4_l1),name='fcs4_l1')				
+		# Declare common conv variables.
+		self.W_conv = [[] for i in range(self.num_layers)]
+		self.b_conv = [[] for i in range(self.num_layers)]
+		# Defining conv layers.
+		self.conv = [[] for i in range(self.num_layers)]
+		self.relu_conv = [[] for i in range(self.num_layers)]
 
-		# Goal output.
-		self.W_goal = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_goal')
-		self.b_goal = tf.Variable(tf.constant(0.1,shape=[4]),name='b_goal')
-		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_goal)+self.b_goal
-		self.goal_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
-		# self.goal_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])
-		self.goal_cov = 0.2*npy.ones(2,dtype=npy.float32)
+		# Defining variables. 
+		for i in range(self.num_layers):
+			self.W_conv[i] = tf.Variable(tf.truncated_normal([self.conv_sizes[i],self.conv_sizes[i], self.conv_num_filters[i], self.conv_num_filters[i+1]],stddev=0.1),name='W_conv{0}'.format(i+1))
+			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
 
-		# Start output.
-		self.W_start = tf.Variable(tf.truncated_normal([self.fcs3_l1_shape,4],stddev=0.1),name='W_start')
-		self.b_start = tf.Variable(tf.constant(0.1,shape=[4]),name='b_start')
-		self.fcs3_preslice = tf.matmul(self.fcs3_l1,self.W_start)+self.b_start
-		self.start_mean = tf.nn.sigmoid(self.fcs3_preslice[0,:2])
-		# self.start_cov = tf.nn.softplus(self.fcs3_preslice[0,2:])		
-		self.start_cov = 0.2*npy.ones(2,dtype=npy.float32)
-
-		self.new_stream_var_list = [self.W_fcs3_l1,self.b_fcs3_l1, self.W_fcs4_l1, self.b_fcs4_l1, self.W_goal, self.b_goal, self.W_start, self.b_start]
-
-		# Creating start and goal distributions.
-		self.goal_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.goal_mean,scale_diag=self.goal_cov)
-		self.start_dist = tf.contrib.distributions.MultivariateNormalDiag(loc=self.start_mean,scale_diag=self.start_cov)
-
-		self.sample_goal = self.goal_dist.sample()
-		self.sample_start = self.start_dist.sample()
-
-		self.sampled_goal = tf.placeholder(tf.float32,shape=(2),name='sampled_goal')
-		self.sampled_start = tf.placeholder(tf.float32,shape=(2),name='sampled_start')
-		self.previous_goal = tf.placeholder(tf.float32,shape=(2),name='previous_goal')
-
-		# Defining training ops. 
-		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None),name='rule_return_weight')
-		# self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
-		self.startgoal_return_weight = tf.placeholder(tf.float32,shape=(None),name='startgoal_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=( self.fcs1_output_shape),name='target_rule')
-
-		# Defining the loss for each of the 3 streams, rule, split and goal.
-		# Rule loss is the negative cross entropy between the rule probabilities and the chosen rule as a one-hot encoded vector. 
-		# Weighted by the return obtained. This is just the negative log probability of the selected action.
-
-		# NO NEGATIVE SIGN HERE - 13/6
-		self.rule_loss = tf.multiply(tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.fcs1_presoftmax),self.rule_return_weight)
-		# The goal loss is the negative log probability of the chosen goal, weighted by the return obtained.
-		self.goal_loss = -tf.multiply(self.goal_dist.log_prob(self.sampled_goal),self.startgoal_return_weight)
-
-		# The start loss is the negative log probability of the chosen start, weighted byt he return obtained.
-		self.start_loss = -tf.multiply(self.start_dist.log_prob(self.sampled_start),self.startgoal_return_weight)
-
-		# Start goal loss - difference between current starting point and previous goal location - this must be in GLOBAL COORDINATES
-		# self.startgoal_loss = tf.multiply(tf.square(tf.norm(tf.subtract(self.previous_goal,self.sampled_start))),self.startgoal_return_weight)
-
-		# The total loss is the sum of individual losses.
-		self.total_loss = self.rule_loss + self.goal_loss + self.start_loss #+ self.startgoal_loss
-
-		# Creating a training operation to minimize the total loss.
-		self.train = tf.train.AdamOptimizer(1e-4).minimize(self.total_loss,name='Adam_Optimizer')
-
-		# Writing graph and other summaries in tensorflow.
-		self.writer = tf.summary.FileWriter('training',self.sess.graph)
-			
-		# if model_file:
-		# 	init = tf.variables_initializer(self.new_stream_var_list)
-		# 	self.sess.run(init)
-		# 	# self.sess.run( tf.initialize_variables( list( tf.get_variable(name) for name in self.sess.run( tf.report_uninitialized_variables(tf.all_variables()) ) ) ) )
-		# else:
-		# 	init = tf.global_variables_initializer()
-		# 	self.sess.run(init)
-
-		init = tf.global_variables_initializer()
-		self.sess.run(init)
-		if model_file:
-			self.saver.restore(self.sess,model_file)
-
-	def save_model(self, model_index):
-		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
-
-	def initialize_tree(self):
-		self.current_parsing_index = 0
-		self.parse_tree = [parse_tree_node()]
-		self.parse_tree[self.current_parsing_index]=self.state
-
-	def insert_node(self, state, index):
-		self.parse_tree.insert(index,state)
-
-	def parse_nonterminal(self, image_index):
-		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-		# Should it be an epsilon-greedy policy? 
-
-		# SAMPLING A SPLIT LOCATION
-		split_location = -1
-
-		# CHANGING THIS NOW TO BAN SPLITS FOR REGIONS SMALLER THAN: MINIMUM_WIDTH; and not just if ==1.
-		self.minimum_width = 10
+		# Defining first conv layer.
+		self.conv[0] = tf.add(tf.nn.conv2d(self.input,self.W_conv[0],strides=[1,1,1,1],padding='VALID'),self.b_conv[0],name='conv1')
+		self.relu_conv[0] = tf.nn.relu(self.conv[0],name='relu0')
 		
-		epislon = 1e-3
-		rule_probabilities += epislon
+		# Defining subsequent conv layers.
+		for i in range(1,self.num_layers):
+			self.conv[i] = tf.add(tf.nn.conv2d(self.conv[i-1],self.W_conv[i],strides=[1,1,1,1],padding='VALID'),self.b_conv[i],name='conv{0}'.format(i+1))
+			self.relu_conv[i] = tf.nn.relu(self.conv[i],name='relu{0}'.format(i+1))
+		
+		################################################################################################
 
-		if (self.state.h<=self.minimum_width):
-			rule_probabilities[0][[0,2]]=0.
-		if (self.state.w<=self.minimum_width):
-			rule_probabilities[0][[1,3]]=0.
+		########## COMMON FC LAYERS ####################################################################
 
-		rule_probabilities[0]/=rule_probabilities[0].sum()
-		# selected_rule = npy.argmax(rule_probabilities)
-		# if self.state.h<=self.minimum_width or self.state.w<=self.minimum_width:
-		# 	print("STATE:",self.state.h,self.state.w)
-		# 	print("Rule probabilities:",rule_probabilities)
-		selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
-		indices = self.map_rules_to_indices(selected_rule)
+		self.fc_input_shape = 5*5*self.conv_num_filters[-1]
+		
+		# Rule stream
+		self.rule_num_fclayers = 2
+		self.rule_num_hidden = 80
+		self.rule_num_branches = 4
+		self.rule_fc_shapes = [[self.fc_input_shape,self.rule_num_hidden,6],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,2]]
 
-		# If it is a split rule:
-		if selected_rule<=3:
-			# Apply the rule: if the rule number is even, it is a vertical split and if the current non-terminal to be parsed is taller than 1 unit:
-			if ((selected_rule==0) or (selected_rule==2)):
-				split_location = int(float(self.state.h)/2)
-				# Create splits.
-				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
-				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
+		# Split stream
+		self.split_num_fclayers = 2
+		self.split_num_hidden = 50
+		self.split_num_branches = 2
+		self.split_fc_shapes = [self.fc_input_shape,self.split_num_hidden,2]
 
-			if ((selected_rule==1) or (selected_rule==3)):
-				split_location = int(float(self.state.w)/2)
-				# Create splits.
-				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
-				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
-				
-			# Update current parse tree with split location and rule applied.
-			self.parse_tree[self.current_parsing_index].split=split_location
-			self.parse_tree[self.current_parsing_index].rule_applied=selected_rule
+		# Primitive stream
+		self.primitive_num_fclayers = 2
+		self.primitive_num_hidden = 50
+		self.number_primitives = 4
+		self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden,self.number_primitives]
 
-			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
-			self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
-			
-			if (selected_rule<=1):
-				# Insert splits into parse tree.
-				self.insert_node(s1,self.current_parsing_index+1)
-				self.insert_node(s2,self.current_parsing_index+2)
+		# Reshape FC input.
+		self.fc_input = tf.reshape(self.relu_conv[-1],[-1,self.fc_input_shape],name='fc_input')
+		
+		################################################################################################
 
-			if (selected_rule>=2):
-				# Insert splits into parse tree.
-				self.insert_node(s2,self.current_parsing_index+1)
-				self.insert_node(s1,self.current_parsing_index+2)
+		########## RULE FC LAYERS ######################################################################
+		
+		# Defining FC layer variables lists.
+		self.W_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+		self.b_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
 
-			self.current_parsing_index+=1
+		# Defining rule_fc layers.
+		self.rule_fc = [[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+		self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
+		self.rule_dist = [[] for j in range(self.rule_num_branches)]
 
-		elif selected_rule>=4:
- 
-			# Create a parse tree node object.
-			s1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
-			# Change label.
-			s1.label=selected_rule-3
-			# Change the backward index.
-			s1.backward_index = self.current_parsing_index
+		# self.sample_rule = [[] for j in range(self.rule_num_branches)]
+		# self.sampled_rule = [[] for j in range(self.rule_num_branches)]
 
-			# Update current parse tree with rule applied.
-			self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+		# Can maintain a single sample_rule and sampled_rule for all of the branches, because we will use tf.case for each.
+		self.rule_indicator = tf.placeholder(tf.int32)
+		self.sampled_rule = tf.placeholder(tf.int32)
 
-			# Insert node into parse tree.
-			self.insert_node(s1,self.current_parsing_index+1)
-			self.current_parsing_index+=1						
-			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+		# Defining Rule FC variables.
+		for j in range(self.rule_num_branches):
+			for i in range(self.num_fc_layers):
+				self.W_rule_fc[j][i] = tf.Variable(tf.truncated_normal([self.rule_fc_shapes[j][i],self.rule_fc_shapes[j][i+1]],stddev=0.1),name='W_rulefc_branch{0}_layer{1}'.format(j,i+1))
+				self.b_rule_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.rule_fc_shapes[j][i+1]]),name='b_rulefc_branch{0}_layer{1}'.format(j,i+1))
+			# self.sampled_rule[j] = tf.placeholder(tf.int32)
 
-	def parse_terminal(self, image_index):
-		# If terminal with primitive assigned:
-		if (self.state.label==1):
-			# Sample a goal location and start location.
-			start_location, goal_location, start_mean, goal_mean = self.sess.run([self.sample_start,self.sample_goal, self.start_mean, self.goal_mean],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-			# print("SAMPLED:")
-			# print(start_location,goal_location)
-			# print("DIST:")
-			# print(start_mean,goal_mean)
-			# Scale the start and goal locations.
-			start_location *= npy.array([self.state.w,self.state.h])
-			goal_location *= npy.array([self.state.w,self.state.h])
-			self.parse_tree[self.current_parsing_index].start = npy.array(start_location)
-			self.parse_tree[self.current_parsing_index].goal = npy.array(goal_location)
-			
-			# Compute the angle and the length of the start-goal line. 
-			angle = npy.arctan2((self.state.goal[1]-self.state.start[1]),(self.state.goal[0]-self.state.start[0]))
-			length = npy.linalg.norm(self.state.goal-self.state.start)
+		# Defining Rule FC layers.
+		for j in range(self.rule_num_branches):
+			self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
+			self.rule_fc[j][1] = tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j))
+			self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][1],name='rule_probabilities_branch{0}'.format(j))
+			self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j])
+			# self.sample_rule[j] = self.rule_dist[j].sample()
+		
+		# This is the heart of the routing. We select which set of parameters we sample the rule from.
+		# Default needs to be a lambda function because we're providing arguments to it. 
+		self.sample_rule = tf.case({tf.equal(self.rule_indicator,0): self.rule_dist[0].sample, tf.equal(self.rule_indicator,1): self.rule_dist[1].sample, 
+									tf.equal(self.rule_indicator,2): self.rule_dist[2].sample, tf.equal(self.rule_indicator,3): self.rule_dist[3].sample},default=lambda: -tf.ones(1),exclusive=True)
 
-			# Create a rectangle for the paintbrush.
-			rect = box(self.state.start[0]+self.state.x,self.state.y+self.state.start[1]-self.paintwidth,self.state.x+self.state.start[0]+length,self.state.y+self.state.start[1]+self.paintwidth)		
+		################################################################################################
 
-			# Rotate it.	
-			rotated_rect = rotate(rect,angle,origin=[self.state.x+self.state.start[0],self.state.y+self.state.start[1]],use_radians=True)
+		########### SPLIT FC LAYERS ####################################################################
 
-			coords = npy.array(list(rotated_rect.exterior.coords)[0:4])
-			bounding_height = int(npy.ceil(max(self.state.y+self.state.h,npy.max(coords[:,1]))))
-			bounding_width = int(npy.ceil(max(self.state.x+self.state.w,npy.max(coords[:,0]))))
+		# Defining FC layer variables lists.
+		self.W_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
+		self.b_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
 
-			for x in range(int(self.state.x),bounding_width):
-				for y in range(int(self.state.y), bounding_height):
-					if rotated_rect.contains(point.Point(x,y)) and (x<self.image_size) and (y<self.image_size):
-						self.painted_image[x,y] = 1
-						self.painted_images[image_index,x,y] = 1
+		# Defining split_fc layers.
+		self.split_fc = [[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
+		self.split_mean = [[] for j in range(self.split_num_branches)]
+		self.split_cov = [[] for j in range(self.split_num_branches)]
+		self.split_dist = [[] for j in range(self.split_num_branches)]
+		self.split_indicator = tf.placeholder(tf.int32)
+		# Similarly to rules, we can use one sample_split, because we use tf.case.
+		# self.sample_split = [[] for j in range(self.split_num_branches)]
+		self.sampled_split = tf.placeholder(tf.float32)
 
-		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
-		self.current_parsing_index+=1
+		# Defining split FC variables.
+		for j in range(self.split_num_branches):
+			for i in range(self.split_num_fclayers):
+				self.W_split_fc[j][i] = tf.Variable(tf.truncated_normal([self.split_fc_shapes[j][i],self.split_fc_shapes[j][i+1]],stddev=0.1),name='W_splitfc_branch{0}_layer{1}'.format(j,i+1))
+				self.b_split_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.split_fc_shapes[j][i+1]]),name='b_splitfc_branch{0}_layer{1}'.format(j,i+1))
 
-	def propagate_rewards(self):
-		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
-		# This is actually the return accumulated by any particular decision.
-		# Now we are discounting based on the depth of the tree (not just sequence in episode)
-		self.gamma = 0.95
-		for j in reversed(range(len(self.parse_tree))):	
-			if (self.parse_tree[j].backward_index>=0):
-				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
+		# Defining split FC layers.
+		for j in range(self.split_num_branches):
+			self.split_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_split_fc[j][0]),self.b_split_fc[j][0]),name='split_fc_branch{0}_layer0'.format(j))
+			self.split_fc[j][1] = tf.add(tf.matmul(self.split_fc[j][0],self.W_split_fc[j][1]),self.b_split_fc[j][1],name='split_fc_branch{0}_layer1'.format(j))
 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+			self.split_mean[j] = tf.nn.sigmoid(self.split_fc[j][1][0,0])
+			# If the variance is learnt.
+			self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])
+			# Defining distributions for each.
+			self.split_dist[j] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j])
+			# self.sample_split[j] = self.split_dist[j].sample()
 
-	def backprop(self, image_index):
-		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
+		# This is the heart of the routing. We select which set of parameters we sample the split location from. 
+		# Default needs to be a lambda function because we're providing arguments to it. 
+		self.sample_split = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: -tf.ones(1),exclusive=True)
+		
+		################################################################################################
 
-		target_rule = npy.zeros(self.fcs1_output_shape)
-		start = npy.zeros(2)
-		previous_goal = npy.zeros(2)
-		goal = npy.zeros(2)
+		########## PRIMITIVE FC LAYERS #################################################################
 
-		for j in range(len(self.parse_tree)):
-			self.state = self.parse_tree[j]
-			
-			boundary_width = 2
-			lowerx = max(0,self.state.x-boundary_width)
-			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
-			lowery = max(0,self.state.y-boundary_width)
-			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
+		# Defining FC layaer for primitive stream.
+		self.W_primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
+		self.b_primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+		# Defining primitive fc layers.
+		self.primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
 
-			rule_weight = 0
-			startgoal_weight = 0
-			target_rule = npy.zeros(self.fcs1_output_shape)
+		# Defining variables:
+		for i in range(self.primitive_num_fclayers):
+			self.W_primitive_fc[j][i] = tf.Variable(tf.truncated_normal([self.primitive_fc_shapes[j][i],self.primitive_fc_shapes[j][i+1]],stddev=0.1),name='W_primitivefc_branch{0}_layer{1}'.format(j,i+1))
+			self.b_primitive_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.primitive_fc_shapes[j][i+1]]),name='b_primitivefc_branch{0}_layer{1}'.format(j,i+1))
+		
+		# Defining primitive FC layers.
+		self.primitive_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_primitive_fc[0]),self.b_primitive_fc[0]),name='primitve_fc_layer0')
+		self.primitive_fc[1] = tf.add(tf.matmul(self.primitive_fc[0],self.W_primitive_fc[1]),self.b_primitive_fc[1]),name='primitve_fc_layer1')
+		self.primitive_probabilities = tf.nn.softmax(self.primitive_fc[-1],name='primitive_probabilities')
+		
+		# Defining categorical distribution for primitives.
+		self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities)
+		
+		################################################################################################
 
-			# MUST PARSE EVERY NODE
-			# If shape:
-			if self.parse_tree[j].label==0:
-				# If split rule.
 
-				rule_weight = self.parse_tree[j].reward
-				target_rule[self.parse_tree[j].rule_applied] = 1.
+		############## THIS IS HOW TO USE THE CASE: 
+		y = tf.placeholder(tf.float32,shape=[3])
 
-			if self.parse_tree[j].label==1:
-				startgoal_weight = self.parse_tree[j].reward
+		# Based on the value of this index, we choose which thing to use. 
+		index = tf.placeholder(tf.int32)		#IMPORTANT: MAKE SURE YOU DON'T ASSIGN SHAPE TO IT. 
+		#The tf.case( pred) requires pred to have no shape (rank 0 tensor).
 
-			rule_loss, start_loss, goal_loss,  _ = self.sess.run([self.rule_loss,self.start_loss,self.goal_loss, self.train], \
-				feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_goal: self.parse_tree[j].goal, self.sampled_start: self.parse_tree[j].start, \
-							self.previous_goal: previous_goal, self.rule_return_weight: rule_weight, self.startgoal_return_weight: startgoal_weight, self.target_rule: target_rule})
+		def case1():
+			w1 = tf.ones(3)
+			return tf.multiply(w1,y)
 
-			if self.parse_tree[j].label==1:
-				previous_goal = copy.deepcopy(self.parse_tree[j].goal)
+		def case2():
+			w2 = 2*tf.ones(3)
+			return tf.multiply(w2,y)
 
-	def construct_parse_tree(self,image_index):
-		# WHILE WE TERMINATE THAT PARSE:
+		def case3():
+			w3 = 3*tf.ones(3)
+			return tf.multiply(w3,y)
 
-		self.painted_image = -npy.ones((self.image_size,self.image_size))
-		self.alternate_painted_image = -npy.ones((self.image_size,self.image_size))
-		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
+		def case4():
+			# Default
+			return -tf.ones(3)
 
-		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
-			
-			# self.painted_image = -npy.ones((self.image_size,self.image_size))
-			# Forward pass of the rule policy- basically picking which rule.
-			self.state = self.parse_tree[self.current_parsing_index]
-			# Pick up correct portion of image.
-			# print("--------------")
-			# self.state.disp()
-			# print("--------------")
-			boundary_width = 2
-			lowerx = max(0,self.state.x-boundary_width)
-			upperx = min(self.image_size,self.state.x+self.state.w+boundary_width)
-			lowery = max(0,self.state.y-boundary_width)
-			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
+		output = tf.case({tf.equal(index,1):case1, tf.equal(index,2):case2, tf.equal(index,3):case3}, default=case4, exclusive=True)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
-			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
-			# If the current non-terminal is a shape.
-			if (self.state.label==0):
-				# print("PARSING NON TERMINAL")
-				self.parse_nonterminal(image_index)
-
-			# If the current non-terminal is a region assigned a particular primitive.
-			if (self.state.label==1) or (self.state.label==2):
-				self.parse_terminal(image_index)
-
-			# if (self.predicted_labels[image_index]==1).any():
-			# self.alternate_painted_image[npy.where(self.predicted_labels[image_index]==1)]=1.
-			self.alternate_painted_image[npy.where(self.painted_image==1)]=1.
-			
-			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==1)]=2.
-			self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=1.
-
-			if self.plot:
-				self.fig.suptitle("Processing Image: {0}".format(image_index))
-				self.sc1.set_data(self.alternate_predicted_labels)
-				# self.sc1.set_data(self.predicted_labels[image_index])
-				self.sc2.set_data(self.true_labels[image_index])
-				# self.sc3.set_data(self.painted_image)
-				self.sc3.set_data(self.alternate_painted_image)
-				self.sc4.set_data(self.images[image_index])
-				self.fig.canvas.draw()
-				plt.pause(0.001)
-
-	def meta_training(self, train=True):
-
-		image_index = 0
-		self.painted_image = -npy.ones((self.image_size,self.image_size))
-
-		if self.plot:
-			self.fig, self.ax = plt.subplots(1,4,sharey=True)
-			# plt.ion()
-			# plt.show()
-			self.fig.show()
-			
-			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal')
-			self.sc1.set_clim([0,2])
-			# self.fig.colorbar(sc1, self.ax=self.ax[0])
-			self.ax[0].set_title("Predicted Labels")
-			self.ax[0].set_adjustable('box-forced')
-
-			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal')
-			self.sc2.set_clim([-1,1])
-			# self.fig.colorbar(sc2, self.ax=self.ax[1])
-			self.ax[1].set_title("True Labels")
-			self.ax[1].set_adjustable('box-forced')
-
-			self.sc3 =self.ax[2].imshow(self.painted_image,aspect='equal')
-			self.sc3.set_clim([-1,1])
-			# self.fig.colorbar(sc3, self.ax=self.ax[2])
-			self.ax[2].set_title("Painted Image")
-			self.ax[2].set_adjustable('box-forced')
-
-			self.sc4 = self.ax[3].imshow(self.images[image_index],aspect='equal')
-			self.sc4.set_clim([-1,1])
-			# self.fig.colorbar(sc4,self.ax=self.ax[3])
-			self.ax[3].set_title("Actual Image")
-			self.ax[3].set_adjustable('box-forced')
-			# plt.draw()
-			self.fig.canvas.draw()
-			plt.pause(0.001)
-
-		# For all epochs
-		if not(train):
-			self.num_epochs=1
-
-		for e in range(self.num_epochs):	
-			# For all images
-			for i in range(self.num_images):		
-				
-				print("#________________________________________________________________#")
-				print("Epoch:",e,"Training Image:",i)
-				print("#________________________________________________________________#")
-
-				# Intialize the parse tree for this image.=
-				self.state = parse_tree_node(label=0,x=0,y=0,w=self.image_size,h=self.image_size)
-				self.initialize_tree()
-
-				self.construct_parse_tree(i)	
-				#compute rewards for the chosen actions., then propagate them through the tree.
-				# self.compute_rewards(i)
-				self.propagate_rewards()
-				print("Parsing Image:",i)
-				
-				print("TOTAL REWARD:",self.parse_tree[0].reward)
-				if train:
-					self.backprop(i)
-
-			if train:
-				npy.save("half_goals_pretrain_{0}.npy".format(e),self.predicted_labels)
-				npy.save("half_goals_painted_images_{0}.npy".format(e),self.painted_images)
-			else:
-				npy.save("validation.npy".format(e),self.predicted_labels)
-
-			self.predicted_labels = npy.zeros((self.num_images, self.image_size,self.image_size))
-			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-			self.save_model(e)
-
-	############################
-	# Pixel labels: 
-	# 0 for shape
-	# 1 for shape with primitive 1
-	# 2 for region with no primitive (not to be painted)
-	############################
-
-	def map_rules_to_indices(self, rule_index):
-		if (rule_index<=3):
-			return [0,0]
-		if (rule_index==4):
-			return 1
-		if (rule_index==5):
-			return 2
-
-	############################
-	# Rule numbers:
-	# 0 (Shape) -> (Shape)(Shape) 								(Vertical split)
-	# 1 (Shape) -> (Shape)(Shape) 								(Horizontal split)
-	# 2 (Shape) -> (Shape)(Shape) 								(Vertical split with opposite order: top-bottom expansion)
-	# 3 (Shape) -> (Shape)(Shape) 								(Horizontal split with opposite order: right-left expansion)
-	# 4 (Shape) -> (Region with primitive #) 
-	# 5 (Shape) -> (Region not to be painted)
-	############################
-
-	def preprocess_images_labels(self):
-
-		noise = 0.2*(2*npy.random.rand(self.num_images,self.image_size,self.image_size)-1)
-		self.images[npy.where(self.images==2)]=-1
-		self.true_labels[npy.where(self.true_labels==2)]=-1
-		self.images += noise
-
-def main(args):
-
-	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="0,3")
-	config = tf.ConfigProto(gpu_options=gpu_ops)
-	sess = tf.Session(config=config)
-
-	hierarchical_model = hierarchical()
-
-	# MUST LOAD IMAGES / LOAD NOISY IMAGES (So that the CNN has some features to latch on to.)	
-	hierarchical_model.images = npy.load(str(sys.argv[1]))	
-	hierarchical_model.true_labels = npy.load(str(sys.argv[2]))
-	
-	hierarchical_model.preprocess_images_labels()
-	hierarchical_model.plot = 0
-	
-	load = True
-	if load:
-		print("HI!")
-		model_file = str(sys.argv[3])
-		hierarchical_model.initialize_tensorflow_model(sess,model_file)
-	else:
-		hierarchical_model.initialize_tensorflow_model(sess)
-
-	# CALL TRAINING
-	# hierarchical_model.meta_training(train=False)
-	hierarchical_model.meta_training(train=True)
-
-if __name__ == '__main__':
-	main(sys.argv)
