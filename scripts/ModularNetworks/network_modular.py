@@ -4,18 +4,31 @@ from state_class import *
 
 class hierarchical():
 
-	def __init__(self):
+	# def __init__(self):
 
-		self.num_epochs = 20
-		self.num_images = 20000
-		self.current_parsing_index = 0
-		self.parse_tree = [parse_tree_node()]
-		self.paintwidth = 2
-		self.minimum_width = self.paintwidth
-		self.images = []
-		self.true_labels = []
-		self.image_size = 20
-		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
+	# 	self.num_epochs = 20
+	# 	self.num_images = 20000
+	# 	self.current_parsing_index = 0
+	# 	self.parse_tree = [parse_tree_node()]
+	# 	self.paintwidth = 2
+	# 	self.minimum_width = self.paintwidth
+	# 	self.images = []
+	# 	self.true_labels = []
+	# 	self.image_size = 20
+	# 	self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
+    
+    def __init__(self):
+
+        self.num_epochs = 20
+        self.num_images = 20000
+        self.current_parsing_index = 0
+        self.parse_tree = [parse_tree_node()]
+        self.paintwidth = -1
+        self.minimum_width = -1
+        self.images = []
+        self.true_labels = []
+        self.image_size = -1
+        self.intermittent_lambda = 0.
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -94,12 +107,9 @@ class hierarchical():
 		self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
 		self.rule_dist = [[] for j in range(self.rule_num_branches)]
 
-		# self.sample_rule = [[] for j in range(self.rule_num_branches)]
-		# self.sampled_rule = [[] for j in range(self.rule_num_branches)]
-
 		# Can maintain a single sample_rule and sampled_rule for all of the branches, because we will use tf.case for each.
-		self.rule_indicator = tf.placeholder(tf.int32)
-		self.sampled_rule = tf.placeholder(tf.int32)
+		self.rule_indicator = tf.placeholder(tf.int32,name='rule_indicator')
+		self.sampled_rule = tf.placeholder(tf.int32,name='sampled_rule')
 
 		# Defining Rule FC variables.
 		for j in range(self.rule_num_branches):
@@ -113,13 +123,13 @@ class hierarchical():
 			self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
 			self.rule_fc[j][1] = tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j))
 			self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][1],name='rule_probabilities_branch{0}'.format(j))
-			self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j])
+			self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j],name='rule_dist_branch{0}'.format(j))
 			# self.sample_rule[j] = self.rule_dist[j].sample()
 		
 		# This is the heart of the routing. We select which set of parameters we sample the rule from.
 		# Default needs to be a lambda function because we're providing arguments to it. 
 		self.sample_rule = tf.case({tf.equal(self.rule_indicator,0): self.rule_dist[0].sample, tf.equal(self.rule_indicator,1): self.rule_dist[1].sample, 
-									tf.equal(self.rule_indicator,2): self.rule_dist[2].sample, tf.equal(self.rule_indicator,3): self.rule_dist[3].sample},default=lambda: -tf.ones(1),exclusive=True)
+									tf.equal(self.rule_indicator,2): self.rule_dist[2].sample, tf.equal(self.rule_indicator,3): self.rule_dist[3].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_rule')
 
 		################################################################################################
 
@@ -134,10 +144,10 @@ class hierarchical():
 		self.split_mean = [[] for j in range(self.split_num_branches)]
 		self.split_cov = [[] for j in range(self.split_num_branches)]
 		self.split_dist = [[] for j in range(self.split_num_branches)]
-		self.split_indicator = tf.placeholder(tf.int32)
+
 		# Similarly to rules, we can use one sample_split, because we use tf.case.
-		# self.sample_split = [[] for j in range(self.split_num_branches)]
-		self.sampled_split = tf.placeholder(tf.float32)
+		self.split_indicator = tf.placeholder(tf.int32,name='split_indicator')
+		self.sampled_split = tf.placeholder(tf.float32,name='sampled_split')
 
 		# Defining split FC variables.
 		for j in range(self.split_num_branches):
@@ -154,13 +164,13 @@ class hierarchical():
 			# If the variance is learnt.
 			self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])
 			# Defining distributions for each.
-			self.split_dist[j] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j])
+			self.split_dist[j] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j],name='split_dist_branch{0}'.format(j))
 			# self.sample_split[j] = self.split_dist[j].sample()
 
 		# This is the heart of the routing. We select which set of parameters we sample the split location from. 
 		# Default needs to be a lambda function because we're providing arguments to it. 
-		self.sample_split = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: -tf.ones(1),exclusive=True)
-		
+		self.sample_split = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_split')
+
 		################################################################################################
 
 		########## PRIMITIVE FC LAYERS #################################################################
@@ -183,34 +193,53 @@ class hierarchical():
 		self.primitive_probabilities = tf.nn.softmax(self.primitive_fc[-1],name='primitive_probabilities')
 		
 		# Defining categorical distribution for primitives.
-		self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities)
+		self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities,name='primitive_distribution')
 		
 		################################################################################################
 
+		########### NOW MOVING TO THE LOSS FUNCTIONS ###################################################
 
-		############## THIS IS HOW TO USE THE CASE: 
-		y = tf.placeholder(tf.float32,shape=[3])
+		self.return_weight = tf.placeholder(tf.float32,name='return_weight')
 
-		# Based on the value of this index, we choose which thing to use. 
-		index = tf.placeholder(tf.int32)		#IMPORTANT: MAKE SURE YOU DON'T ASSIGN SHAPE TO IT. 
-		#The tf.case( pred) requires pred to have no shape (rank 0 tensor).
+		######## For rule stream:##########
+		self.target_rule = [[] for j in range(self.rule_num_branches)] 
+		self.rule_loss_branch = [[] for j in range(self.rule_num_branches)]
 
-		def case1():
-			w1 = tf.ones(3)
-			return tf.multiply(w1,y)
+		# Defining a log probability loss for each of the rule policy branches.
+		for j in range(self.rule_num_branches):
+			self.target_rule[j] = tf.placeholder(tf.float32,shape=(self.rule_fc_shapes[j][-1]))
+			# self.rule_loss_branch[j] = tf.multiply(self.return_weight,tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1]),name='rule_loss_branch{0}'.format(j))			
+			self.rule_loss_branch[j] = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1],name='rule_loss_branch{0}'.format(j))
 
-		def case2():
-			w2 = 2*tf.ones(3)
-			return tf.multiply(w2,y)
+		# Defining a loss that selects which branch to back-propagate into.
+		self.rule_loss = tf.case({tf.equal(self.rule_indicator,0): self.rule_loss_branch[0], tf.equal(self.rule_indicator,1): self.rule_loss_branch[1], 
+									tf.equal(self.rule_indicator,2): self.rule_loss_branch[2], tf.equal(self.rule_indicator,3): self.rule_loss_branch[3]},default=lambda: -tf.ones(1),exclusive=True,name='rule_loss')
 
-		def case3():
-			w3 = 3*tf.ones(3)
-			return tf.multiply(w3,y)
+		######## For split stream:#########
+		self.split_loss_branch = [[] for j in range(self.split_num_branches)]
 
-		def case4():
-			# Default
-			return -tf.ones(3)
+		for j in range(self.split_num_branches):
+			# self.split_loss_branch = -tf.multply(self.return_weight,self.split_dist[j].log_prob(self.sampled_split),name='split_loss_branch{0}'.format(j))
+			self.split_loss_branch = -self.split_dist[j].log_prob(self.sampled_split)
 
-		output = tf.case({tf.equal(index,1):case1, tf.equal(index,2):case2, tf.equal(index,3):case3}, default=case4, exclusive=True)
+		# Now defining a split loss that selects which branch to back-propagate into.
+		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_split')
 
+		######### For primitive stream ####
+
+		self.target_primitives = tf.placeholder(tf.float32,shape=(self.number_primitives))
+		self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitives,logits=self.primitive_fc[1],name='primitive_loss')
+
+		######### COMBINED LOSS ###########
+
+		self.policy_indicator = tf.placeholder(tf.int32)
+        # There is a fixed set of policy branches that can be applied together. 
+        # A split rule is applied with the split location --> Case 1
+        # An assignment rule is run on its own --> Case 2
+        # A primitive is run on its own --> Case 3
+        
+		self.selected_loss = tf.case({tf.equal(self.policy_indicator,0): self.rule_loss+self.split_loss, tf.equal(self.policy_indicator,1): self.rule_loss, tf.equal(self.policy_indicator,2): self.primitive_loss},default=lambda: tf.ones(1), exclusive=True,name='selected_loss')
+        self.total_loss = tf.multply(self.return_weight,self.selected_loss,name='total_loss')
+
+		#################################################################################################
 
