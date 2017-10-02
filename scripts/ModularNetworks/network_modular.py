@@ -368,7 +368,7 @@ class hierarchical():
 
 					split_copy = copy.deepcopy(split_location)
 					# inter_split = split_location*self.imagey-self.state.y+self.ly
-					inter_split = split_location*(self.imagey-2)-self.state.y+self.ly+1
+					inter_split = split_location*(self.imagey-2)+1
 				
 					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
@@ -393,7 +393,7 @@ class hierarchical():
 					
 					split_copy = copy.deepcopy(split_location)
 					# inter_split = split_location*self.imagex-self.state.x+self.lx
-					inter_split = split_location*(self.imagex-2)-self.state.x+self.lx+1
+					inter_split = split_location*(self.imagex-2)+1
 
 					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
