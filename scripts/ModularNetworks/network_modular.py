@@ -122,6 +122,10 @@ class hierarchical():
 		self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
 									tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
 
+        self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
+                                    tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+
+
 		################################################################################################
 
 		########### SPLIT FC LAYERS ####################################################################
