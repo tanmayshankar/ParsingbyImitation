@@ -27,6 +27,10 @@ class hierarchical():
 		self.num_fc_layers = 2
 		self.conv_sizes = 3*npy.ones((self.num_layers),dtype=int)		
 		self.conv_num_filters = npy.array([1,20,20,20,20,20],dtype=int)
+		if self.image_size==20:
+			self.conv_strides = npy.array([1,1,1,1,2])
+		else:
+			self.conv_strides = npy.array([1,1,1,2,2])
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
@@ -46,12 +50,12 @@ class hierarchical():
 			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
 
 		# Defining first conv layer.
-		self.conv[0] = tf.add(tf.nn.conv2d(self.input,self.W_conv[0],strides=[1,1,1,1],padding='VALID'),self.b_conv[0],name='conv1')
+		self.conv[0] = tf.add(tf.nn.conv2d(self.input,self.W_conv[0],strides=[1,self.conv_strides[0],self.conv_strides[0],1],padding='VALID'),self.b_conv[0],name='conv1')
 		self.relu_conv[0] = tf.nn.relu(self.conv[0],name='relu0')
 		
 		# Defining subsequent conv layers.
 		for i in range(1,self.num_layers):
-			self.conv[i] = tf.add(tf.nn.conv2d(self.conv[i-1],self.W_conv[i],strides=[1,1,1,1],padding='VALID'),self.b_conv[i],name='conv{0}'.format(i+1))
+			self.conv[i] = tf.add(tf.nn.conv2d(self.conv[i-1],self.W_conv[i],strides=[1,self.conv_strides[i],self.conv_strides[i],1],padding='VALID'),self.b_conv[i],name='conv{0}'.format(i+1))
 			self.relu_conv[i] = tf.nn.relu(self.conv[i],name='relu{0}'.format(i+1))
 		
 		################################################################################################
@@ -79,8 +83,9 @@ class hierarchical():
 		self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden,self.number_primitives]
 
 		# Reshape FC input.
+		self.target_rule_shapes = [6,4,4,2]
 		self.fc_input = tf.reshape(self.relu_conv[-1],[-1,self.fc_input_shape],name='fc_input')
-		
+
 		################################################################################################
 
 		########## RULE FC LAYERS ######################################################################
@@ -104,12 +109,12 @@ class hierarchical():
 				self.W_rule_fc[j][i] = tf.Variable(tf.truncated_normal([self.rule_fc_shapes[j][i],self.rule_fc_shapes[j][i+1]],stddev=0.1),name='W_rulefc_branch{0}_layer{1}'.format(j,i+1))
 				self.b_rule_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.rule_fc_shapes[j][i+1]]),name='b_rulefc_branch{0}_layer{1}'.format(j,i+1))
 			# self.sampled_rule[j] = tf.placeholder(tf.int32)
-
 		# Defining Rule FC layers.
 		for j in range(self.rule_num_branches):
 			self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
 			self.rule_fc[j][1] = tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j))
 			self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][1],name='rule_probabilities_branch{0}'.format(j))
+			
 			# Now not using the categorical distributions, directly taking the rule_probabilities so we can sample greedily at test time, or do stuff like epsilon greedy.
 			# self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j],name='rule_dist_branch{0}'.format(j))
 			# self.sample_rule[j] = self.rule_dist[j].sample()
@@ -207,8 +212,8 @@ class hierarchical():
 			self.rule_loss_branch[j] = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1],name='rule_loss_branch{0}'.format(j))
 
 		# Defining a loss that selects which branch to back-propagate into.
-		self.rule_loss = tf.case({tf.equal(self.rule_indicator,0): self.rule_loss_branch[0], tf.equal(self.rule_indicator,1): self.rule_loss_branch[1], 
-									tf.equal(self.rule_indicator,2): self.rule_loss_branch[2], tf.equal(self.rule_indicator,3): self.rule_loss_branch[3]},default=lambda: tf.zeros(1),exclusive=True,name='rule_loss')
+		self.rule_loss = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_loss_branch[0], tf.equal(self.rule_indicator,1): lambda: self.rule_loss_branch[1], 
+									tf.equal(self.rule_indicator,2): lambda: self.rule_loss_branch[2], tf.equal(self.rule_indicator,3): lambda: self.rule_loss_branch[3]},default=lambda: tf.zeros(1),exclusive=True,name='rule_loss')
 
 		######## For split stream:#########
 		self.split_loss_branch = [[] for j in range(self.split_num_branches)]
@@ -222,8 +227,8 @@ class hierarchical():
 
 		######### For primitive stream ####
 
-		self.target_primitives = tf.placeholder(tf.float32,shape=(self.number_primitives))
-		self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitives,logits=self.primitive_fc[1],name='primitive_loss')
+		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives))
+		self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_fc[1],name='primitive_loss')
 
 		######### COMBINED LOSS ###########
 
@@ -233,10 +238,12 @@ class hierarchical():
 		# An assignment rule is run on its own --> Case 2
 		# A primitive is run on its own --> Case 3
 		
-		self.selected_loss = tf.case({tf.equal(self.policy_indicator,0): self.rule_loss+self.split_loss, tf.equal(self.policy_indicator,1): self.rule_loss, tf.equal(self.policy_indicator,2): self.primitive_loss},default=lambda: tf.zeros(1), exclusive=True,name='selected_loss')
-		self.total_loss = tf.multply(self.return_weight,self.selected_loss,name='total_loss')
+		self.selected_loss = tf.case({tf.equal(self.policy_indicator,0): lambda: self.rule_loss+self.split_loss, tf.equal(self.policy_indicator,1): lambda: self.rule_loss, tf.equal(self.policy_indicator,2): lambda: self.primitive_loss},default=lambda: tf.zeros(1), exclusive=True,name='selected_loss')
+		self.total_loss = tf.multiply(self.return_weight,self.selected_loss,name='total_loss')
 
 		#################################################################################################
+		self.previous_goal = npy.zeros(2)
+		self.current_start = npy.zeros(2)
 
 		# Defining the training optimizer. 
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
@@ -304,7 +311,7 @@ class hierarchical():
 				return rule_index+2
 			else:
 				return rule_index*2+1
-		else: 
+		elif self.state.rule_indicator==3:
 			# Now allowing only assignment rules.
 			return rule_index+4
 
@@ -332,12 +339,20 @@ class hierarchical():
 		
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
-			selected_rule = self.remap_rule_indices(npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0]))
+			selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0])
 		elif not(self.to_train):
-			selected_rule = self.remap_rule_indices(npy.argmax(rule_probabilities[0]))
-		
+			selected_rule = npy.argmax(rule_probabilities[0])
+
+		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
+		# print("PARSING:")
+		# print(self.state.rule_indicator)
+		# print("Selected rule:",selected_rule)
+
+		selected_rule = self.remap_rule_indices(selected_rule)
+		indices = self.map_rules_to_indices(selected_rule)
+		split_location = -1
+
 		#####################################################################################
-		
 		# Split rule selected.
 		if selected_rule<=3:
 
@@ -394,7 +409,7 @@ class hierarchical():
 			# Update current parse tree with split location and rule applied.
 			self.parse_tree[self.current_parsing_index].split = split_copy
 			self.parse_tree[self.current_parsing_index].boundaryscaled_split = split_location
-			self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+			# self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 			self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
@@ -424,7 +439,7 @@ class hierarchical():
 			s1.backward_index = self.current_parsing_index
 
 			# Update current parse tree with rule applied.
-			self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+			# self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
 
 			# Insert node into parse tree.
 			self.insert_node(s1,self.current_parsing_index+1)
@@ -554,7 +569,12 @@ class hierarchical():
 			split_indicator = -1
 
 			# Declare target rule and primitives.
-			target_rule = npy.zeros(self.fcs1_output_shape)
+			# target_rule = npy.zeros(self.fcs1_output_shape)
+			target_rule = [[] for i in range(self.rule_num_branches)]
+			
+			for k in range(self.rule_num_branches):
+				target_rule[k] = npy.zeros(self.target_rule_shapes[k])
+			# target_rule = npy.zeros(self.target_rule_shapes[self.parse_tree[j].rule_indicator])						
 			target_primitive = npy.zeros(self.number_primitives)		
 
 			# Set the return weight for the loss globally.
@@ -564,7 +584,12 @@ class hierarchical():
 			# If it's a non-terminal:
 			if self.parse_tree[j].label==0:			
 				# A rule was necessarily applied, so set the target rule and the rule branch indicator.
-				target_rule[self.parse_tree[j].rule_applied] = 1.
+				# target_rule[self.parse_tree[j].rule_applied] = 1.
+				# print("Ind:")
+				# print(self.parse_tree[j].rule_indicator)
+				# print(self.parse_tree[j].rule_applied)
+
+				target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
 				rule_indicator = self.parse_tree[j].rule_indicator
 				# If it was a split rule, then both the split and rule policies were used. 
 				if self.parse_tree[j].rule_applied<=3:
@@ -583,8 +608,8 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
-				self.sampled_split: self.parse_tree[j].split, self.return_weight: return_weight, self.target_rule: target_rule, \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
+				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
 # May not need to rewrite construct_parse_tree?
@@ -610,6 +635,10 @@ class hierarchical():
 
 			self.imagex = upperx-lowerx
 			self.imagey = uppery-lowery
+			self.ux = upperx
+			self.uy = uppery
+			self.lx = lowerx
+			self.ly = lowery
 
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
@@ -760,6 +789,7 @@ class hierarchical():
 		self.minimum_width = self.paintwidth
 		
 		if self.plot:
+			print(self.plot)
 			self.define_plots()
 
 		self.to_train = train
