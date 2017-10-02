@@ -14,7 +14,14 @@ class parse_tree_node():
 		self.rule_applied = rule_applied
 		self.split = split
 		self.reward = 0.
-		self.split_prior = npy.ones((1,20))/20
+		self.start = start
+		self.goal = goal
+		self.primitive = -1
+
+		self.stroke_term = 0.
+		self.intermittent_term = 0.
+
+		self.boundaryscaled_split = 0
 
 		# Adding variables to denote which branches of the network to use.
 		self.rule_indicator = -1
