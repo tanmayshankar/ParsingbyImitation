@@ -16,6 +16,11 @@ class parse_tree_node():
 		self.reward = 0.
 		self.split_prior = npy.ones((1,20))/20
 
+		# Adding variables to denote which branches of the network to use.
+		self.rule_indicator = -1
+		self.split_indicator = -1
+		self.policy_indicator = -1
+
 	def disp(self):
 		print("Label:", self.label)
 		print("X:",self.x,"Y:",self.y,"W:",self.w,"H:",self.h)
