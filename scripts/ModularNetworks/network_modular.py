@@ -331,75 +331,29 @@ class hierarchical():
 			selected_rule = self.remap_rule_indices(npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0]))
 		elif not(self.to_train):
 			selected_rule = self.remap_rule_indices(npy.argmax(rule_probabilities[0]))
-
 		
-		# Assignment rules:
-		elif selected_rule>=4:
-			
-			# Now even with the different primitives we don't need more than 6 rules; since choice of primitive is independent of assignment of primitive.
-			# Create a parse tree node object.
-			s1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
-			# Change label.
-			s1.label=selected_rule-3
-			# Change the backward index (backwardly linked link list)
-			s1.backward_index = self.current_parsing_index
-
-			# Update current parse tree with rule applied.
-			self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
-
-			# Insert node into parse tree.
-			self.insert_node(s1,self.current_parsing_index+1)
-			self.current_parsing_index+=1						
-			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label			
-
-	def old_parse_nonterminal(self, image_index):
-		rule_probabilities = self.sess.run(self.rule_probabilities,feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-	
-		split_location = -1
+		#####################################################################################
 		
-		# Hard coding ban of splits for regions smaller than minimum width.		
-		epislon = 1e-5
-		rule_probabilities += epislon
-
-		if (self.state.h<=self.minimum_width):
-			rule_probabilities[0][[0,2]]=0.
-
-		if (self.state.w<=self.minimum_width):
-			rule_probabilities[0][[1,3]]=0.
-
-		# Sampling a rule:
-		rule_probabilities/=rule_probabilities.sum()
-
-		if self.to_train:
-			selected_rule = npy.random.choice(range(self.fcs1_output_shape),p=rule_probabilities[0])
-		if not(self.to_train):
-			selected_rule = npy.argmax(rule_probabilities[0])
-
-		indices = self.map_rules_to_indices(selected_rule)
-
-		# If it is a split rule:
+		# Split rule selected.
 		if selected_rule<=3:
 
 			# Resampling until it gets a split INSIDE the segment. This just ensures the split lies within 0 and 1.
 			if ((selected_rule==0) or (selected_rule==2)):
 				counter = 0				
-
+				self.state.split_indicator = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
-					# inter_split = split_location*self.state.h
-					inter_split = split_location*self.imagey-self.state.y+self.ly
+					# inter_split = split_location*self.imagey-self.state.y+self.ly
+					inter_split = split_location*(self.imagey-2)-self.state.y+self.ly
 				
 					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
-
-					# print("Y:",self.state.y,"H:",self.state.y,"Image Y:",self.imagey)
-					# print("H SC:",split_copy,"SL:",split_location)
 
 					if counter>25:
 						print("State: H",self.state.h, "Split fraction:",split_copy, "Split location:",split_location)
@@ -410,24 +364,21 @@ class hierarchical():
 
 			if ((selected_rule==1) or (selected_rule==3)):
 				counter = 0
+				self.state.split_indicator = 1
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
-					# inter_split = split_location*self.state.w
-					inter_split = split_location*self.imagex-self.state.x+self.lx
+					# inter_split = split_location*self.imagex-self.state.x+self.lx
+					inter_split = split_location*(self.imagex-2)-self.state.x+self.lx
 
-					# if inter_split>(self.image_size/2):
 					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
 					else:
 						split_location = int(npy.ceil(inter_split))
-
-					# print("X:",self.state.x,"W",self.state.w,"Image X:",self.imagex)
-					# print("W SC:",split_copy,"SL:",split_location)
 
 					if counter>25:
 						print("State: W",self.state.w, "Split fraction:",split_copy, "Split location:",split_location)
@@ -455,15 +406,17 @@ class hierarchical():
 				self.insert_node(s1,self.current_parsing_index+2)
 
 			self.current_parsing_index+=1
-
+ 		
+ 		#####################################################################################
+		# Assignment rules:
 		elif selected_rule>=4:
+			
 			# Now even with the different primitives we don't need more than 6 rules; since choice of primitive is independent of assignment of primitive.
-
 			# Create a parse tree node object.
 			s1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
 			# Change label.
 			s1.label=selected_rule-3
-			# Change the backward index.
+			# Change the backward index (backwardly linked link list)
 			s1.backward_index = self.current_parsing_index
 
 			# Update current parse tree with rule applied.
@@ -472,7 +425,7 @@ class hierarchical():
 			# Insert node into parse tree.
 			self.insert_node(s1,self.current_parsing_index+1)
 			self.current_parsing_index+=1						
-			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
+			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label			
 
 # May not need to rewrite parse_primitive_terminal
 	def parse_primitive_terminal(self, image_index):
@@ -596,30 +549,39 @@ class hierarchical():
 			rule_indicator = -1
 			split_indicator = -1
 
-			# rule_weight = 0
-			# split_weight = 0
-			# primitive_weight = 0
-
+			# Declare target rule and primitives.
 			target_rule = npy.zeros(self.fcs1_output_shape)
 			target_primitive = npy.zeros(self.number_primitives)		
 
+			# Set the return weight for the loss globally.
 			return_weight = self.parse_tree[j].reward
 
+			# Here, we set the indicator functions for the various cases.
+			# If it's a non-terminal:
 			if self.parse_tree[j].label==0:			
+				# A rule was necessarily applied, so set the target rule and the rule branch indicator.
 				target_rule[self.parse_tree[j].rule_applied] = 1.
+				rule_indicator = self.parse_tree[j].rule_indicator
+				# If it was a split rule, then both the split and rule policies were used. 
 				if self.parse_tree[j].rule_applied<=3:
 					policy_indicator = 0
+					# Since a split location was sampled, provide the split indicator for branch.
+					split_indicator = self.parse_tree[j].split_indicator
 				else:
-					policy_indicator = 1
+					policy_indicator = 1					
 
+			# If it was a terminal symbol that was to be painted:
 			if self.parse_tree[j].label==1:
-
-				primitive_weight = self.parse_tree[j].reward
+				# Set the target primitive and policy branch.
 				target_primitive[self.parse_tree[j].primitive] = 1.				
+				policy_indicator = 2
+
+			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
+			# for assigning the parent non-terminal to a region not to be painted).
 
 			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), \
-				self.sampled_split: self.parse_tree[j].split, self.rule_return_weight: rule_weight, self.split_return_weight: split_weight, self.target_rule: target_rule, \
-					self.primitive_return_weight: primitive_weight, self.target_primitive: target_primitive})
+				self.sampled_split: self.parse_tree[j].split, self.return_weight: return_weight, self.target_rule: target_rule, \
+					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
 # May not need to rewrite construct_parse_tree?
 	def construct_parse_tree(self,image_index):
@@ -892,4 +854,5 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
 
