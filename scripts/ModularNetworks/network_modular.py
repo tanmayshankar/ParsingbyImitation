@@ -90,7 +90,7 @@ class hierarchical():
 		self.b_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
 
 		# Defining rule_fc layers.
-		self.rule_fc = [[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+		self.rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
 		self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
 		# self.rule_dist = [[] for j in range(self.rule_num_branches)]
 
@@ -131,7 +131,7 @@ class hierarchical():
 		self.b_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
 
 		# Defining split_fc layers.
-		self.split_fc = [[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
+		self.split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
 		self.split_mean = [[] for j in range(self.split_num_branches)]
 		self.split_cov = [[] for j in range(self.split_num_branches)]
 		self.split_dist = [[] for j in range(self.split_num_branches)]
@@ -180,7 +180,7 @@ class hierarchical():
 		
 		# Defining primitive FC layers.
 		self.primitive_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_primitive_fc[0]),self.b_primitive_fc[0]),name='primitve_fc_layer0')
-		self.primitive_fc[1] = tf.add(tf.matmul(self.primitive_fc[0],self.W_primitive_fc[1]),self.b_primitive_fc[1]),name='primitve_fc_layer1')
+		self.primitive_fc[1] = tf.add(tf.matmul(self.primitive_fc[0],self.W_primitive_fc[1]),self.b_primitive_fc[1],name='primitve_fc_layer1')
 		self.primitive_probabilities = tf.nn.softmax(self.primitive_fc[-1],name='primitive_probabilities')
 		
 		# Defining categorical distribution for primitives.
@@ -324,7 +324,7 @@ class hierarchical():
 		# Four branches of the rule policy.
 		self.set_rule_indicator()
 
-		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator}
+		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
 		
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
