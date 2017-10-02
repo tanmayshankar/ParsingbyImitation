@@ -135,6 +135,7 @@ class hierarchical():
 
 		########### SPLIT FC LAYERS ####################################################################
 
+		self.minimum_covariance = 0.001
 		# Defining FC layer variables lists.
 		self.W_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
 		self.b_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
@@ -162,7 +163,7 @@ class hierarchical():
 
 			self.split_mean[j] = tf.nn.sigmoid(self.split_fc[j][1][0,0])
 			# If the variance is learnt.
-			self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])
+			self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])+self.minimum_covariance
 			# Defining distributions for each.
 			self.split_dist[j] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j],name='split_dist_branch{0}'.format(j))
 			# self.sample_split[j] = self.split_dist[j].sample()
@@ -571,7 +572,7 @@ class hierarchical():
 			# Declare target rule and primitives.
 			# target_rule = npy.zeros(self.fcs1_output_shape)
 			target_rule = [[] for i in range(self.rule_num_branches)]
-			
+
 			for k in range(self.rule_num_branches):
 				target_rule[k] = npy.zeros(self.target_rule_shapes[k])
 			# target_rule = npy.zeros(self.target_rule_shapes[self.parse_tree[j].rule_indicator])						
