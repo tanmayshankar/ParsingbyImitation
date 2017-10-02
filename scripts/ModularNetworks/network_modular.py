@@ -70,7 +70,7 @@ class hierarchical():
 		self.split_num_fclayers = 2
 		self.split_num_hidden = 50
 		self.split_num_branches = 2
-		self.split_fc_shapes = [self.fc_input_shape,self.split_num_hidden,2]
+		self.split_fc_shapes = [[self.fc_input_shape,self.split_num_hidden,2],[self.fc_input_shape,self.split_num_hidden,2]]
 
 		# Primitive stream
 		self.primitive_num_fclayers = 2
@@ -119,11 +119,11 @@ class hierarchical():
 		# self.sample_rule = tf.case({tf.equal(self.rule_indicator,0): self.rule_dist[0].sample, tf.equal(self.rule_indicator,1): self.rule_dist[1].sample, 
 		# 							tf.equal(self.rule_indicator,2): self.rule_dist[2].sample, tf.equal(self.rule_indicator,3): self.rule_dist[3].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_rule')
 
-		self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
-									tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+		# self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
+									# tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
 
-        self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
-                                    tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+		self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_probabilities[0], tf.equal(self.rule_indicator,1): lambda: self.rule_probabilities[1], 
+									tf.equal(self.rule_indicator,2): lambda: self.rule_probabilities[2], tf.equal(self.rule_indicator,3): lambda: self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
 
 
 		################################################################################################
@@ -179,8 +179,8 @@ class hierarchical():
 
 		# Defining variables:
 		for i in range(self.primitive_num_fclayers):
-			self.W_primitive_fc[j][i] = tf.Variable(tf.truncated_normal([self.primitive_fc_shapes[j][i],self.primitive_fc_shapes[j][i+1]],stddev=0.1),name='W_primitivefc_branch{0}_layer{1}'.format(j,i+1))
-			self.b_primitive_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.primitive_fc_shapes[j][i+1]]),name='b_primitivefc_branch{0}_layer{1}'.format(j,i+1))
+			self.W_primitive_fc[i] = tf.Variable(tf.truncated_normal([self.primitive_fc_shapes[i],self.primitive_fc_shapes[i+1]],stddev=0.1),name='W_primitivefc_layer{0}'.format(i+1))
+			self.b_primitive_fc[i] = tf.Variable(tf.constant(0.1,shape=[self.primitive_fc_shapes[i+1]]),name='b_primitivefc_layer{0}'.format(i+1))
 		
 		# Defining primitive FC layers.
 		self.primitive_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_primitive_fc[0]),self.b_primitive_fc[0]),name='primitve_fc_layer0')
@@ -410,8 +410,8 @@ class hierarchical():
 				self.insert_node(s1,self.current_parsing_index+2)
 
 			self.current_parsing_index+=1
- 		
- 		#####################################################################################
+		
+		#####################################################################################
 		# Assignment rules:
 		elif selected_rule>=4:
 			
@@ -632,7 +632,7 @@ class hierarchical():
 
 		for j in range(self.current_parsing_index):
 			self.dummy_state = self.parse_tree[j]
-		 	self.mask[self.dummy_state.x:self.dummy_state.x+self.dummy_state.w,self.dummy_state.y:self.dummy_state.y+self.dummy_state.h] = -(self.backward_discount**j)
+			self.mask[self.dummy_state.x:self.dummy_state.x+self.dummy_state.w,self.dummy_state.y:self.dummy_state.y+self.dummy_state.h] = -(self.backward_discount**j)
 		
 		for j in range(self.current_parsing_index,len(self.parse_tree)):
 			self.dummy_state = self.parse_tree[j]
