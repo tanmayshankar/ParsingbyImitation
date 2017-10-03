@@ -6,7 +6,8 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 20
+		self.num_epochs = 5
+		self.save_every = 1000
 		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
@@ -285,11 +286,23 @@ class hierarchical():
 		self.goal_list = []
 		self.start_list = []
 
-	def save_model(self, model_index):
+	# def save_model(self, model_index):
+	# 	if not(os.path.isdir("saved_models")):
+	# 		os.mkdir("saved_models")
+	# 	self.saver = tf.train.Saver(max_to_keep=None)           
+	# 	save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+
+	def save_model(self, model_index, iteration_number=-1):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
+
 		self.saver = tf.train.Saver(max_to_keep=None)           
-		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+
+		if not(iteration_number==-1):
+			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}_iter{1}.ckpt'.format(model_index,iteration_number))
+		else:
+			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}.ckpt'.format(model_index))
+
 
 	def initialize_tree(self):
 		# Intialize the parse tree for this image.=
@@ -819,6 +832,9 @@ class hierarchical():
 				self.start_list = []
 				self.goal_list = []
 				
+				if ((i%self.save_every)==0):
+					self.save_model(e,i/self.save_every)
+
 			if train:
 				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
