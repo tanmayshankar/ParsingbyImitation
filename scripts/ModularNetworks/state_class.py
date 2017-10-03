@@ -12,6 +12,7 @@ class parse_tree_node():
 		self.h = h
 		self.backward_index = backward_index
 		self.rule_applied = rule_applied
+		self.alter_rule_applied = rule_applied
 		self.split = split
 		self.reward = 0.
 		self.start = start

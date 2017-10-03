@@ -386,8 +386,8 @@ class hierarchical():
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
-					# inter_split = split_location*self.imagey-self.state.y+self.ly
-					inter_split = split_location*(self.imagey-2)+1
+					# inter_split = split_location*(self.imagey-2)+1
+					inter_split = split_location*(self.imagey-2*self.minimum_width)+self.minimum_width					
 				
 					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
@@ -411,8 +411,8 @@ class hierarchical():
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
-					# inter_split = split_location*self.imagex-self.state.x+self.lx
-					inter_split = split_location*(self.imagex-2)+1
+					# inter_split = split_location*(self.imagex-2)+1
+					inter_split = split_location*(self.imagex-2*self.minimum_width)+self.minimum_width
 
 					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
@@ -430,6 +430,7 @@ class hierarchical():
 			self.parse_tree[self.current_parsing_index].split = split_copy
 			self.parse_tree[self.current_parsing_index].boundaryscaled_split = split_location
 			# self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+			self.parse_tree[self.current_parsing_index].alter_rule_applied = selected_rule
 
 			self.predicted_labels[image_index,s1.x:s1.x+s1.w,s1.y:s1.y+s1.h] = s1.label
 			self.predicted_labels[image_index,s2.x:s2.x+s2.w,s2.y:s2.y+s2.h] = s2.label
@@ -460,6 +461,7 @@ class hierarchical():
 
 			# Update current parse tree with rule applied.
 			# self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
+			self.parse_tree[self.current_parsing_index].alter_rule_applied = selected_rule
 
 			# Insert node into parse tree.
 			self.insert_node(s1,self.current_parsing_index+1)
@@ -696,7 +698,7 @@ class hierarchical():
 		self.alternate_predicted_labels[npy.where(self.predicted_labels[image_index]==2)]=-1.
 
 		if self.plot:
-			self.fig.suptitle("Processing Image: {0}".format(image_index))
+			self.fig.suptitle("Processing Image: {0}".format(image_index)) 
 			self.sc1.set_data(self.alternate_predicted_labels)
 			self.attention_plots()
 			self.sc2.set_data(self.mask)
@@ -712,11 +714,16 @@ class hierarchical():
 				colors = ['r']
 
 				if self.parse_tree[j].label==0:
-					if (self.parse_tree[j].rule_applied==1) or (self.parse_tree[j].rule_applied==3):
+
+					rule_app_map = self.remap_rule_indices(self.parse_tree[j].rule_applied)
+
+					if (self.parse_tree[j].alter_rule_applied==1) or (self.parse_tree[j].alter_rule_applied==3):
+					# if (rule_app_map==1) or (rule_app_map==3):
 						sc = self.parse_tree[j].boundaryscaled_split
 						split_segs.append([[self.parse_tree[j].y,self.parse_tree[j].x+sc],[self.parse_tree[j].y+self.parse_tree[j].h,self.parse_tree[j].x+sc]])
 						
-					if (self.parse_tree[j].rule_applied==0) or (self.parse_tree[j].rule_applied==2):					
+					if (self.parse_tree[j].alter_rule_applied==0) or (self.parse_tree[j].alter_rule_applied==2):					
+					# if (rule_app_map==0) or (rule_app_map==2):
 						sc = self.parse_tree[j].boundaryscaled_split
 						split_segs.append([[self.parse_tree[j].y+sc,self.parse_tree[j].x],[self.parse_tree[j].y+sc,self.parse_tree[j].x+self.parse_tree[j].w]])
 
@@ -755,10 +762,10 @@ class hierarchical():
 			self.fig.canvas.draw()
 			# raw_input("Press any key to continue.")
 			plt.pause(0.1)	
+			# plt.pause(0.5)	
 
 			if len(self.ax[0].collections):
 				del self.ax[0].collections[-1]
-
 		
 			del self.ax[3].collections[-1]
 			del self.ax[2].collections[-1]			
