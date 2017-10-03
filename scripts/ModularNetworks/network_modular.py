@@ -64,10 +64,10 @@ class hierarchical():
 
 		# self.fc_input_shape = 5*5*self.conv_num_filters[-1]
 		if self.image_size==20:
-			self.fc_input_shape = 5*5*self.conv5_num_filters[-1]
+			self.fc_input_shape = 5*5*self.conv_num_filters[-1]
 		else:
-			self.fc_input_shape = 10*10*self.conv5_num_filters[-1]
-			
+			self.fc_input_shape = 10*10*self.conv_num_filters[-1]
+
 		# Rule stream
 		self.rule_num_fclayers = 2
 		self.rule_num_hidden = 80
