@@ -62,8 +62,12 @@ class hierarchical():
 
 		########## COMMON FC LAYERS ####################################################################
 
-		self.fc_input_shape = 5*5*self.conv_num_filters[-1]
-		
+		# self.fc_input_shape = 5*5*self.conv_num_filters[-1]
+		if self.image_size==20:
+			self.fc_input_shape = 5*5*self.conv5_num_filters[-1]
+		else:
+			self.fc_input_shape = 10*10*self.conv5_num_filters[-1]
+			
 		# Rule stream
 		self.rule_num_fclayers = 2
 		self.rule_num_hidden = 80
@@ -84,6 +88,8 @@ class hierarchical():
 
 		# Reshape FC input.
 		self.target_rule_shapes = [6,4,4,2]
+
+
 		self.fc_input = tf.reshape(self.relu_conv[-1],[-1,self.fc_input_shape],name='fc_input')
 
 		################################################################################################
@@ -734,7 +740,7 @@ class hierarchical():
 				
 			
 			self.fig.canvas.draw()
-			raw_input("Press any key to continue.")
+			# raw_input("Press any key to continue.")
 			plt.pause(0.1)	
 
 			if len(self.ax[0].collections):
