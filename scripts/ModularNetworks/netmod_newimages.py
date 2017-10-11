@@ -827,13 +827,13 @@ class hierarchical():
 		# For all epochs
 		for e in range(self.num_epochs):
 
-            image_list = npy.array(range(self.num_images))
-            npy.random.shuffle(image_list)            
+			image_list = npy.array(range(self.num_images))
+			npy.random.shuffle(image_list)            
 
 			for jx in range(self.num_images):
 
-                # Image index to process.
-                i = image_list[jx]
+				# Image index to process.
+				i = image_list[jx]
 
 				self.initialize_tree()
 				self.construct_parse_tree(i)
