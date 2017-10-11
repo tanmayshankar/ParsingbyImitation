@@ -8,7 +8,10 @@ class hierarchical():
 
 		self.num_epochs = 5
 		self.save_every = 100
-		self.num_images = 1656
+		# self.num_images = 1656
+		# Use images 1500-1656 for val.
+		self.num_images = 1500
+
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -31,7 +34,7 @@ class hierarchical():
 		self.conv_strides = npy.array([1,2,2,2,2])
 
 		# Placeholders
-		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
+		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,3],name='input')
 		
 		############ CONV LAYERS #######################################################################
 
@@ -45,7 +48,8 @@ class hierarchical():
 		# Defining variables. 
 		for i in range(self.num_layers):
 			self.W_conv[i] = tf.Variable(tf.truncated_normal([self.conv_sizes[i],self.conv_sizes[i], self.conv_num_filters[i], self.conv_num_filters[i+1]],stddev=0.1),name='W_conv{0}'.format(i+1))
-			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
+			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i+1]]),name='b_conv{0}'.format(i+1))
+			# self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[1,self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
 
 		# Defining first conv layer.
 		self.conv[0] = tf.add(tf.nn.conv2d(self.input,self.W_conv[0],strides=[1,self.conv_strides[0],self.conv_strides[0],1],padding='VALID'),self.b_conv[0],name='conv1')
@@ -350,7 +354,7 @@ class hierarchical():
 		# Four branches of the rule policy.
 		self.set_rule_indicator()
 
-		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
+		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})
 		
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
@@ -377,7 +381,7 @@ class hierarchical():
 				self.state.split_indicator = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
@@ -402,7 +406,7 @@ class hierarchical():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
@@ -472,7 +476,7 @@ class hierarchical():
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
 
-			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})				
+			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})				
 
 			if self.to_train:
 				selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
@@ -554,17 +558,16 @@ class hierarchical():
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
-		
-		self.alpha = 1.1
+			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)			
+		self.alpha = 1.0
 		
 		# Non-linearizing rewards.
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 			# # Additional term for continuity. 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
 			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 # Definitely need to rewrite backprop.
@@ -579,7 +582,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# Must set indicator functions.
@@ -627,7 +630,7 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split, \
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
@@ -650,7 +653,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
 
 			self.imagex = upperx-lowerx
 			self.imagey = uppery-lowery
@@ -857,13 +860,23 @@ class hierarchical():
 		if (rule_index==4):
 			return 1
 		if (rule_index==5):
-			return 2
+			return 2	
 
-	# def preprocess_images_labels(self):
+	def preprocess_images_labels(self):
+
 	# 	noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
 	# 	self.images[npy.where(self.images==2)]=-1
 	# 	self.true_labels[npy.where(self.true_labels==2)]=-1
 	# 	self.images += noise  
+
+		# INSTEAD OF ADDING NOISE to the images, now we are going to normalize the images to -1 to 1 (float values).
+		# Convert labels to -1 and 1 too.
+		self.true_labels /= self.true_labels.max()
+		self.images = self.images.astype(float)
+		self.image_means = self.images.mean(axis=(0,1,2))
+		self.images -= self.image_means
+		self.images_maxes = self.images.max(axis=(0,1,2))
+		self.images /= self.images_maxes
 
 def parse_arguments():
 
@@ -896,6 +909,7 @@ def main(args):
 	hierarchical_model.images = npy.load(args.images)
 	hierarchical_model.true_labels = npy.load(args.labels)
 	hierarchical_model.image_size = args.size 
+	hierarchical_model.preprocess_images_labels()
 
 	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
