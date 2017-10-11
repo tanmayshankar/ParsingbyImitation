@@ -349,7 +349,8 @@ class hierarchical():
 		# Four branches of the rule policy.
 		self.set_rule_indicator()
 
-		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
+		# rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
+		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.attended_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
 		
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
@@ -376,7 +377,8 @@ class hierarchical():
 				self.state.split_indicator = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.attended_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
@@ -401,7 +403,8 @@ class hierarchical():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.attended_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
@@ -471,7 +474,8 @@ class hierarchical():
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
 
-			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})				
+			# primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})				
+			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.attended_image.reshape(1,self.image_size,self.image_size,1)})				
 
 			if self.to_train:
 				selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
@@ -578,6 +582,8 @@ class hierarchical():
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+			self.attended_image = -npy.ones((self.image_size,self.image_size))
+			self.attended_image[lowerx:upperx,lowery:uppery] = copy.deepcopy(self.images[image_index,lowerx:upperx,lowery:uppery])
 
 			# Must set indicator functions.
 			policy_indicator = -1
@@ -624,9 +630,14 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
+			# self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
+				# self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
+					# self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
+
+			self.sess.run(self.train, feed_dict={self.input: self.attended_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
+
 
 # May not need to rewrite construct_parse_tree?
 	def construct_parse_tree(self,image_index):
@@ -648,6 +659,9 @@ class hierarchical():
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+
+			self.attended_image = -npy.ones((self.image_size,self.image_size))			
+			self.attended_image[lowerx:upperx,lowery:uppery] = copy.deepcopy(self.images[image_index, lowerx:upperx, lowery:uppery])
 
 			self.imagex = upperx-lowerx
 			self.imagey = uppery-lowery

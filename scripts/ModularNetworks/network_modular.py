@@ -9,6 +9,7 @@ class hierarchical():
 		self.num_epochs = 5
 		self.save_every = 1000
 		self.num_images = 20000
+		self.num_images = 20000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -380,8 +381,8 @@ class hierarchical():
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
-					# inter_split = split_location*(self.imagey-2)+1
-					inter_split = split_location*(self.imagey-2*self.minimum_width)+self.minimum_width					
+					inter_split = split_location*(self.imagey-2)+1
+					# inter_split = split_location*(self.imagey-2*self.minimum_width)+self.minimum_width					
 				
 					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
@@ -405,8 +406,8 @@ class hierarchical():
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
-					# inter_split = split_location*(self.imagex-2)+1
-					inter_split = split_location*(self.imagex-2*self.minimum_width)+self.minimum_width
+					inter_split = split_location*(self.imagex-2)+1
+					# inter_split = split_location*(self.imagex-2*self.minimum_width)+self.minimum_width
 
 					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
@@ -554,7 +555,9 @@ class hierarchical():
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
-
+		
+		self.alpha = 1.1
+		
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
@@ -799,7 +802,7 @@ class hierarchical():
 			self.ax[3].set_adjustable('box-forced')			
 
 			self.fig.canvas.draw()
-			plt.pause(0.1)	
+			plt.pause(0.01)	
 	
 	def meta_training(self,train=True):
 		
@@ -872,8 +875,8 @@ def parse_arguments():
 	parser.add_argument('--model',dest='model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--gpu',dest='gpu')
-	parser.add_argument('--plot',dest='plot',type=bool,default=False)
-	parser.add_argument('--train',dest='train',type=bool,default=True)
+	parser.add_argument('--plot',dest='plot',type=int,default=0)
+	parser.add_argument('--train',dest='train',type=int,default=1)
 
 	return parser.parse_args()
 
