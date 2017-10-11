@@ -17,6 +17,7 @@ class hierarchical():
 		self.paintwidth = -1
 		self.minimum_width = -1
 		self.images = []
+		self.original_images = []
 		self.true_labels = []
 		self.image_size = -1
 		self.intermittent_lambda = 0.
@@ -704,7 +705,9 @@ class hierarchical():
 			self.sc2.set_data(self.mask)
 
 			# npy.save("Mask_{0}.npy".format(image_index),self.mask)
-			self.sc3.set_data(self.images[image_index])
+			# self.sc3.set_data(self.images[image_index])
+			self.sc3.set_data(self.original_images[image_index])
+			
 			self.sc4.set_data(self.alternate_painted_image)
 
 			# Plotting split line segments from the parse tree.
@@ -792,7 +795,8 @@ class hierarchical():
 			self.ax[1].set_title("Parse Tree")
 			self.ax[1].set_adjustable('box-forced')
 
-			self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc3 = self.ax[2].imshow(self.original_images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
 			self.sc3.set_clim([-1,1.2])
 			self.ax[2].set_title("Actual Image")
@@ -813,7 +817,7 @@ class hierarchical():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-		self.minimum_width = self.paintwidth
+		# self.minimum_width = self.paintwidth
 		
 		if self.plot:
 			print(self.plot)
@@ -896,6 +900,7 @@ def parse_arguments():
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--paintwidth',dest='paintwidth',type=int)
+	parser.add_argument('--minwidth',dest='minwidth',type=int)
 	parser.add_argument('--lambda',dest='inter_lambda',type=float)
 	parser.add_argument('--model',dest='model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
@@ -918,11 +923,13 @@ def main(args):
 	hierarchical_model = hierarchical()
 
 	hierarchical_model.images = npy.load(args.images)
+	hierarchical_model.original_images = npy.load(args.images)
 	hierarchical_model.true_labels = npy.load(args.labels)
 	hierarchical_model.image_size = args.size 
 	hierarchical_model.preprocess_images_labels()
 
 	hierarchical_model.paintwidth = args.paintwidth
+	hierarchical_model.minimum_width = args.minwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
 
 	hierarchical_model.plot = args.plot
