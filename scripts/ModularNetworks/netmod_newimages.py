@@ -69,19 +69,22 @@ class hierarchical():
 
 		# Rule stream
 		self.rule_num_fclayers = 2
-		self.rule_num_hidden = 80
+		# self.rule_num_hidden = 80
+		self.rule_num_hidden = 400
 		self.rule_num_branches = 4
 		self.rule_fc_shapes = [[self.fc_input_shape,self.rule_num_hidden,6],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,2]]
 
 		# Split stream
 		self.split_num_fclayers = 2
-		self.split_num_hidden = 50
+		# self.split_num_hidden = 50
+		self.split_num_hidden = 400
 		self.split_num_branches = 2
 		self.split_fc_shapes = [[self.fc_input_shape,self.split_num_hidden,2],[self.fc_input_shape,self.split_num_hidden,2]]
 
 		# Primitive stream
 		self.primitive_num_fclayers = 2
-		self.primitive_num_hidden = 50
+		# self.primitive_num_hidden = 50
+		self.primitive_num_hidden = 400
 		self.number_primitives = 4
 		self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden,self.number_primitives]
 
@@ -856,16 +859,17 @@ class hierarchical():
 		if (rule_index==5):
 			return 2
 
-	def preprocess_images_labels(self):
-		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
-		self.images[npy.where(self.images==2)]=-1
-		self.true_labels[npy.where(self.true_labels==2)]=-1
-		self.images += noise  
+	# def preprocess_images_labels(self):
+	# 	noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
+	# 	self.images[npy.where(self.images==2)]=-1
+	# 	self.true_labels[npy.where(self.true_labels==2)]=-1
+	# 	self.images += noise  
 
 def parse_arguments():
 
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
 	parser.add_argument('--images',dest='images',type=str)
+	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--paintwidth',dest='paintwidth',type=int)
 	parser.add_argument('--lambda',dest='inter_lambda',type=float)
@@ -890,9 +894,8 @@ def main(args):
 	hierarchical_model = hierarchical()
 
 	hierarchical_model.images = npy.load(args.images)
-	hierarchical_model.true_labels = copy.deepcopy(hierarchical_model.images)   
+	hierarchical_model.true_labels = npy.load(args.labels)
 	hierarchical_model.image_size = args.size 
-	# hierarchical_model.preprocess_images_labels()
 
 	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
