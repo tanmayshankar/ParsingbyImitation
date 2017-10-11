@@ -839,7 +839,7 @@ class hierarchical():
 				self.construct_parse_tree(i)
 				self.propagate_rewards()				
 				print("#___________________________________________________________________________")
-				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
+				print("Epoch:",e,"Training Image:",jx,"TOTAL REWARD:",self.parse_tree[0].reward)
 
 				if train:
 					self.backprop(i)
@@ -847,7 +847,7 @@ class hierarchical():
 				self.goal_list = []
 				
 				if ((i%self.save_every)==0):
-					self.save_model(e,i/self.save_every)
+					self.save_model(e,jx/self.save_every)
 
 			if train:
 				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
