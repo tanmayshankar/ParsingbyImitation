@@ -554,10 +554,12 @@ class hierarchical():
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
-
+		
+		self.alpha = 1.1
+		
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
+			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 			# # Additional term for continuity. 
 		for j in range(len(self.parse_tree)):
@@ -872,8 +874,8 @@ def parse_arguments():
 	parser.add_argument('--model',dest='model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--gpu',dest='gpu')
-	parser.add_argument('--plot',dest='plot',type=bool,default=False)
-	parser.add_argument('--train',dest='train',type=bool,default=True)
+	parser.add_argument('--plot',dest='plot',type=int,default=0)
+	parser.add_argument('--train',dest='train',type=int,default=1)
 
 	return parser.parse_args()
 

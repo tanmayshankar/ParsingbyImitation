@@ -11,10 +11,11 @@ import os
 import shutil
 import subprocess
 import glob
-import argparse
 
 import tensorflow as tf
 import cv2
 from shapely.geometry import box
 from shapely.geometry import point
 from shapely.affinity import rotate
+
+import argparse

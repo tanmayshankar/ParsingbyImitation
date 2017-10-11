@@ -11,7 +11,6 @@ import os
 import shutil
 import subprocess
 import glob
-import argparse
 
 import tensorflow as tf
 import cv2

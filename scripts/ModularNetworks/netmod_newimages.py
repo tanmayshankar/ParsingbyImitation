@@ -7,8 +7,8 @@ class hierarchical():
 	def __init__(self):
 
 		self.num_epochs = 5
-		self.save_every = 1000
-		self.num_images = 20000
+		self.save_every = 100
+		self.num_images = 1656
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -27,11 +27,8 @@ class hierarchical():
 		self.num_layers = 5
 		self.num_fc_layers = 2
 		self.conv_sizes = 3*npy.ones((self.num_layers),dtype=int)		
-		self.conv_num_filters = npy.array([1,20,20,20,20,20],dtype=int)
-		if self.image_size==20:
-			self.conv_strides = npy.array([1,1,1,1,2])
-		else:
-			self.conv_strides = npy.array([1,1,1,2,2])
+		self.conv_num_filters = npy.array([3,20,20,20,20,20],dtype=int)
+		self.conv_strides = npy.array([1,2,2,2,2])
 
 		# Placeholders
 		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
@@ -63,27 +60,31 @@ class hierarchical():
 
 		########## COMMON FC LAYERS ####################################################################
 
-		# self.fc_input_shape = 5*5*self.conv_num_filters[-1]
-		if self.image_size==20:
-			self.fc_input_shape = 5*5*self.conv_num_filters[-1]
-		else:
-			self.fc_input_shape = 10*10*self.conv_num_filters[-1]
+		# # self.fc_input_shape = 5*5*self.conv_num_filters[-1]
+		# if self.image_size==20:
+		# 	self.fc_input_shape = 5*5*self.conv_num_filters[-1]
+		# else:
+		# 	self.fc_input_shape = 10*10*self.conv_num_filters[-1]
+		self.fc_input_shape = 14*14*self.conv_num_filters[-1]
 
 		# Rule stream
 		self.rule_num_fclayers = 2
-		self.rule_num_hidden = 80
+		# self.rule_num_hidden = 80
+		self.rule_num_hidden = 400
 		self.rule_num_branches = 4
 		self.rule_fc_shapes = [[self.fc_input_shape,self.rule_num_hidden,6],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,2]]
 
 		# Split stream
 		self.split_num_fclayers = 2
-		self.split_num_hidden = 50
+		# self.split_num_hidden = 50
+		self.split_num_hidden = 400
 		self.split_num_branches = 2
 		self.split_fc_shapes = [[self.fc_input_shape,self.split_num_hidden,2],[self.fc_input_shape,self.split_num_hidden,2]]
 
 		# Primitive stream
 		self.primitive_num_fclayers = 2
-		self.primitive_num_hidden = 50
+		# self.primitive_num_hidden = 50
+		self.primitive_num_hidden = 400
 		self.number_primitives = 4
 		self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden,self.number_primitives]
 
@@ -554,10 +555,12 @@ class hierarchical():
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
-
+		
+		self.alpha = 1.1
+		
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
+			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 			# # Additional term for continuity. 
 		for j in range(len(self.parse_tree)):
@@ -856,24 +859,25 @@ class hierarchical():
 		if (rule_index==5):
 			return 2
 
-	def preprocess_images_labels(self):
-		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
-		self.images[npy.where(self.images==2)]=-1
-		self.true_labels[npy.where(self.true_labels==2)]=-1
-		self.images += noise  
+	# def preprocess_images_labels(self):
+	# 	noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
+	# 	self.images[npy.where(self.images==2)]=-1
+	# 	self.true_labels[npy.where(self.true_labels==2)]=-1
+	# 	self.images += noise  
 
 def parse_arguments():
 
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
 	parser.add_argument('--images',dest='images',type=str)
+	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--paintwidth',dest='paintwidth',type=int)
 	parser.add_argument('--lambda',dest='inter_lambda',type=float)
 	parser.add_argument('--model',dest='model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--gpu',dest='gpu')
-	parser.add_argument('--plot',dest='plot',type=bool,default=False)
-	parser.add_argument('--train',dest='train',type=bool,default=True)
+	parser.add_argument('--plot',dest='plot',type=int,default=0)
+	parser.add_argument('--train',dest='train',type=int,default=1)
 
 	return parser.parse_args()
 
@@ -890,9 +894,8 @@ def main(args):
 	hierarchical_model = hierarchical()
 
 	hierarchical_model.images = npy.load(args.images)
-	hierarchical_model.true_labels = copy.deepcopy(hierarchical_model.images)   
+	hierarchical_model.true_labels = npy.load(args.labels)
 	hierarchical_model.image_size = args.size 
-	hierarchical_model.preprocess_images_labels()
 
 	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda

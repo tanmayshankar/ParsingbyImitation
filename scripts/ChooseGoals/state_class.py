@@ -12,7 +12,6 @@ class parse_tree_node():
 		self.h = h
 		self.backward_index = backward_index
 		self.rule_applied = rule_applied
-		self.alter_rule_applied = rule_applied
 		self.split = split
 		self.reward = 0.
 		self.start = start
@@ -23,11 +22,6 @@ class parse_tree_node():
 		self.intermittent_term = 0.
 
 		self.boundaryscaled_split = 0
-
-		# Adding variables to denote which branches of the network to use.
-		self.rule_indicator = -1
-		self.split_indicator = -1
-		self.policy_indicator = -1
 
 	def disp(self):
 		print("Label:", self.label)
