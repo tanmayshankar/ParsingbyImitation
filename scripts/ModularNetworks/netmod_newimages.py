@@ -562,12 +562,12 @@ class hierarchical():
 		self.alpha = 1.0
 		
 		# Non-linearizing rewards.
-		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
-			# # Additional term for continuity. 
-		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
+		# Additional term for continuity. 
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
 			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 # Definitely need to rewrite backprop.
