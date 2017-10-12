@@ -571,7 +571,7 @@ class hierarchical():
 		# 	# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward -= self.depth_lambda*float(j)/len(self.parse_tree)
+			self.parse_tree[j].reward -= self.depth_lambda*float(j)
 
 # Definitely need to rewrite backprop.
 	def backprop(self, image_index):
@@ -910,7 +910,6 @@ def parse_arguments():
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--train',dest='train',type=int,default=1)
-
 
 	return parser.parse_args()
 
