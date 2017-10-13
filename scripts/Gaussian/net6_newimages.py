@@ -182,11 +182,22 @@ class hierarchical():
 		self.goal_list = []
 		self.start_list = []
 
-	def save_model(self, model_index):
+	# def save_model(self, model_index):
+	# 	if not(os.path.isdir("saved_models")):
+	# 		os.mkdir("saved_models")
+	# 	self.saver = tf.train.Saver(max_to_keep=None)			
+	# 	save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+
+	def save_model(self, model_index, iteration_number=-1):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
-		self.saver = tf.train.Saver(max_to_keep=None)			
-		save_path = self.saver.save(self.sess,'saved_models/model_{0}.ckpt'.format(model_index))
+
+		self.saver = tf.train.Saver(max_to_keep=None)           
+
+		if not(iteration_number==-1):
+			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}_iter{1}.ckpt'.format(model_index,iteration_number))
+		else:
+			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}.ckpt'.format(model_index))
 
 	def initialize_tree(self):
 		# Intialize the parse tree for this image.=
@@ -719,7 +730,7 @@ class hierarchical():
 				self.save_model(e)
 			else: 
 				npy.save("validation_{0}.npy".format(self.suffix),self.predicted_labels)
-				npy.save("validation_painted_{0}.npy".format(self.suffix))
+				npy.save("validation_painted_{0}.npy".format(self.suffix),self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
