@@ -91,7 +91,7 @@ class hierarchical():
  		# BatchSize x Time_Steps x InputDimensions
 		# Ideally we'd like to specify a tensor of the feature representation of the image resized to # BatchSize x Time_Steps x InputDimensions
 		self.outputs, self.current_state = tf.nn.dynamic_rnn(self.lstm_cell, inputs=self.vectorized_image_features,dtype=tf.float32)
-
+		# Now defining LSTM.
 		self.policy_input = self.current_state.h
 		# This "outputs" is just a series of states. 
 		####################################################################################################
