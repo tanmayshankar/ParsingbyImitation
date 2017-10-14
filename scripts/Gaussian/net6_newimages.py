@@ -6,7 +6,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 5
+		self.num_epochs = 10
 		self.save_every = 100
 		self.num_images = 276
 		self.current_parsing_index = 0
