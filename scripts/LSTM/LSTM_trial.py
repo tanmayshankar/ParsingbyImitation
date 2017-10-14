@@ -90,7 +90,7 @@ class hierarchical():
  		# The inputs provided to the Dynamic RNN are of the form: 
  		# BatchSize x Time_Steps x InputDimensions
 		# Ideally we'd like to specify a tensor of the feature representation of the image resized to # BatchSize x Time_Steps x InputDimensions
-		self.outputs, self.current_state = tf.nn.dynamic_rnn(self.lstm_cell, inputs=self.vectorized_image_features)
+		self.outputs, self.current_state = tf.nn.dynamic_rnn(self.lstm_cell, inputs=self.vectorized_image_features,dtype=tf.float32)
 
 		self.policy_input = self.current_state.h
 		# This "outputs" is just a series of states. 
@@ -794,10 +794,11 @@ class hierarchical():
 
 		# INSTEAD OF ADDING NOISE to the images, now we are going to normalize the images to -1 to 1 (float values).
 		# Convert labels to -1 and 1 too.
-		self.true_labels = self.true_labels.astype(float)
-		self.true_labels /= self.true_labels.max()
-		self.true_labels -= 0.5
-		self.true_labels *= 2
+
+		# self.true_labels = self.true_labels.astype(float)
+		# self.true_labels /= self.true_labels.max()
+		# self.true_labels -= 0.5
+		# self.true_labels *= 2
 
 		self.images = self.images.astype(float)
 		self.image_means = self.images.mean(axis=(0,1,2))
