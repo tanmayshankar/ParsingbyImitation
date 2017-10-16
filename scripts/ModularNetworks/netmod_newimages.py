@@ -830,7 +830,7 @@ class hierarchical():
 		for e in range(self.num_epochs):
 
 			image_list = npy.array(range(self.num_images))
-			npy.random.shuffle(image_list)            
+			# npy.random.shuffle(image_list)            
 
 			for jx in range(self.num_images):
 
