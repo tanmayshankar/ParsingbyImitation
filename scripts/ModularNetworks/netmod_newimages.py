@@ -566,7 +566,7 @@ class hierarchical():
 
 		# Additional term for continuity. 
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
+			self.parse_tree[j].reward -= self.parse_tree[j].intermittent_term*self.intermittent_lambda
 			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 # Definitely need to rewrite backprop.
