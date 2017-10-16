@@ -146,7 +146,7 @@ class hierarchical():
 
 		########### SPLIT FC LAYERS ####################################################################
 
-		self.minimum_covariance = 0.001
+		self.minimum_covariance = 0.0001
 		# Defining FC layer variables lists.
 		self.W_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
 		self.b_split_fc = [[[] for i in range(self.split_num_fclayers)] for j in range(self.split_num_branches)]
