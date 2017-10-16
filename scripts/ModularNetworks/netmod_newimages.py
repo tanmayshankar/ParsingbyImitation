@@ -880,10 +880,10 @@ class hierarchical():
 
 		# INSTEAD OF ADDING NOISE to the images, now we are going to normalize the images to -1 to 1 (float values).
 		# Convert labels to -1 and 1 too.
-		self.true_labels = self.true_labels.astype(float)
-		self.true_labels /= self.true_labels.max()
-		self.true_labels -= 0.5
-		self.true_labels *= 2
+		# self.true_labels = self.true_labels.astype(float)
+		# self.true_labels /= self.true_labels.max()
+		# self.true_labels -= 0.5
+		# self.true_labels *= 2
 
 		self.images = self.images.astype(float)
 		self.image_means = self.images.mean(axis=(0,1,2))
