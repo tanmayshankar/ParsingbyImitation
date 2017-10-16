@@ -698,15 +698,13 @@ class hierarchical():
 
 		if self.plot:
 			self.fig.suptitle("Processing Image: {0}".format(image_index)) 
-			self.sc1.set_data(self.alternate_predicted_labels)
-			self.attention_plots()
-			self.sc2.set_data(self.mask)
-
-			# npy.save("Mask_{0}.npy".format(image_index),self.mask)
-			# self.sc3.set_data(self.images[image_index])
-			self.sc3.set_data(self.original_images[image_index])
 			
-			self.sc4.set_data(self.alternate_painted_image)
+			self.attention_plots()
+			self.sc0.set_data(self.mask)			
+			self.sc1.set_data(self.original_images[image_index])
+			self.sc2.set_data(self.true_labels[image_index])	
+			# self.sc3.set_data(self.alternate_painted_image)
+			self.sc3.set_data(self.original_images[image_index])
 
 			# Plotting split line segments from the parse tree.
 			split_segs = []
@@ -729,13 +727,15 @@ class hierarchical():
 						split_segs.append([[self.parse_tree[j].y+sc,self.parse_tree[j].x],[self.parse_tree[j].y+sc,self.parse_tree[j].x+self.parse_tree[j].w]])
 
 				# print(split_segs)	
-			split_lines = LineCollection(split_segs, colors='k', linewidths=2)
+			split_lines0 = LineCollection(split_segs, colors='k', linewidths=2)
+			split_lines1 = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines2 = LineCollection(split_segs, colors='k',linewidths=2)
-			split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
-
-			self.split_lines = self.ax[1].add_collection(split_lines)				
+			# split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
+			
+			self.split_lines0 = self.ax[0].add_collection(split_lines0)				
+			self.split_lines1 = self.ax[1].add_collection(split_lines1)			
 			self.split_lines2 = self.ax[2].add_collection(split_lines2)
-			self.split_lines3 = self.ax[3].add_collection(split_lines3)
+			# self.split_lines3 = self.ax[3].add_collection(split_lines3)
 
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
@@ -757,58 +757,50 @@ class hierarchical():
 				linewidths.append(5)
 
 				lines = LineCollection(segs, colors=color_index,linewidths=linewidths)
-				self.lines = self.ax[0].add_collection(lines)
-				
+				self.lines = self.ax[3].add_collection(lines)
 			
 			self.fig.canvas.draw()
 			# raw_input("Press any key to continue.")
 			plt.pause(0.1)	
-			# plt.pause(0.5)	
 
-			if len(self.ax[0].collections):
-				del self.ax[0].collections[-1]
+			del self.ax[0].collections[-1]
+			del self.ax[1].collections[-1]			
+			del self.ax[2].collections[-1]
+
+			if len(self.ax[3].collections):
+				del self.ax[3].collections[-1]
 		
-			del self.ax[3].collections[-1]
-			del self.ax[2].collections[-1]			
-			del self.ax[1].collections[-1]
-
 	def define_plots(self):
 		image_index = 0
+		
 		if self.plot:
+
 			self.fig, self.ax = plt.subplots(1,4,sharey=True)
 			self.fig.show()
 			
-			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal',cmap='jet')
-			self.sc1.set_clim([-1,1])
-			# self.sc1.set_clim([0,2])
-			self.ax[0].set_title("Predicted Labels")
+			self.sc0 = self.ax[0].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc0.set_clim([-1,1])
+			self.ax[0].set_title("Parse Tree")
 			self.ax[0].set_adjustable('box-forced')
-			# self.ax[0].set_xlim(self.ax[0].get_xlim()[0]-0.5, self.ax[0].get_xlim()[1]+0.5) 
-			# self.ax[0].set_ylim(self.ax[0].get_ylim()[0]-0.5, self.ax[0].get_ylim()[1]+0.5) 
 
-			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
-			self.sc2.set_clim([-1,1])
-			self.ax[1].set_title("Parse Tree")
+			self.sc1 = self.ax[1].imshow(self.original_images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc1.set_clim([-1,1])
+			self.ax[1].set_title("Actual Image")
 			self.ax[1].set_adjustable('box-forced')
 
-			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			self.sc3 = self.ax[2].imshow(self.original_images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
-			self.sc3.set_clim([-1,1.2])
-			self.ax[2].set_title("Actual Image")
+			self.sc2 = self.ax[2].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc2.set_clim([-1,1])
+			self.ax[2].set_title("True Labels")
 			self.ax[2].set_adjustable('box-forced')
 
-			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet') #, extent=[0,self.image_size,0,self.image_size],origin='lower')
-			self.sc4.set_clim([-1,1])
+			self.sc3 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc3.set_clim([-1,1])
 			self.ax[3].set_title("Segmented Painted Image")
-			self.ax[3].set_adjustable('box-forced')			
+			self.ax[3].set_adjustable('box-forced')         
 
 			self.fig.canvas.draw()
-			plt.pause(0.1)	
-	
+			plt.pause(0.1)  
+
 	def meta_training(self,train=True):
 		
 		image_index = 0
