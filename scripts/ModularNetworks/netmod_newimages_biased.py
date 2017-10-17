@@ -877,7 +877,7 @@ class hierarchical():
 		# self.true_labels -= 0.5
 		# self.true_labels *= 2
 
-        self.true_labels[self.true_labels==1]=1.1
+		self.true_labels[self.true_labels==1]=1.1
 
 		self.images = self.images.astype(float)
 		self.image_means = self.images.mean(axis=(0,1,2))
