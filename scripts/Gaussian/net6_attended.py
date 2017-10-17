@@ -839,8 +839,8 @@ def main(args):
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
 	
-	if hierarchical_model.to_train:
-		hierarchical_model.suffix = args.suffix
+	# if hierarchical_model.to_train:
+	hierarchical_model.suffix = args.suffix
 
 	if args.model:
 		hierarchical_model.initialize_tensorflow_model(sess,args.model)
