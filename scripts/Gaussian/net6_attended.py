@@ -106,7 +106,10 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
-		self.split_cov = 0.1
+		if self.to_train:
+			self.split_cov = 0.1
+		else:
+			self.split_cov = 0.001
 		# self.split_cov = 0.01
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
