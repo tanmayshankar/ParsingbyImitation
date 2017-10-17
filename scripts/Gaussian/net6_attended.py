@@ -41,7 +41,8 @@ class hierarchical():
 
 		# Convolutional layers: 
 		# Layer 1
-		self.W_conv1 = tf.Variable(tf.truncated_normal([self.conv1_size,self.conv1_size, 3, self.conv1_num_filters],stddev=0.1),name='W_conv1')
+		# self.W_conv1 = tf.Variable(tf.truncated_normal([self.conv1_size,self.conv1_size, 3, self.conv1_num_filters],stddev=0.1),name='W_conv1')
+		self.W_conv1 = tf.Variable(tf.truncated_normal([self.conv1_size,self.conv1_size, 1, self.conv1_num_filters],stddev=0.1),name='W_conv1')
 		self.b_conv1 = tf.Variable(tf.constant(0.1,shape=[self.conv1_num_filters]),name='b_conv1')
 		self.conv1 = tf.add(tf.nn.conv2d(self.input,self.W_conv1,strides=[1,1,1,1],padding='VALID'),self.b_conv1,name='conv1')
 		self.relu_conv1 = tf.nn.relu(self.conv1)
