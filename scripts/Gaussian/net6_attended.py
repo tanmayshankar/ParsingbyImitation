@@ -432,7 +432,7 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
-		self.alpha = 1.1
+		self.alpha = 1.
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
