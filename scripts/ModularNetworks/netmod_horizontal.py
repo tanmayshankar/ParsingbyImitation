@@ -7,17 +7,18 @@ class hierarchical():
 	def __init__(self):
 
 		self.num_epochs = 5
-		self.save_every = 1000
-		self.num_images = 20000
-		self.num_images = 20000
+		self.save_every = 100
+		self.num_images = 276
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
 		self.minimum_width = -1
 		self.images = []
+		self.original_images = []
 		self.true_labels = []
 		self.image_size = -1
 		self.intermittent_lambda = 0.
+		self.suffix = []
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
 
@@ -28,14 +29,11 @@ class hierarchical():
 		self.num_layers = 5
 		self.num_fc_layers = 2
 		self.conv_sizes = 3*npy.ones((self.num_layers),dtype=int)		
-		self.conv_num_filters = npy.array([1,20,20,20,20,20],dtype=int)
-		if self.image_size==20:
-			self.conv_strides = npy.array([1,1,1,1,2])
-		else:
-			self.conv_strides = npy.array([1,1,1,2,2])
+		self.conv_num_filters = npy.array([3,20,20,20,20,20],dtype=int)
+		self.conv_strides = npy.array([1,2,2,2,2])
 
 		# Placeholders
-		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,1],name='input')
+		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,3],name='input')
 		
 		############ CONV LAYERS #######################################################################
 
@@ -49,7 +47,8 @@ class hierarchical():
 		# Defining variables. 
 		for i in range(self.num_layers):
 			self.W_conv[i] = tf.Variable(tf.truncated_normal([self.conv_sizes[i],self.conv_sizes[i], self.conv_num_filters[i], self.conv_num_filters[i+1]],stddev=0.1),name='W_conv{0}'.format(i+1))
-			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
+			self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[self.conv_num_filters[i+1]]),name='b_conv{0}'.format(i+1))
+			# self.b_conv[i] = tf.Variable(tf.constant(0.1,shape=[1,self.conv_num_filters[i]]),name='b_conv{0}'.format(i+1))
 
 		# Defining first conv layer.
 		self.conv[0] = tf.add(tf.nn.conv2d(self.input,self.W_conv[0],strides=[1,self.conv_strides[0],self.conv_strides[0],1],padding='VALID'),self.b_conv[0],name='conv1')
@@ -64,28 +63,32 @@ class hierarchical():
 
 		########## COMMON FC LAYERS ####################################################################
 
-		# self.fc_input_shape = 5*5*self.conv_num_filters[-1]
-		if self.image_size==20:
-			self.fc_input_shape = 5*5*self.conv_num_filters[-1]
-		else:
-			self.fc_input_shape = 10*10*self.conv_num_filters[-1]
+		# # self.fc_input_shape = 5*5*self.conv_num_filters[-1]
+		# if self.image_size==20:
+		# 	self.fc_input_shape = 5*5*self.conv_num_filters[-1]
+		# else:
+		# 	self.fc_input_shape = 10*10*self.conv_num_filters[-1]
+		self.fc_input_shape = 14*14*self.conv_num_filters[-1]
 
 		# Rule stream
 		self.rule_num_fclayers = 2
-		self.rule_num_hidden = 80
+		# self.rule_num_hidden = 80
+		self.rule_num_hidden = 400
 		self.rule_num_branches = 4
 		self.rule_fc_shapes = [[self.fc_input_shape,self.rule_num_hidden,6],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,4],[self.fc_input_shape,self.rule_num_hidden,2]]
 
 		# Split stream
 		self.split_num_fclayers = 2
-		self.split_num_hidden = 50
+		# self.split_num_hidden = 50
+		self.split_num_hidden = 400
 		self.split_num_branches = 2
 		self.split_fc_shapes = [[self.fc_input_shape,self.split_num_hidden,2],[self.fc_input_shape,self.split_num_hidden,2]]
 
 		# Primitive stream
 		self.primitive_num_fclayers = 2
-		self.primitive_num_hidden = 50
-		self.number_primitives = 4
+		# self.primitive_num_hidden = 50
+		self.primitive_num_hidden = 400
+		self.number_primitives = 2
 		self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden,self.number_primitives]
 
 		# Reshape FC input.
@@ -350,7 +353,7 @@ class hierarchical():
 		# Four branches of the rule policy.
 		self.set_rule_indicator()
 
-		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
+		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})
 		
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
@@ -377,12 +380,12 @@ class hierarchical():
 				self.state.split_indicator = 0
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})
 					counter+=1
 
 					split_copy = copy.deepcopy(split_location)
-					inter_split = split_location*(self.imagey-2)+1
-					# inter_split = split_location*(self.imagey-2*self.minimum_width)+self.minimum_width					
+					# inter_split = split_location*(self.imagey-2)+1
+					inter_split = split_location*(self.imagey-2*self.minimum_width)+self.minimum_width					
 				
 					if inter_split>(self.state.h/2):
 						split_location = int(npy.floor(inter_split))
@@ -402,12 +405,12 @@ class hierarchical():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
+					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})
 					counter+=1
 					
 					split_copy = copy.deepcopy(split_location)
-					inter_split = split_location*(self.imagex-2)+1
-					# inter_split = split_location*(self.imagex-2*self.minimum_width)+self.minimum_width
+					# inter_split = split_location*(self.imagex-2)+1
+					inter_split = split_location*(self.imagex-2*self.minimum_width)+self.minimum_width
 
 					if inter_split>(self.state.w/2):
 						split_location = int(npy.floor(inter_split))
@@ -472,7 +475,7 @@ class hierarchical():
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
 
-			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})				
+			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})				
 
 			if self.to_train:
 				selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
@@ -485,27 +488,28 @@ class hierarchical():
 			# For primitive 3, vertical brush stroke from bottom to top. (at left)
 			# print("Selected Primitive:",selected_primitive)
 			
+			# if (selected_primitive==0):
+			# 	self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x])
+			# 	self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
+
+			# 	lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
+			# 	upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
+
+			# 	self.painted_image[self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
+			# 	self.painted_images[image_index, self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
+
+			# if (selected_primitive==1):
+			# 	self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
+			# 	self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x])
+
+			# 	lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
+			# 	upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
+
+			# 	self.painted_image[self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
+			# 	self.painted_images[image_index, self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
+
+			# if (selected_primitive==2):
 			if (selected_primitive==0):
-				self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x])
-				self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
-
-				lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
-				upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
-
-				self.painted_image[self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
-				self.painted_images[image_index, self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
-
-			if (selected_primitive==1):
-				self.current_start = npy.array([self.state.y+self.state.h/2,self.state.x+self.state.w])
-				self.current_goal = npy.array([self.state.y+self.state.h/2,self.state.x])
-
-				lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
-				upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
-
-				self.painted_image[self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
-				self.painted_images[image_index, self.state.x:(self.state.x+self.state.w), lower:upper] = 1.
-
-			if (selected_primitive==2):
 				self.current_start = npy.array([self.state.y,self.state.x+self.state.w/2])
 				self.current_goal = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])				
 
@@ -515,7 +519,8 @@ class hierarchical():
 				self.painted_image[lower:upper, self.state.y:self.state.y+self.state.h] = 1.
 				self.painted_images[image_index,lower:upper, self.state.y:self.state.y+self.state.h] = 1.
 
-			if (selected_primitive==3):
+			# if (selected_primitive==3):
+			if (selected_primitive==1):
 				self.current_start = npy.array([self.state.y+self.state.h,self.state.x+self.state.w/2])
 				self.current_goal = npy.array([self.state.y,self.state.x+self.state.w/2])
 				
@@ -554,17 +559,16 @@ class hierarchical():
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
-		
-		self.alpha = 1.1
+			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)			
+		self.alpha = 1.0
 		
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.parse_tree[j].reward)		
+			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
-			# # Additional term for continuity. 
+		# Additional term for continuity. 
 		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward += self.parse_tree[j].intermittent_term*self.intermittent_lambda
+			self.parse_tree[j].reward -= self.parse_tree[j].intermittent_term*self.intermittent_lambda
 			# print("MODIFIED REWARD:",self.parse_tree[j].reward)
 
 # Definitely need to rewrite backprop.
@@ -579,7 +583,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# Must set indicator functions.
@@ -627,7 +631,7 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.sampled_split: self.parse_tree[j].split, \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split, \
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
@@ -650,7 +654,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
 
 			self.imagex = upperx-lowerx
 			self.imagey = uppery-lowery
@@ -696,13 +700,13 @@ class hierarchical():
 
 		if self.plot:
 			self.fig.suptitle("Processing Image: {0}".format(image_index)) 
-			self.sc1.set_data(self.alternate_predicted_labels)
+			
 			self.attention_plots()
-			self.sc2.set_data(self.mask)
-
-			# npy.save("Mask_{0}.npy".format(image_index),self.mask)
-			self.sc3.set_data(self.images[image_index])
-			self.sc4.set_data(self.alternate_painted_image)
+			self.sc0.set_data(self.mask)			
+			self.sc1.set_data(self.original_images[image_index])
+			self.sc2.set_data(self.true_labels[image_index])	
+			# self.sc3.set_data(self.alternate_painted_image)
+			self.sc3.set_data(self.original_images[image_index])
 
 			# Plotting split line segments from the parse tree.
 			split_segs = []
@@ -725,13 +729,15 @@ class hierarchical():
 						split_segs.append([[self.parse_tree[j].y+sc,self.parse_tree[j].x],[self.parse_tree[j].y+sc,self.parse_tree[j].x+self.parse_tree[j].w]])
 
 				# print(split_segs)	
-			split_lines = LineCollection(split_segs, colors='k', linewidths=2)
+			split_lines0 = LineCollection(split_segs, colors='k', linewidths=2)
+			split_lines1 = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines2 = LineCollection(split_segs, colors='k',linewidths=2)
-			split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
-
-			self.split_lines = self.ax[1].add_collection(split_lines)				
+			# split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
+			
+			self.split_lines0 = self.ax[0].add_collection(split_lines0)				
+			self.split_lines1 = self.ax[1].add_collection(split_lines1)			
 			self.split_lines2 = self.ax[2].add_collection(split_lines2)
-			self.split_lines3 = self.ax[3].add_collection(split_lines3)
+			# self.split_lines3 = self.ax[3].add_collection(split_lines3)
 
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
@@ -753,64 +759,57 @@ class hierarchical():
 				linewidths.append(5)
 
 				lines = LineCollection(segs, colors=color_index,linewidths=linewidths)
-				self.lines = self.ax[0].add_collection(lines)
-				
+				self.lines = self.ax[3].add_collection(lines)
 			
 			self.fig.canvas.draw()
 			# raw_input("Press any key to continue.")
 			plt.pause(0.1)	
-			# plt.pause(0.5)	
 
-			if len(self.ax[0].collections):
-				del self.ax[0].collections[-1]
+			del self.ax[0].collections[-1]
+			del self.ax[1].collections[-1]			
+			del self.ax[2].collections[-1]
+
+			if len(self.ax[3].collections):
+				del self.ax[3].collections[-1]
 		
-			del self.ax[3].collections[-1]
-			del self.ax[2].collections[-1]			
-			del self.ax[1].collections[-1]
-
 	def define_plots(self):
 		image_index = 0
+		
 		if self.plot:
+
 			self.fig, self.ax = plt.subplots(1,4,sharey=True)
 			self.fig.show()
 			
-			self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc1 = self.ax[0].imshow(self.predicted_labels[image_index],aspect='equal',cmap='jet')
-			self.sc1.set_clim([-1,1])
-			# self.sc1.set_clim([0,2])
-			self.ax[0].set_title("Predicted Labels")
+			self.sc0 = self.ax[0].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc0.set_clim([-1,1])
+			self.ax[0].set_title("Parse Tree")
 			self.ax[0].set_adjustable('box-forced')
-			# self.ax[0].set_xlim(self.ax[0].get_xlim()[0]-0.5, self.ax[0].get_xlim()[1]+0.5) 
-			# self.ax[0].set_ylim(self.ax[0].get_ylim()[0]-0.5, self.ax[0].get_ylim()[1]+0.5) 
 
-			self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc2 = self.ax[1].imshow(self.true_labels[image_index],aspect='equal',cmap='jet')
-			self.sc2.set_clim([-1,1])
-			self.ax[1].set_title("Parse Tree")
+			self.sc1 = self.ax[1].imshow(self.original_images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc1.set_clim([-1,1])
+			self.ax[1].set_title("Actual Image")
 			self.ax[1].set_adjustable('box-forced')
 
-			self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
-			self.sc3.set_clim([-1,1.2])
-			self.ax[2].set_title("Actual Image")
+			self.sc2 = self.ax[2].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc2.set_clim([-1,1])
+			self.ax[2].set_title("True Labels")
 			self.ax[2].set_adjustable('box-forced')
 
-			self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-			# self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet') #, extent=[0,self.image_size,0,self.image_size],origin='lower')
-			self.sc4.set_clim([-1,1])
+			self.sc3 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc3.set_clim([-1,1])
 			self.ax[3].set_title("Segmented Painted Image")
-			self.ax[3].set_adjustable('box-forced')			
+			self.ax[3].set_adjustable('box-forced')         
 
 			self.fig.canvas.draw()
-			plt.pause(0.01)	
-	
+			plt.pause(0.1)  
+
 	def meta_training(self,train=True):
 		
 		image_index = 0
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-		self.minimum_width = self.paintwidth
+		# self.minimum_width = self.paintwidth
 		
 		if self.plot:
 			print(self.plot)
@@ -823,13 +822,20 @@ class hierarchical():
 
 		# For all epochs
 		for e in range(self.num_epochs):
-			for i in range(self.num_images):
+
+			image_list = npy.array(range(self.num_images))
+			# npy.random.shuffle(image_list)            
+
+			for jx in range(self.num_images):
+
+				# Image index to process.
+				i = image_list[jx]
 
 				self.initialize_tree()
 				self.construct_parse_tree(i)
 				self.propagate_rewards()				
 				print("#___________________________________________________________________________")
-				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
+				print("Epoch:",e,"Training Image:",jx,"TOTAL REWARD:",self.parse_tree[0].reward)
 
 				if train:
 					self.backprop(i)
@@ -837,7 +843,7 @@ class hierarchical():
 				self.goal_list = []
 				
 				if ((i%self.save_every)==0):
-					self.save_model(e,i/self.save_every)
+					self.save_model(e,jx/self.save_every)
 
 			if train:
 				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
@@ -845,7 +851,7 @@ class hierarchical():
 				self.save_model(e)
 			else: 
 				npy.save("validation_{0}.npy".format(self.suffix),self.predicted_labels)
-				npy.save("validation_painted_{0}.npy".format(self.suffix))
+				npy.save("validation_painted_{0}.npy".format(self.suffix),self.painted_images)
 				
 			self.predicted_labels = npy.zeros((self.num_images,self.image_size,self.image_size))
 			self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
@@ -857,20 +863,36 @@ class hierarchical():
 		if (rule_index==4):
 			return 1
 		if (rule_index==5):
-			return 2
+			return 2	
 
 	def preprocess_images_labels(self):
-		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
-		self.images[npy.where(self.images==2)]=-1
-		self.true_labels[npy.where(self.true_labels==2)]=-1
-		self.images += noise  
+
+	# 	noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
+	# 	self.images[npy.where(self.images==2)]=-1
+	# 	self.true_labels[npy.where(self.true_labels==2)]=-1
+	# 	self.images += noise  
+
+		# INSTEAD OF ADDING NOISE to the images, now we are going to normalize the images to -1 to 1 (float values).
+		# Convert labels to -1 and 1 too.
+		# self.true_labels = self.true_labels.astype(float)
+		# self.true_labels /= self.true_labels.max()
+		# self.true_labels -= 0.5
+		# self.true_labels *= 2
+
+		self.images = self.images.astype(float)
+		self.image_means = self.images.mean(axis=(0,1,2))
+		self.images -= self.image_means
+		self.images_maxes = self.images.max(axis=(0,1,2))
+		self.images /= self.images_maxes
 
 def parse_arguments():
 
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
 	parser.add_argument('--images',dest='images',type=str)
+	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--paintwidth',dest='paintwidth',type=int)
+	parser.add_argument('--minwidth',dest='minwidth',type=int)
 	parser.add_argument('--lambda',dest='inter_lambda',type=float)
 	parser.add_argument('--model',dest='model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
@@ -893,18 +915,21 @@ def main(args):
 	hierarchical_model = hierarchical()
 
 	hierarchical_model.images = npy.load(args.images)
-	hierarchical_model.true_labels = copy.deepcopy(hierarchical_model.images)   
+	hierarchical_model.original_images = npy.load(args.images)
+	hierarchical_model.true_labels = npy.load(args.labels)
 	hierarchical_model.image_size = args.size 
 	hierarchical_model.preprocess_images_labels()
 
 	hierarchical_model.paintwidth = args.paintwidth
+	hierarchical_model.minimum_width = args.minwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
+
 
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
 	
-	if hierarchical_model.to_train:
-		hierarchical_model.suffix = args.suffix
+	# if hierarchical_model.to_train:
+	hierarchical_model.suffix = args.suffix
 
 	if args.model:
 		hierarchical_model.initialize_tensorflow_model(sess,args.model)
