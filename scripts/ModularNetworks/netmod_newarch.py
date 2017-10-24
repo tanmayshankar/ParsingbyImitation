@@ -178,7 +178,13 @@ class hierarchical():
 
 			self.split_mean[j] = tf.nn.sigmoid(self.split_fc[j][1][0,0])
 			# If the variance is learnt.
-			self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])+self.minimum_covariance
+			# self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])+self.minimum_covariance
+
+			if self.to_train:
+				self.split_cov[j] = 0.1
+			else:
+				self.split_cov[j] = 0.001
+
 			# Defining distributions for each.
 			self.split_dist[j] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j],name='split_dist_branch{0}'.format(j))
 			# self.sample_split[j] = self.split_dist[j].sample()
