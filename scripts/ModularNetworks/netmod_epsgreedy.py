@@ -32,6 +32,13 @@ class hierarchical():
         self.conv_num_filters = npy.array([3,20,20,20,20,20],dtype=int)
         self.conv_strides = npy.array([1,2,2,2,2])
 
+        # Defining epislon and annealing rate for epislon.
+        self.initial_epislon = 0.5
+        self.final_epsilon = 0.1
+        self.decay_epochs = 3
+        self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
+        self.annealed_epislon = 0.
+
         # Placeholders
         self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,3],name='input')
         
@@ -357,13 +364,17 @@ class hierarchical():
         # Four branches of the rule policy.
         self.set_rule_indicator()
 
-        rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})
+        orig_rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})[0]
         
+        greedy_index = npy.argmax(orig_rule_probabilities)
+        rule_probabilities =  npy.ones(len(orig_rule_probabilities))*(self.annealed_epislon/len(orig_rule_probabilities))
+        rule_probabilities[greedy_index] = 1-self.annealed_epislon+self.annealed_epislon/len(orig_rule_probabilities)
+
         # Must handle the fact that branches now index rules differently, using remap_rule_indices.
         if self.to_train:
-            selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0])
+            selected_rule = npy.random.choice(range(len(rule_probabilities)),p=rule_probabilities)
         elif not(self.to_train):
-            selected_rule = npy.argmax(rule_probabilities[0])
+            selected_rule = npy.argmax(rule_probabilities)
 
         self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
         # print("PARSING:")
@@ -479,12 +490,17 @@ class hierarchical():
         # If it is a region to be painted and assigned a primitive:
         if (self.state.label==1):
 
-            primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})              
+            orig_primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})[0] 
+
+            greedy_prim_index = npy.argmax(orig_primitive_probabilities)
+            primitive_probabilities = npy.ones(self.number_primitives)*(self.annealed_epislon/self.number_primitives)
+            primitive_probabilities[greedy_prim_index] = 1 - self.annealed_epislon+self.annealed_epislon/self.number_primitives
+            # primitive_probabilities = npy.ones(range(self.number_primitives))
 
             if self.to_train:
-                selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
+                selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities)
             if not(self.to_train):
-                selected_primitive = npy.argmax(primitive_probabilities[0])
+                selected_primitive = npy.argmax(primitive_probabilities)
 
             # For primitive 0, horizontal brush stroke from left to right. (at bottom)
             # For primitive 1, horizontal brush stroke from right to left. (at bottom)
