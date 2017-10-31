@@ -121,8 +121,8 @@ class FCN16VGG:
 
 		self.W_fc1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fc1_num_hidden],stddev=0.1),name='W_fc1')
 		self.b_fc1 = tf.Variable(tf.constant(0.1,shape=[self.fc1_num_hidden]))
-		self.W_fc2 = tf.Variable(tf.truncated_normal([fc1_num_hidden,fc2_num_hidden],stddev=0.1),name='W_fc2')
-		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[fc2_num_hidden]))
+		self.W_fc2 = tf.Variable(tf.truncated_normal([self.fc1_num_hidden,self.fc2_num_hidden],stddev=0.1),name='W_fc2')
+		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[self.fc2_num_hidden]))
 
 		self.fc1 = tf.nn.relu(tf.matmul(self.fc_input,self.W_fc1)+self.b_fc1)
 		self.fc2 = tf.matmul(self.fc1,self.W_fc2)+self.b_fc2
