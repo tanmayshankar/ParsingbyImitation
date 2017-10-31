@@ -175,7 +175,10 @@ class hierarchical():
 			self.split_mean[j] = tf.nn.sigmoid(self.split_fc[j][1][0,0])
 			# If the variance is learnt.
 			# self.split_cov[j] = tf.nn.sigmoid(self.split_fc[j][1][0,1])+self.minimum_covariance
-			self.split_cov[j] = 0.1
+			if self.to_train:
+				self.split_cov[j] = 0.1
+			else:
+				self.split_cov[j] = 0.001
 			# Defining distributions for each.
 			self.split_dist[j] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j],name='split_dist_branch{0}'.format(j))
 			# self.sample_split[j] = self.split_dist[j].sample()
@@ -233,11 +236,11 @@ class hierarchical():
 
 		for j in range(self.split_num_branches):
 			# self.split_loss_branch = -tf.multply(self.return_weight,self.split_dist[j].log_prob(self.sampled_split),name='split_loss_branch{0}'.format(j))
-			self.split_loss_branch = -self.split_dist[j].log_prob(self.sampled_split)
+			self.split_loss_branch[j] = -self.split_dist[j].log_prob(self.sampled_split)
 
 		# Now defining a split loss that selects which branch to back-propagate into.
-		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
-
+		# self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_loss_branch[0],tf.equal(self.split_indicator,1): self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
 		######### For primitive stream ####
 
 		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives))

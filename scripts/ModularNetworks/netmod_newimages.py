@@ -232,10 +232,11 @@ class hierarchical():
 
 		for j in range(self.split_num_branches):
 			# self.split_loss_branch = -tf.multply(self.return_weight,self.split_dist[j].log_prob(self.sampled_split),name='split_loss_branch{0}'.format(j))
-			self.split_loss_branch = -self.split_dist[j].log_prob(self.sampled_split)
+			self.split_loss_branch[j] = -self.split_dist[j].log_prob(self.sampled_split)
 
 		# Now defining a split loss that selects which branch to back-propagate into.
-		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+		# self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_loss_branch[0],tf.equal(self.split_indicator,1): self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
 
 		######### For primitive stream ####
 
@@ -704,8 +705,9 @@ class hierarchical():
 			self.sc1.set_data(self.original_images[image_index])
 			self.sc2.set_data(self.true_labels[image_index])	
 			# self.sc3.set_data(self.alternate_painted_image)
-			self.sc3.set_data(self.original_images[image_index])
-
+			self.sc3.set_data(self.alternate_predicted_labels)
+			self.sc4.set_data(self.original_images[image_index])
+			
 			# Plotting split line segments from the parse tree.
 			split_segs = []
 			for j in range(len(self.parse_tree)):
@@ -730,12 +732,12 @@ class hierarchical():
 			split_lines0 = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines1 = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines2 = LineCollection(split_segs, colors='k',linewidths=2)
-			# split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
+			split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
 			
 			self.split_lines0 = self.ax[0].add_collection(split_lines0)				
 			self.split_lines1 = self.ax[1].add_collection(split_lines1)			
 			self.split_lines2 = self.ax[2].add_collection(split_lines2)
-			# self.split_lines3 = self.ax[3].add_collection(split_lines3)
+			self.split_lines3 = self.ax[3].add_collection(split_lines3)
 
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
@@ -757,7 +759,7 @@ class hierarchical():
 				linewidths.append(5)
 
 				lines = LineCollection(segs, colors=color_index,linewidths=linewidths)
-				self.lines = self.ax[3].add_collection(lines)
+				self.lines = self.ax[4].add_collection(lines)
 			
 			self.fig.canvas.draw()
 			# raw_input("Press any key to continue.")
@@ -766,16 +768,48 @@ class hierarchical():
 			del self.ax[0].collections[-1]
 			del self.ax[1].collections[-1]			
 			del self.ax[2].collections[-1]
+			del self.ax[3].collections[-1]
 
-			if len(self.ax[3].collections):
-				del self.ax[3].collections[-1]
+			if len(self.ax[4].collections):
+				del self.ax[4].collections[-1]
 		
+	# def define_plots(self):
+	# 	image_index = 0
+		
+	# 	if self.plot:
+
+	# 		self.fig, self.ax = plt.subplots(1,4,sharey=True)
+	# 		self.fig.show()
+			
+	# 		self.sc0 = self.ax[0].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		self.sc0.set_clim([-1,1])
+	# 		self.ax[0].set_title("Parse Tree")
+	# 		self.ax[0].set_adjustable('box-forced')
+
+	# 		self.sc1 = self.ax[1].imshow(self.original_images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		# self.sc1.set_clim([-1,1])
+	# 		self.ax[1].set_title("Actual Image")
+	# 		self.ax[1].set_adjustable('box-forced')
+
+	# 		self.sc2 = self.ax[2].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		self.sc2.set_clim([-1,1])
+	# 		self.ax[2].set_title("True Labels")
+	# 		self.ax[2].set_adjustable('box-forced')
+
+	# 		self.sc3 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		self.sc3.set_clim([-1,1])
+	# 		self.ax[3].set_title("Segmented Painted Image")
+	# 		self.ax[3].set_adjustable('box-forced')         
+
+	# 		self.fig.canvas.draw()
+	# 		plt.pause(0.1)  
+
 	def define_plots(self):
 		image_index = 0
 		
 		if self.plot:
 
-			self.fig, self.ax = plt.subplots(1,4,sharey=True)
+			self.fig, self.ax = plt.subplots(1,5,sharey=True)
 			self.fig.show()
 			
 			self.sc0 = self.ax[0].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -795,8 +829,13 @@ class hierarchical():
 
 			self.sc3 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			self.sc3.set_clim([-1,1])
-			self.ax[3].set_title("Segmented Painted Image")
+			self.ax[3].set_title("Predicted labels")
 			self.ax[3].set_adjustable('box-forced')         
+
+			self.sc4 = self.ax[4].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc4.set_clim([-1,1])
+			self.ax[4].set_title("Segmented Painted Image")
+			self.ax[4].set_adjustable('box-forced')         
 
 			self.fig.canvas.draw()
 			plt.pause(0.1)  
@@ -822,7 +861,7 @@ class hierarchical():
 		for e in range(self.num_epochs):
 
 			image_list = npy.array(range(self.num_images))
-			# npy.random.shuffle(image_list)            
+			npy.random.shuffle(image_list)            
 
 			for jx in range(self.num_images):
 
