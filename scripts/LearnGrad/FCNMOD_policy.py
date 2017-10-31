@@ -2,13 +2,6 @@
 from headers import *
 from state_class import *
 
-import utils
-import os
-import numpy as np
-import logging
-import tensorflow as tf
-import sys
-
 class hierarchical():
 
 	def __init__(self):
