@@ -6,7 +6,7 @@ class hierarchical():
 
 	def __init__(self):
 
-		self.num_epochs = 5
+		self.num_epochs = 10
 		self.save_every = 100
 		self.num_images = 276
 		self.current_parsing_index = 0
@@ -582,12 +582,7 @@ class hierarchical():
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
-			# self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-
-			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
-			self.attended_image = npy.zeros((self.image_size,self.image_size,3))
-			self.attended_image[lowerx:upperx,lowery:uppery,:] = copy.deepcopy(self.images[image_index,lowerx:upperx,lowery:uppery])
-			self.resized_image = copy.deepcopy(self.attended_image)
+			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# Must set indicator functions.
 			policy_indicator = -1
@@ -657,9 +652,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			# self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
-			self.attended_image = npy.zeros((self.image_size,self.image_size,3))
-			self.attended_image[lowerx:upperx,lowery:uppery,:] = copy.deepcopy(self.images[image_index,lowerx:upperx,lowery:uppery])
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
 
 			self.imagex = upperx-lowerx
 			self.imagey = uppery-lowery
@@ -668,8 +661,7 @@ class hierarchical():
 			self.lx = lowerx
 			self.ly = lowery
 
-			# self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-			self.resized_image = copy.deepcopy(self.attended_image)
+			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
@@ -708,13 +700,13 @@ class hierarchical():
 			self.fig.suptitle("Processing Image: {0}".format(image_index)) 
 			
 			self.attention_plots()
-			# self.sc0.set_data(self.mask)			
-			self.sc0.set_data(self.attended_image)
+			self.sc0.set_data(self.mask)			
 			self.sc1.set_data(self.original_images[image_index])
 			self.sc2.set_data(self.true_labels[image_index])	
 			# self.sc3.set_data(self.alternate_painted_image)
-			self.sc3.set_data(self.original_images[image_index])			
-
+			self.sc3.set_data(self.alternate_predicted_labels)
+			self.sc4.set_data(self.original_images[image_index])
+			
 			# Plotting split line segments from the parse tree.
 			split_segs = []
 			for j in range(len(self.parse_tree)):
@@ -739,12 +731,12 @@ class hierarchical():
 			split_lines0 = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines1 = LineCollection(split_segs, colors='k', linewidths=2)
 			split_lines2 = LineCollection(split_segs, colors='k',linewidths=2)
-			# split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
+			split_lines3 = LineCollection(split_segs, colors='k',linewidths=2)
 			
 			self.split_lines0 = self.ax[0].add_collection(split_lines0)				
 			self.split_lines1 = self.ax[1].add_collection(split_lines1)			
 			self.split_lines2 = self.ax[2].add_collection(split_lines2)
-			# self.split_lines3 = self.ax[3].add_collection(split_lines3)
+			self.split_lines3 = self.ax[3].add_collection(split_lines3)
 
 			if len(self.start_list)>0 and len(self.goal_list)>0:
 				segs = [[npy.array([0,0]),self.start_list[0]]]
@@ -766,7 +758,7 @@ class hierarchical():
 				linewidths.append(5)
 
 				lines = LineCollection(segs, colors=color_index,linewidths=linewidths)
-				self.lines = self.ax[3].add_collection(lines)
+				self.lines = self.ax[4].add_collection(lines)
 			
 			self.fig.canvas.draw()
 			# raw_input("Press any key to continue.")
@@ -775,16 +767,48 @@ class hierarchical():
 			del self.ax[0].collections[-1]
 			del self.ax[1].collections[-1]			
 			del self.ax[2].collections[-1]
+			del self.ax[3].collections[-1]
 
-			if len(self.ax[3].collections):
-				del self.ax[3].collections[-1]
+			if len(self.ax[4].collections):
+				del self.ax[4].collections[-1]
 		
+	# def define_plots(self):
+	# 	image_index = 0
+		
+	# 	if self.plot:
+
+	# 		self.fig, self.ax = plt.subplots(1,4,sharey=True)
+	# 		self.fig.show()
+			
+	# 		self.sc0 = self.ax[0].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		self.sc0.set_clim([-1,1])
+	# 		self.ax[0].set_title("Parse Tree")
+	# 		self.ax[0].set_adjustable('box-forced')
+
+	# 		self.sc1 = self.ax[1].imshow(self.original_images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		# self.sc1.set_clim([-1,1])
+	# 		self.ax[1].set_title("Actual Image")
+	# 		self.ax[1].set_adjustable('box-forced')
+
+	# 		self.sc2 = self.ax[2].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		self.sc2.set_clim([-1,1])
+	# 		self.ax[2].set_title("True Labels")
+	# 		self.ax[2].set_adjustable('box-forced')
+
+	# 		self.sc3 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+	# 		self.sc3.set_clim([-1,1])
+	# 		self.ax[3].set_title("Segmented Painted Image")
+	# 		self.ax[3].set_adjustable('box-forced')         
+
+	# 		self.fig.canvas.draw()
+	# 		plt.pause(0.1)  
+
 	def define_plots(self):
 		image_index = 0
 		
 		if self.plot:
 
-			self.fig, self.ax = plt.subplots(1,4,sharey=True)
+			self.fig, self.ax = plt.subplots(1,5,sharey=True)
 			self.fig.show()
 			
 			self.sc0 = self.ax[0].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -804,8 +828,13 @@ class hierarchical():
 
 			self.sc3 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			self.sc3.set_clim([-1,1])
-			self.ax[3].set_title("Segmented Painted Image")
+			self.ax[3].set_title("Predicted labels")
 			self.ax[3].set_adjustable('box-forced')         
+
+			self.sc4 = self.ax[4].imshow(self.true_labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc4.set_clim([-1,1])
+			self.ax[4].set_title("Segmented Painted Image")
+			self.ax[4].set_adjustable('box-forced')         
 
 			self.fig.canvas.draw()
 			plt.pause(0.1)  
@@ -831,7 +860,7 @@ class hierarchical():
 		for e in range(self.num_epochs):
 
 			image_list = npy.array(range(self.num_images))
-			# npy.random.shuffle(image_list)            
+			npy.random.shuffle(image_list)            
 
 			for jx in range(self.num_images):
 
@@ -885,6 +914,7 @@ class hierarchical():
 		# self.true_labels /= self.true_labels.max()
 		# self.true_labels -= 0.5
 		# self.true_labels *= 2
+		self.true_labels[self.true_labels==1]=1.1
 
 		self.images = self.images.astype(float)
 		self.image_means = self.images.mean(axis=(0,1,2))
