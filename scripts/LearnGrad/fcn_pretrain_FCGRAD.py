@@ -113,28 +113,22 @@ class FCN16VGG:
 										   num_classes=num_classes,
 										   relu=False)
 
-		self.pred = tf.argmax(self.score_fr, dimension=3)
+		self.fc_input_shape = 8*8*4096		
+		self.fc_input = tf.reshape(self.fc7,[-1,self.fc_input_shape])
+		
+		self.fc1_num_hidden = 1000
+		self.fc2_num_hidden = 256*2
 
-		self.upscore2 = self._upscore_layer(self.score_fr,
-											shape=tf.shape(self.pool4),
-											num_classes=num_classes,
-											debug=debug, name='upscore2',
-											ksize=4, stride=2)
+		self.W_fc1 = tf.Variable(tf.truncated_normal([self.fc_input_shape,self.fc1_num_hidden],stddev=0.1),name='W_fc1')
+		self.b_fc1 = tf.Variable(tf.constant(0.1,shape=[self.fc1_num_hidden]))
+		self.W_fc2 = tf.Variable(tf.truncated_normal([fc1_num_hidden,fc2_num_hidden],stddev=0.1),name='W_fc2')
+		self.b_fc2 = tf.Variable(tf.constant(0.1,shape=[fc2_num_hidden]))
 
-		self.score_pool4 = self._score_layer(self.pool4, "score_pool4",
-											 num_classes=num_classes)
+		self.fc1 = tf.nn.relu(tf.matmul(self.fc_input,self.W_fc1)+self.b_fc1)
+		self.fc2 = tf.matmul(self.fc1,self.W_fc2)+self.b_fc2
 
-		self.fuse_pool4 = tf.add(self.upscore2, self.score_pool4)
-
-		self.upscore32 = self._upscore_layer(self.fuse_pool4,
-											 shape=tf.shape(self.bgr),
-											 num_classes=num_classes,
-											 debug=debug, name='upscore32',
-											 ksize=32, stride=16)
-		self.pred_up = tf.argmax(self.upscore32, dimension=3)
-
-		self.horizontal_grad_presf = tf.reduce_sum(self.upscore32[:,:,:,0],axis=1)
-		self.vertical_grad_presf = tf.reduce_sum(self.upscore32[:,:,:,1],axis=2)
+		self.horizontal_grad_presf = self.fc2[0][:image_size]
+		self.vertical_grad_presf = self.fc2[0][image_size:]
 
 		self.horizontal_grad = tf.nn.softmax(self.horizontal_grad_presf)
 		self.vertical_grad = tf.nn.softmax(self.vertical_grad_presf)
