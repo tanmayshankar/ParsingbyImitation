@@ -70,7 +70,7 @@ class hierarchical():
 
 		red, green, blue = tf.split(self.expanded_input, 3, 3)
 		self.bgr = tf.concat([blue - VGG_MEAN[0],green - VGG_MEAN[1],red - VGG_MEAN[2]], axis=3)
- 		self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
+		self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
 		self.conv1_2 = self._conv_layer(self.conv1_1, "conv1_2")
 		self.pool1 = self._max_pool(self.conv1_2, 'pool1', debug)
 
@@ -185,8 +185,9 @@ class hierarchical():
 		for j in range(self.rule_num_branches):
 			# self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
 			self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.policy_branch_fcinput,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
-			self.rule_fc[j][1] = tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j))
-			self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][1],name='rule_probabilities_branch{0}'.format(j))
+			self.rule_fc[j][1] = tf.nn.relu(tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j)))
+			self.rule_fc[j][2] = tf.add(tf.matmul(self.rule_fc[j][1],self.W_rule_fc[j][2]),self.b_rule_fc[j][2],name='rule_fc_branch{0}_layer2'.format(j))
+			self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][2],name='rule_probabilities_branch{0}'.format(j))
 			
 			# Now not using the categorical distributions, directly taking the rule_probabilities so we can sample greedily at test time, or do stuff like epsilon greedy.
 			# self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j],name='rule_dist_branch{0}'.format(j))
@@ -211,7 +212,8 @@ class hierarchical():
 
 		# Similarly to rules, we can use one sample_split, because we use tf.case.
 		self.split_indicator = tf.placeholder(tf.int32,name='split_indicator')
-		self.sampled_split = tf.placeholder(tf.float32,name='sampled_split')
+		# self.sampled_split = tf.placeholder(tf.float32,name='sampled_split')
+		self.sampled_split = tf.placeholder(tf.int32,name='sampled_split')
 
 		# Defining distributions for each.
 
@@ -263,7 +265,8 @@ class hierarchical():
 		for j in range(self.rule_num_branches):
 			self.target_rule[j] = tf.placeholder(tf.float32,shape=(self.rule_fc_shapes[j][-1]))
 
-			print(self.target_rule[j].shape,self.rule_fc[j][-1].shape)
+			# print(self.target_rule[j].shape,self.rule_fc_shapes[j][-1].shape)
+			# print(self.target_rule[j],self.rule_fc[j][-1])
 			# self.rule_loss_branch[j] = tf.multiply(self.return_weight,tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1]),name='rule_loss_branch{0}'.format(j))			
 			self.rule_loss_branch[j] = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1],name='rule_loss_branch{0}'.format(j))
 
@@ -279,12 +282,12 @@ class hierarchical():
 			self.split_loss_branch = -self.split_dist[j].log_prob(self.sampled_split)
 
 		# Now defining a split loss that selects which branch to back-propagate into.
-		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1,dtype=tf.int32),exclusive=True,name='sample_split')
 
 		######### For primitive stream ####
 
 		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives))
-		self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_fc[1],name='primitive_loss')
+		self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_fc[-1],name='primitive_loss')
 
 		######### COMBINED LOSS ###########
 
@@ -936,7 +939,7 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split, \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split.astype(int), \
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
