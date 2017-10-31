@@ -24,9 +24,9 @@ class hierarchical():
 #####################################################################################################
 	
 	# REMEMBER, FIRST BUILDING THE NETWORK FOR RESIZED 256x256 image input.
-	def build(self, train=False, num_classes=20, random_init_fc8=False,
-			  debug=False):
-
+	def build(self, sess, model_file=None)
+		self.sess = sess
+		
 		# if vgg16_npy_path is None:
 		path = sys.modules[self.__class__.__module__].__file__
 		path = os.path.abspath(os.path.join(path, os.pardir))
@@ -60,7 +60,8 @@ class hierarchical():
 		debug: bool
 			Whether to print additional Debug Information.
 		"""
-
+		train = True
+		num_classes = 2
 		# self.input_image = tf.placeholder(tf.float32,shape=(256,256,3))
 		self.input = tf.placeholder(tf.float32,shape=(256,256,3))
 		self.expanded_input = tf.expand_dims(self.input,0)
