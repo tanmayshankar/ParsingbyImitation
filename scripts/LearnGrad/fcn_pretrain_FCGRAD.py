@@ -127,6 +127,7 @@ class FCN16VGG:
 		self.fc1 = tf.nn.relu(tf.matmul(self.fc_input,self.W_fc1)+self.b_fc1)
 		self.fc2 = tf.matmul(self.fc1,self.W_fc2)+self.b_fc2
 
+		image_size = 256
 		self.horizontal_grad_presf = self.fc2[0][:image_size]
 		self.vertical_grad_presf = self.fc2[0][image_size:]
 
