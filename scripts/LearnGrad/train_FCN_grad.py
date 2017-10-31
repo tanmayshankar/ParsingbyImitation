@@ -10,7 +10,8 @@ import tensorflow as tf
 import sys
 
 # import fcn16_vgg
-import modified_gradient_network
+# import modified_gradient_network
+import fcn_pretrain_FCGRAD
 import utils
 
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s',
@@ -46,7 +47,8 @@ with tf.Session(config=config) as sess:
 	# batch_images = tf.expand_dims(images, 0)
 
 	# vgg_fcn = fcn16_vgg.FCN16VGG()
-	vgg_fcn = modified_gradient_network.FCN16VGG()
+	# vgg_fcn = modified_gradient_network.FCN16VGG()
+	vgg_fcn = fcn_pretrain_FCGRAD.FCN16VGG()
 
 	# Building with 2 classes, so that we can sum horizontally and vertically for gradients across each class.
 	with tf.name_scope("content_vgg"):
