@@ -176,7 +176,8 @@ class hierarchical():
 
 		# Defining Rule FC variables.
 		for j in range(self.rule_num_branches):
-			for i in range(self.num_fc_layers):
+			# for i in range(self.num_fc_layers):
+			for i in range(self.rule_num_fclayers):
 				self.W_rule_fc[j][i] = tf.Variable(tf.truncated_normal([self.rule_fc_shapes[j][i],self.rule_fc_shapes[j][i+1]],stddev=0.1),name='W_rulefc_branch{0}_layer{1}'.format(j,i+1))
 				self.b_rule_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.rule_fc_shapes[j][i+1]]),name='b_rulefc_branch{0}_layer{1}'.format(j,i+1))
 			# self.sampled_rule[j] = tf.placeholder(tf.int32)
