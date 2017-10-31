@@ -2,6 +2,13 @@
 from headers import *
 from state_class import *
 
+import utils
+import os
+import numpy as np
+import logging
+import tensorflow as tf
+import sys
+
 class hierarchical():
 
 	def __init__(self):
@@ -32,7 +39,7 @@ class hierarchical():
 		path = os.path.abspath(os.path.join(path, os.pardir))
 		path = os.path.join(path, "vgg16.npy")
 		vgg16_npy_path = path
-		logging.info("Load npy file from '%s'.", vgg16_npy_path)
+		# logging.info("Load npy file from '%s'.", vgg16_npy_path)
 
 		# if not os.path.isfile(vgg16_npy_path):
 		# 	logging.error(("File '%s' not found. Download it from "
@@ -424,7 +431,7 @@ class hierarchical():
 				new_shape = [shape[0], shape[1], shape[2], num_classes]
 			output_shape = tf.stack(new_shape)
 
-			logging.debug("Layer: %s, Fan-in: %d" % (name, in_features))
+			# logging.debug("Layer: %s, Fan-in: %d" % (name, in_features))
 			f_shape = [ksize, ksize, num_classes, in_features]
 
 			# create
