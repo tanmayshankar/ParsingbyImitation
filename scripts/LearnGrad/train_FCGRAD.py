@@ -24,8 +24,7 @@ from tensorflow.python.framework import ops
 input_images = npy.load("IMAGES_TO_USE.npy")
 grads = npy.load("SOFTMAX_GRADS.npy")
 
-
-num_epochs = 20
+num_epochs = 50
 num_images = 276
 image_size = 256
 # Add 0's to the end of every gradient value. 
