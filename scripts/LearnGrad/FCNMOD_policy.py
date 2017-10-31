@@ -24,9 +24,9 @@ class hierarchical():
 #####################################################################################################
 	
 	# REMEMBER, FIRST BUILDING THE NETWORK FOR RESIZED 256x256 image input.
-	def build(self, sess, model_file=None)
+	def build(self, sess, model_file=None):
 		self.sess = sess
-		
+
 		# if vgg16_npy_path is None:
 		path = sys.modules[self.__class__.__module__].__file__
 		path = os.path.abspath(os.path.join(path, os.pardir))
@@ -1231,7 +1231,6 @@ def main(args):
 	hierarchical_model.minimum_width = args.minwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
 
-
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
 	
@@ -1239,9 +1238,11 @@ def main(args):
 	hierarchical_model.suffix = args.suffix
 
 	if args.model:
-		hierarchical_model.initialize_tensorflow_model(sess,args.model)
+		# hierarchical_model.initialize_tensorflow_model(sess,args.model)
+		hierarchical_model.build(sess,args.model)
 	else:
-		hierarchical_model.initialize_tensorflow_model(sess)
+		# hierarchical_model.initialize_tensorflow_model(sess)
+		hierarchical_model.build(sess)
 
 	hierarchical_model.meta_training(train=args.train)
 
