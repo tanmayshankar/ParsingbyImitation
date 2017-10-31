@@ -46,7 +46,7 @@ class hierarchical():
 		# 				   "ftp://mi.eng.cam.ac.uk/pub/mttt2/"
 		# 				   "models/vgg16.npy"), vgg16_npy_path)
 		# 	sys.exit(1)
-
+		debug = False
 		VGG_MEAN = [ 175.5183833 ,  176.6830765 ,  192.35719172]
 		self.data_dict = np.load(vgg16_npy_path, encoding='latin1').item()
 		self.wd = 5e-4
