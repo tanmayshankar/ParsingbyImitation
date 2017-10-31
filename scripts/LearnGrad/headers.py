@@ -1,4 +1,8 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import numpy as npy
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -19,9 +23,6 @@ from shapely.geometry import box
 from shapely.geometry import point
 from shapely.affinity import rotate
 
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
 
 import logging
 from math import ceil
