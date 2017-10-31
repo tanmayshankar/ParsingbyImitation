@@ -262,6 +262,8 @@ class hierarchical():
 		# Defining a log probability loss for each of the rule policy branches.
 		for j in range(self.rule_num_branches):
 			self.target_rule[j] = tf.placeholder(tf.float32,shape=(self.rule_fc_shapes[j][-1]))
+
+			print(self.target_rule[j].shape,self.rule_fc[j][-1].shape)
 			# self.rule_loss_branch[j] = tf.multiply(self.return_weight,tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1]),name='rule_loss_branch{0}'.format(j))			
 			self.rule_loss_branch[j] = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1],name='rule_loss_branch{0}'.format(j))
 
