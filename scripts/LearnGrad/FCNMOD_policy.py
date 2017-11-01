@@ -67,10 +67,12 @@ class hierarchical():
 		# with tf.device('/device:GPU:0'):
 		with tf.device('/gpu:0'):
 			# self.input_image = tf.placeholder(tf.float32,shape=(256,256,3))
-			self.input = tf.placeholder(tf.float32,shape=(256,256,3))
-			self.expanded_input = tf.expand_dims(self.input,0)
-
-			red, green, blue = tf.split(self.expanded_input, 3, 3)
+			self.input = tf.placeholder(tf.float32,shape=(1,256,256,3))
+			# self.expanded_input = tf.expand_dims(self.input,0)
+			# print("HEYYYYYY")
+			# print(self.expanded_input)
+			# red, green, blue = tf.split(self.expanded_input, 3, 3)
+			red, green, blue = tf.split(self.input, 3, 3)
 			self.bgr = tf.concat([blue - VGG_MEAN[0],green - VGG_MEAN[1],red - VGG_MEAN[2]], axis=3)
 			self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
 			self.conv1_2 = self._conv_layer(self.conv1_1, "conv1_2")
@@ -84,7 +86,7 @@ class hierarchical():
 			self.conv3_2 = self._conv_layer(self.conv3_1, "conv3_2")
 			self.conv3_3 = self._conv_layer(self.conv3_2, "conv3_3")
 			self.pool3 = self._max_pool(self.conv3_3, 'pool3', debug)
-
+		with tf.device('/gpu:1'):
 			self.conv4_1 = self._conv_layer(self.pool3, "conv4_1")
 			self.conv4_2 = self._conv_layer(self.conv4_1, "conv4_2")
 			self.conv4_3 = self._conv_layer(self.conv4_2, "conv4_3")
@@ -95,7 +97,7 @@ class hierarchical():
 
 			self.conv5_3 = self._conv_layer(self.conv5_2, "conv5_3")
 			self.pool5 = self._max_pool(self.conv5_3, 'pool5', debug)
-		with tf.device('/gpu:1'):
+		with tf.device('/gpu:2'):
 
 			self.fc6 = self._fc_layer(self.pool5, "fc6")
 
@@ -112,16 +114,22 @@ class hierarchical():
 			# When we switch to NOT resizing the original input, for an FCN,
 			# we can do global spatial pooling (averaging) to feed into the rule / primitive streams. 
 
-			self.fc_input_shape = 8*8*4096		
-			self.policy_branch_fcinput = tf.reshape(self.fc7,[-1,self.fc_input_shape])
+			# self.fc_input_shape = 8*8*4096	
+			# self.policy_branch_fcinput = tf.reshape(self.fc7,[-1,self.fc_input_shape])
 
+		with tf.device('/gpu:0'):
 			if random_init_fc8:
 				self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
 			else:
 				self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
 
+			self.fc_input_shape = 8*8*num_classes	
+			self.policy_branch_fcinput = tf.reshape(self.score_fr,[-1,self.fc_input_shape])
+
 			self.pred = tf.argmax(self.score_fr, dimension=3)
 			self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
+
+		with tf.device('/gpu:1'):
 			self.score_pool4 = self._score_layer(self.pool4, "score_pool4", num_classes=num_classes)
 			self.fuse_pool4 = tf.add(self.upscore2, self.score_pool4)
 			self.upscore32 = self._upscore_layer(self.fuse_pool4, shape=tf.shape(self.bgr), num_classes=num_classes, debug=debug, name='upscore32', ksize=32, stride=16)
@@ -137,7 +145,7 @@ class hierarchical():
 
 		########## COMMON FC LAYERS ####################################################################
 		# with tf.device('/device:GPU:1'):
-		with tf.device('/gpu:1'):
+		with tf.device('/gpu:2'):
 
 			# Rule stream
 			self.rule_num_fclayers = 3
@@ -704,7 +712,7 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.h):
 					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
 
-					categorical_prob_softmax = copy.deepcopy(probs)
+					categorical_prob_softmax = copy.deepcopy(probs[0])
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
@@ -713,7 +721,9 @@ class hierarchical():
 						split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
 					else:
 						split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
-			
+					
+					print(counter)			
+					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
@@ -725,7 +735,7 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.w):
 					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
 
-					categorical_prob_softmax = copy.deepcopy(probs)
+					categorical_prob_softmax = copy.deepcopy(probs[0])
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
@@ -735,12 +745,14 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
 					
+					print(counter)			
+					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				s2 = parse_tree_node(label=indices[1],x=self.state.x+split_location,y=self.state.y,w=self.state.w-split_location,h=self.state.h,backward_index=self.current_parsing_index)
 				
 			# Update current parse tree with split location and rule applied.
-			self.parse_tree[self.current_parsing_index].split = split_copy
+			# self.parse_tree[self.current_parsing_index].split = split_copy
 			self.parse_tree[self.current_parsing_index].boundaryscaled_split = split_location
 			# self.parse_tree[self.current_parsing_index].rule_applied = selected_rule
 			self.parse_tree[self.current_parsing_index].alter_rule_applied = selected_rule
@@ -944,7 +956,8 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split.astype(int), \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), #self.sampled_split: int(self.parse_tree[j].split), \
+				self.sampled_split: self.parse_tree[j].boundaryscaled_split, \
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
@@ -977,7 +990,7 @@ class hierarchical():
 			self.ly = lowery
 
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-
+			print("Still parsing.",len(self.parse_tree))
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
 				self.parse_nonterminal(image_index)
@@ -1247,8 +1260,10 @@ def main(args):
 	print(args)
 
 	# # Create a TensorFlow session with limits on GPU usage.
+	# gpu_ops = tf.GPUOptions(visible_device_list=args.gpu)
 	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list=args.gpu)
-	config = tf.ConfigProto(gpu_options=gpu_ops,allow_soft_placement = True)
+	config = tf.ConfigProto(gpu_options=gpu_ops, allow_soft_placement = True)
+	config.gpu_options.per_process_gpu_memory_fraction = 0.90
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
@@ -1280,5 +1295,6 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
 
 
