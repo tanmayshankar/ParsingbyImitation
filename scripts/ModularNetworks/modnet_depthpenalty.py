@@ -236,7 +236,7 @@ class hierarchical():
 
 		# Now defining a split loss that selects which branch to back-propagate into.
 		# self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
-		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_loss_branch[0],tf.equal(self.split_indicator,1): self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+		self.split_loss = tf.case({tf.equal(self.split_indicator,0): lambda: self.split_loss_branch[0],tf.equal(self.split_indicator,1): lambda: self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
 		######### For primitive stream ####
 
 		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives))

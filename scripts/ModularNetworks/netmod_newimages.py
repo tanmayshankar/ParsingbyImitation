@@ -236,7 +236,7 @@ class hierarchical():
 
 		# Now defining a split loss that selects which branch to back-propagate into.
 		# self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
-		self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_loss_branch[0],tf.equal(self.split_indicator,1): self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+		self.split_loss = tf.case({tf.equal(self.split_indicator,0): lambda: self.split_loss_branch[0],tf.equal(self.split_indicator,1): lambda: self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
 
 		######### For primitive stream ####
 
@@ -630,7 +630,7 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split, \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.sampled_split: self.parse_tree[j].split, \				
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
