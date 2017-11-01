@@ -123,9 +123,16 @@ class hierarchical():
 			# else:
 
 			# From 4096 to 128. 
-			self.feature_dimension = 64
-			self.finalconv_output = self._fc_layer(self.fc7,"finalconv_output",num_classes=self.feature_dimension, relu=True)
+			# self.feature_dimension = 64			
+			self.num_filters = 64
+			# self.finalconv_output = self._fc_layer(self.fc7,"finalconv_output",num_classes=self.feature_dimension, relu=True)
+			###########################################################################################
+			# Putting a fully-convolutional layer here. 
+			self.W_fullyconv = tf.Variable(tf.truncated_normal([1,1,4096,64],stddev=0.1),name='W_fullyconv')
+			self.b_fullyconv = tf.Variable(tf.constant(0.1,shape=[64]),name='b_fullyconv')
 
+			self.finalconv_output = tf.nn.relu(tf.nn.conv2d(self.fc7,self.W_fullyconv,strides=[1,1,1,1],padding='SAME')+self.b_fullyconv,name='finalconv_output')
+			###########################################################################################
 			self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
 
 			self.fc_input_shape = 8*8*self.feature_dimension
