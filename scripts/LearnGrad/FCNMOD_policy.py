@@ -118,13 +118,18 @@ class hierarchical():
 			# self.policy_branch_fcinput = tf.reshape(self.fc7,[-1,self.fc_input_shape])
 
 		with tf.device('/gpu:0'):
-			if random_init_fc8:
-				self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
-			else:
-				self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
+			# if random_init_fc8:
+			# 	self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
+			# else:
 
-			self.fc_input_shape = 8*8*num_classes	
-			self.policy_branch_fcinput = tf.reshape(self.score_fr,[-1,self.fc_input_shape])
+			# From 4096 to 128. 
+			self.feature_dimension = 64
+			self.finalconv_output = self._fc_layer(self.fc7,"finalconv_output",num_classes=self.feature_dimension, relu=True)
+
+			self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
+
+			self.fc_input_shape = 8*8*self.feature_dimension
+			self.policy_branch_fcinput = tf.reshape(self.finalconv_output,[-1,self.fc_input_shape])
 
 			self.pred = tf.argmax(self.score_fr, dimension=3)
 			self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
