@@ -135,7 +135,7 @@ class hierarchical():
 			###########################################################################################
 			self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
 
-			self.fc_input_shape = 8*8*self.feature_dimension
+			self.fc_input_shape = 8*8*self.num_filters
 			self.policy_branch_fcinput = tf.reshape(self.finalconv_output,[-1,self.fc_input_shape])
 
 			self.pred = tf.argmax(self.score_fr, dimension=3)
