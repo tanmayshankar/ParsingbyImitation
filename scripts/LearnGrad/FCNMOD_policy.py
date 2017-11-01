@@ -64,243 +64,247 @@ class hierarchical():
 		"""
 		train = True
 		num_classes = 2
-		# self.input_image = tf.placeholder(tf.float32,shape=(256,256,3))
-		self.input = tf.placeholder(tf.float32,shape=(256,256,3))
-		self.expanded_input = tf.expand_dims(self.input,0)
+		# with tf.device('/device:GPU:0'):
+		with tf.device('/gpu:0'):
+			# self.input_image = tf.placeholder(tf.float32,shape=(256,256,3))
+			self.input = tf.placeholder(tf.float32,shape=(256,256,3))
+			self.expanded_input = tf.expand_dims(self.input,0)
 
-		red, green, blue = tf.split(self.expanded_input, 3, 3)
-		self.bgr = tf.concat([blue - VGG_MEAN[0],green - VGG_MEAN[1],red - VGG_MEAN[2]], axis=3)
-		self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
-		self.conv1_2 = self._conv_layer(self.conv1_1, "conv1_2")
-		self.pool1 = self._max_pool(self.conv1_2, 'pool1', debug)
+			red, green, blue = tf.split(self.expanded_input, 3, 3)
+			self.bgr = tf.concat([blue - VGG_MEAN[0],green - VGG_MEAN[1],red - VGG_MEAN[2]], axis=3)
+			self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
+			self.conv1_2 = self._conv_layer(self.conv1_1, "conv1_2")
+			self.pool1 = self._max_pool(self.conv1_2, 'pool1', debug)
 
-		self.conv2_1 = self._conv_layer(self.pool1, "conv2_1")
-		self.conv2_2 = self._conv_layer(self.conv2_1, "conv2_2")
-		self.pool2 = self._max_pool(self.conv2_2, 'pool2', debug)
+			self.conv2_1 = self._conv_layer(self.pool1, "conv2_1")
+			self.conv2_2 = self._conv_layer(self.conv2_1, "conv2_2")
+			self.pool2 = self._max_pool(self.conv2_2, 'pool2', debug)
 
-		self.conv3_1 = self._conv_layer(self.pool2, "conv3_1")
-		self.conv3_2 = self._conv_layer(self.conv3_1, "conv3_2")
-		self.conv3_3 = self._conv_layer(self.conv3_2, "conv3_3")
-		self.pool3 = self._max_pool(self.conv3_3, 'pool3', debug)
+			self.conv3_1 = self._conv_layer(self.pool2, "conv3_1")
+			self.conv3_2 = self._conv_layer(self.conv3_1, "conv3_2")
+			self.conv3_3 = self._conv_layer(self.conv3_2, "conv3_3")
+			self.pool3 = self._max_pool(self.conv3_3, 'pool3', debug)
 
-		self.conv4_1 = self._conv_layer(self.pool3, "conv4_1")
-		self.conv4_2 = self._conv_layer(self.conv4_1, "conv4_2")
-		self.conv4_3 = self._conv_layer(self.conv4_2, "conv4_3")
-		self.pool4 = self._max_pool(self.conv4_3, 'pool4', debug)
+			self.conv4_1 = self._conv_layer(self.pool3, "conv4_1")
+			self.conv4_2 = self._conv_layer(self.conv4_1, "conv4_2")
+			self.conv4_3 = self._conv_layer(self.conv4_2, "conv4_3")
+			self.pool4 = self._max_pool(self.conv4_3, 'pool4', debug)
 
-		self.conv5_1 = self._conv_layer(self.pool4, "conv5_1")
-		self.conv5_2 = self._conv_layer(self.conv5_1, "conv5_2")
+			self.conv5_1 = self._conv_layer(self.pool4, "conv5_1")
+			self.conv5_2 = self._conv_layer(self.conv5_1, "conv5_2")
 
-		self.conv5_3 = self._conv_layer(self.conv5_2, "conv5_3")
-		self.pool5 = self._max_pool(self.conv5_3, 'pool5', debug)
+			self.conv5_3 = self._conv_layer(self.conv5_2, "conv5_3")
+			self.pool5 = self._max_pool(self.conv5_3, 'pool5', debug)
 
-		self.fc6 = self._fc_layer(self.pool5, "fc6")
+			self.fc6 = self._fc_layer(self.pool5, "fc6")
 
-		if train:
-			self.fc6 = tf.nn.dropout(self.fc6, 0.5)
+			if train:
+				self.fc6 = tf.nn.dropout(self.fc6, 0.5)
 
-		self.fc7 = self._fc_layer(self.fc6, "fc7")
-		if train:
-			self.fc7 = tf.nn.dropout(self.fc7, 0.5)
+			self.fc7 = self._fc_layer(self.fc6, "fc7")
+			if train:
+				self.fc7 = tf.nn.dropout(self.fc7, 0.5)
 
-		# For 256x256 images (for which we resize to), FC7 always takes shape 8x8x4096. 
-		# There is no need to do the global spatial pooling to obtain constant shape. 
-		# We can get away by just reshaping. 
-		# When we switch to NOT resizing the original input, for an FCN,
-		# we can do global spatial pooling (averaging) to feed into the rule / primitive streams. 
+			# For 256x256 images (for which we resize to), FC7 always takes shape 8x8x4096. 
+			# There is no need to do the global spatial pooling to obtain constant shape. 
+			# We can get away by just reshaping. 
+			# When we switch to NOT resizing the original input, for an FCN,
+			# we can do global spatial pooling (averaging) to feed into the rule / primitive streams. 
 
-		self.fc_input_shape = 8*8*4096		
-		self.policy_branch_fcinput = tf.reshape(self.fc7,[-1,self.fc_input_shape])
+			self.fc_input_shape = 8*8*4096		
+			self.policy_branch_fcinput = tf.reshape(self.fc7,[-1,self.fc_input_shape])
 
-		if random_init_fc8:
-			self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
-		else:
-			self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
+			if random_init_fc8:
+				self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
+			else:
+				self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
 
-		self.pred = tf.argmax(self.score_fr, dimension=3)
-		self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
-		self.score_pool4 = self._score_layer(self.pool4, "score_pool4", num_classes=num_classes)
-		self.fuse_pool4 = tf.add(self.upscore2, self.score_pool4)
-		self.upscore32 = self._upscore_layer(self.fuse_pool4, shape=tf.shape(self.bgr), num_classes=num_classes, debug=debug, name='upscore32', ksize=32, stride=16)
-		self.pred_up = tf.argmax(self.upscore32, dimension=3)
+			self.pred = tf.argmax(self.score_fr, dimension=3)
+			self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
+			self.score_pool4 = self._score_layer(self.pool4, "score_pool4", num_classes=num_classes)
+			self.fuse_pool4 = tf.add(self.upscore2, self.score_pool4)
+			self.upscore32 = self._upscore_layer(self.fuse_pool4, shape=tf.shape(self.bgr), num_classes=num_classes, debug=debug, name='upscore32', ksize=32, stride=16)
+			self.pred_up = tf.argmax(self.upscore32, dimension=3)
 
-		self.horizontal_grad_presf = tf.reduce_sum(self.upscore32[:,:,:,0],axis=1)
-		self.vertical_grad_presf = tf.reduce_sum(self.upscore32[:,:,:,1],axis=2)
+			self.horizontal_grad_presf = tf.reduce_sum(self.upscore32[:,:,:,0],axis=1)
+			self.vertical_grad_presf = tf.reduce_sum(self.upscore32[:,:,:,1],axis=2)
 
-		self.horizontal_grad = tf.nn.softmax(self.horizontal_grad_presf)
-		self.vertical_grad = tf.nn.softmax(self.vertical_grad_presf)
+			self.horizontal_grad = tf.nn.softmax(self.horizontal_grad_presf)
+			self.vertical_grad = tf.nn.softmax(self.vertical_grad_presf)
 
 		################################################################################################
 
 		########## COMMON FC LAYERS ####################################################################
+		# with tf.device('/device:GPU:1'):
+		with tf.device('/gpu:1'):
 
-		# Rule stream
-		self.rule_num_fclayers = 3
-		self.rule_num_hidden1 = 1000
-		self.rule_num_hidden2 = 400
-		self.rule_num_branches = 4
-		self.rule_fc_shapes = [[self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,6],
-							   [self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,4],
-							   [self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,4],
-							   [self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,2]]
-		
-		# Split stream
-		self.split_num_branches = 2
-
-		# Primitive stream
-		self.primitive_num_fclayers = 3
-		self.primitive_num_hidden1 = 1000
-		self.primitive_num_hidden2 = 400
-		self.number_primitives = 4
-		self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden1,self.primitive_num_hidden2,self.number_primitives]
-
-		# Reshape FC input.
-		self.target_rule_shapes = [6,4,4,2]	
-
-		################################################################################################
-
-		########## RULE FC LAYERS ######################################################################
-		
-		# Defining FC layer variables lists.
-		self.W_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
-		self.b_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
-
-		# Defining rule_fc layers.
-		self.rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
-		self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
-		# self.rule_dist = [[] for j in range(self.rule_num_branches)]
-
-		# Can maintain a single sample_rule and sampled_rule for all of the branches, because we will use tf.case for each.
-		self.rule_indicator = tf.placeholder(tf.int32,name='rule_indicator')
-		self.sampled_rule = tf.placeholder(tf.int32,name='sampled_rule')
-
-		# Defining Rule FC variables.
-		for j in range(self.rule_num_branches):
-			# for i in range(self.num_fc_layers):
-			for i in range(self.rule_num_fclayers):
-				self.W_rule_fc[j][i] = tf.Variable(tf.truncated_normal([self.rule_fc_shapes[j][i],self.rule_fc_shapes[j][i+1]],stddev=0.1),name='W_rulefc_branch{0}_layer{1}'.format(j,i+1))
-				self.b_rule_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.rule_fc_shapes[j][i+1]]),name='b_rulefc_branch{0}_layer{1}'.format(j,i+1))
-			# self.sampled_rule[j] = tf.placeholder(tf.int32)
-		# Defining Rule FC layers.
-		for j in range(self.rule_num_branches):
-			# self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
-			self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.policy_branch_fcinput,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
-			self.rule_fc[j][1] = tf.nn.relu(tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j)))
-			self.rule_fc[j][2] = tf.add(tf.matmul(self.rule_fc[j][1],self.W_rule_fc[j][2]),self.b_rule_fc[j][2],name='rule_fc_branch{0}_layer2'.format(j))
-			self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][2],name='rule_probabilities_branch{0}'.format(j))
+			# Rule stream
+			self.rule_num_fclayers = 3
+			self.rule_num_hidden1 = 1000
+			self.rule_num_hidden2 = 400
+			self.rule_num_branches = 4
+			self.rule_fc_shapes = [[self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,6],
+								   [self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,4],
+								   [self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,4],
+								   [self.fc_input_shape,self.rule_num_hidden1,self.rule_num_hidden2,2]]
 			
-			# Now not using the categorical distributions, directly taking the rule_probabilities so we can sample greedily at test time, or do stuff like epsilon greedy.
-			# self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j],name='rule_dist_branch{0}'.format(j))
-			# self.sample_rule[j] = self.rule_dist[j].sample()
+			# Split stream
+			self.split_num_branches = 2
+
+			# Primitive stream
+			self.primitive_num_fclayers = 3
+			self.primitive_num_hidden1 = 1000
+			self.primitive_num_hidden2 = 400
+			self.number_primitives = 4
+			self.primitive_fc_shapes = [self.fc_input_shape,self.primitive_num_hidden1,self.primitive_num_hidden2,self.number_primitives]
+
+			# Reshape FC input.
+			self.target_rule_shapes = [6,4,4,2]	
+
+			################################################################################################
+
+			########## RULE FC LAYERS ######################################################################
+			
+			# Defining FC layer variables lists.
+			self.W_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+			self.b_rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+
+			# Defining rule_fc layers.
+			self.rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+			self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
+			# self.rule_dist = [[] for j in range(self.rule_num_branches)]
+
+			# Can maintain a single sample_rule and sampled_rule for all of the branches, because we will use tf.case for each.
+			self.rule_indicator = tf.placeholder(tf.int32,name='rule_indicator')
+			self.sampled_rule = tf.placeholder(tf.int32,name='sampled_rule')
+
+			# Defining Rule FC variables.
+			for j in range(self.rule_num_branches):
+				# for i in range(self.num_fc_layers):
+				for i in range(self.rule_num_fclayers):
+					self.W_rule_fc[j][i] = tf.Variable(tf.truncated_normal([self.rule_fc_shapes[j][i],self.rule_fc_shapes[j][i+1]],stddev=0.1),name='W_rulefc_branch{0}_layer{1}'.format(j,i+1))
+					self.b_rule_fc[j][i] = tf.Variable(tf.constant(0.1,shape=[self.rule_fc_shapes[j][i+1]]),name='b_rulefc_branch{0}_layer{1}'.format(j,i+1))
+				# self.sampled_rule[j] = tf.placeholder(tf.int32)
+			# Defining Rule FC layers.
+			for j in range(self.rule_num_branches):
+				# self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.fc_input,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
+				self.rule_fc[j][0] = tf.nn.relu(tf.add(tf.matmul(self.policy_branch_fcinput,self.W_rule_fc[j][0]),self.b_rule_fc[j][0]),name='rule_fc_branch{0}_layer0'.format(j))
+				self.rule_fc[j][1] = tf.nn.relu(tf.add(tf.matmul(self.rule_fc[j][0],self.W_rule_fc[j][1]),self.b_rule_fc[j][1],name='rule_fc_branch{0}_layer1'.format(j)))
+				self.rule_fc[j][2] = tf.add(tf.matmul(self.rule_fc[j][1],self.W_rule_fc[j][2]),self.b_rule_fc[j][2],name='rule_fc_branch{0}_layer2'.format(j))
+				self.rule_probabilities[j] = tf.nn.softmax(self.rule_fc[j][2],name='rule_probabilities_branch{0}'.format(j))
+				
+				# Now not using the categorical distributions, directly taking the rule_probabilities so we can sample greedily at test time, or do stuff like epsilon greedy.
+				# self.rule_dist[j] = tf.contrib.distributions.Categorical(probs=self.rule_probabilities[j],name='rule_dist_branch{0}'.format(j))
+				# self.sample_rule[j] = self.rule_dist[j].sample()
+			
+			# This is the heart of the routing. We select which set of parameters we sample the rule from.
+			# Default needs to be a lambda function because we're providing arguments to it. 
+			# self.sample_rule = tf.case({tf.equal(self.rule_indicator,0): self.rule_dist[0].sample, tf.equal(self.rule_indicator,1): self.rule_dist[1].sample, 
+			# 							tf.equal(self.rule_indicator,2): self.rule_dist[2].sample, tf.equal(self.rule_indicator,3): self.rule_dist[3].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_rule')
+
+			# self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
+										# tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+
+			self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_probabilities[0], tf.equal(self.rule_indicator,1): lambda: self.rule_probabilities[1], 
+										tf.equal(self.rule_indicator,2): lambda: self.rule_probabilities[2], tf.equal(self.rule_indicator,3): lambda: self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+
+			################################################################################################
+
+			########### SPLIT FC LAYERS ####################################################################
 		
-		# This is the heart of the routing. We select which set of parameters we sample the rule from.
-		# Default needs to be a lambda function because we're providing arguments to it. 
-		# self.sample_rule = tf.case({tf.equal(self.rule_indicator,0): self.rule_dist[0].sample, tf.equal(self.rule_indicator,1): self.rule_dist[1].sample, 
-		# 							tf.equal(self.rule_indicator,2): self.rule_dist[2].sample, tf.equal(self.rule_indicator,3): self.rule_dist[3].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_rule')
+			self.split_dist = [[] for j in range(self.split_num_branches)]
 
-		# self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): self.rule_probabilities[0], tf.equal(self.rule_indicator,1): self.rule_probabilities[1], 
-									# tf.equal(self.rule_indicator,2): self.rule_probabilities[2], tf.equal(self.rule_indicator,3): self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+			# Similarly to rules, we can use one sample_split, because we use tf.case.
+			self.split_indicator = tf.placeholder(tf.int32,name='split_indicator')
+			# self.sampled_split = tf.placeholder(tf.float32,name='sampled_split')
+			self.sampled_split = tf.placeholder(tf.int32,name='sampled_split')
 
-		self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_probabilities[0], tf.equal(self.rule_indicator,1): lambda: self.rule_probabilities[1], 
-									tf.equal(self.rule_indicator,2): lambda: self.rule_probabilities[2], tf.equal(self.rule_indicator,3): lambda: self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+			# Defining distributions for each.
 
-		################################################################################################
+			# self.split_dist[0] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j],name='split_dist_branch{0}'.format(j))
+			self.split_dist[0] = tf.contrib.distributions.Categorical(probs=self.horizontal_grad)
+			self.split_dist[1] = tf.contrib.distributions.Categorical(probs=self.vertical_grad)
+				# self.sample_split[j] = self.split_dist[j].sample()
 
-		########### SPLIT FC LAYERS ####################################################################
+			# This is the heart of the routing. We select which set of parameters we sample the split location from. 
+			# Default needs to be a lambda function because we're providing arguments to it. 		
+			# self.sample_split = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_split')
 
-		self.split_dist = [[] for j in range(self.split_num_branches)]
+			################################################################################################
 
-		# Similarly to rules, we can use one sample_split, because we use tf.case.
-		self.split_indicator = tf.placeholder(tf.int32,name='split_indicator')
-		# self.sampled_split = tf.placeholder(tf.float32,name='sampled_split')
-		self.sampled_split = tf.placeholder(tf.int32,name='sampled_split')
+			########## PRIMITIVE FC LAYERS #################################################################
 
-		# Defining distributions for each.
+			# Defining FC layaer for primitive stream.
+			self.W_primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
+			self.b_primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
 
-		# self.split_dist[0] = tf.contrib.distributions.Normal(loc=self.split_mean[j],scale=self.split_cov[j],name='split_dist_branch{0}'.format(j))
-		self.split_dist[0] = tf.contrib.distributions.Categorical(probs=self.horizontal_grad)
-		self.split_dist[1] = tf.contrib.distributions.Categorical(probs=self.vertical_grad)
-			# self.sample_split[j] = self.split_dist[j].sample()
+			# Defining primitive fc layers.
+			self.primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
 
-		# This is the heart of the routing. We select which set of parameters we sample the split location from. 
-		# Default needs to be a lambda function because we're providing arguments to it. 		
-		# self.sample_split = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: -tf.ones(1),exclusive=True,name='sample_split')
+			# Defining variables:
+			for i in range(self.primitive_num_fclayers):
+				self.W_primitive_fc[i] = tf.Variable(tf.truncated_normal([self.primitive_fc_shapes[i],self.primitive_fc_shapes[i+1]],stddev=0.1),name='W_primitivefc_layer{0}'.format(i+1))
+				self.b_primitive_fc[i] = tf.Variable(tf.constant(0.1,shape=[self.primitive_fc_shapes[i+1]]),name='b_primitivefc_layer{0}'.format(i+1))
+			
+			# Defining primitive FC layers.
+			self.primitive_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.policy_branch_fcinput,self.W_primitive_fc[0]),self.b_primitive_fc[0]),name='primitve_fc_layer0')		
+			self.primitive_fc[1] = tf.add(tf.matmul(self.primitive_fc[0],self.W_primitive_fc[1]),self.b_primitive_fc[1],name='primitve_fc_layer1')
+			self.primitive_fc[2] = tf.add(tf.matmul(self.primitive_fc[1],self.W_primitive_fc[2]),self.b_primitive_fc[2],name='primitve_fc_layer2')
+			self.primitive_probabilities = tf.nn.softmax(self.primitive_fc[-1],name='primitive_probabilities')
+			
+			# Defining categorical distribution for primitives.
+			# self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities,name='primitive_distribution')
+			
+			################################################################################################
 
-		################################################################################################
+			########### NOW MOVING TO THE LOSS FUNCTIONS ###################################################
 
-		########## PRIMITIVE FC LAYERS #################################################################
+			self.return_weight = tf.placeholder(tf.float32,name='return_weight')
 
-		# Defining FC layaer for primitive stream.
-		self.W_primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
-		self.b_primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
+			######## For rule stream:##########
+			self.target_rule = [[] for j in range(self.rule_num_branches)] 
+			self.rule_loss_branch = [[] for j in range(self.rule_num_branches)]
 
-		# Defining primitive fc layers.
-		self.primitive_fc = [[] for i in range(self.primitive_num_fclayers)]
+			# Defining a log probability loss for each of the rule policy branches.
+			for j in range(self.rule_num_branches):
+				self.target_rule[j] = tf.placeholder(tf.float32,shape=(self.rule_fc_shapes[j][-1]))
 
-		# Defining variables:
-		for i in range(self.primitive_num_fclayers):
-			self.W_primitive_fc[i] = tf.Variable(tf.truncated_normal([self.primitive_fc_shapes[i],self.primitive_fc_shapes[i+1]],stddev=0.1),name='W_primitivefc_layer{0}'.format(i+1))
-			self.b_primitive_fc[i] = tf.Variable(tf.constant(0.1,shape=[self.primitive_fc_shapes[i+1]]),name='b_primitivefc_layer{0}'.format(i+1))
-		
-		# Defining primitive FC layers.
-		self.primitive_fc[0] = tf.nn.relu(tf.add(tf.matmul(self.policy_branch_fcinput,self.W_primitive_fc[0]),self.b_primitive_fc[0]),name='primitve_fc_layer0')		
-		self.primitive_fc[1] = tf.add(tf.matmul(self.primitive_fc[0],self.W_primitive_fc[1]),self.b_primitive_fc[1],name='primitve_fc_layer1')
-		self.primitive_fc[2] = tf.add(tf.matmul(self.primitive_fc[1],self.W_primitive_fc[2]),self.b_primitive_fc[2],name='primitve_fc_layer2')
-		self.primitive_probabilities = tf.nn.softmax(self.primitive_fc[-1],name='primitive_probabilities')
-		
-		# Defining categorical distribution for primitives.
-		# self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities,name='primitive_distribution')
-		
-		################################################################################################
+				# print(self.target_rule[j].shape,self.rule_fc_shapes[j][-1].shape)
+				# print(self.target_rule[j],self.rule_fc[j][-1])
+				# self.rule_loss_branch[j] = tf.multiply(self.return_weight,tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1]),name='rule_loss_branch{0}'.format(j))			
+				self.rule_loss_branch[j] = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1],name='rule_loss_branch{0}'.format(j))
 
-		########### NOW MOVING TO THE LOSS FUNCTIONS ###################################################
+			# Defining a loss that selects which branch to back-propagate into.
+			self.rule_loss = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_loss_branch[0], tf.equal(self.rule_indicator,1): lambda: self.rule_loss_branch[1], 
+										tf.equal(self.rule_indicator,2): lambda: self.rule_loss_branch[2], tf.equal(self.rule_indicator,3): lambda: self.rule_loss_branch[3]},default=lambda: tf.zeros(1),exclusive=True,name='rule_loss')
 
-		self.return_weight = tf.placeholder(tf.float32,name='return_weight')
+			######## For split stream:#########
+			self.split_loss_branch = [[] for j in range(self.split_num_branches)]
 
-		######## For rule stream:##########
-		self.target_rule = [[] for j in range(self.rule_num_branches)] 
-		self.rule_loss_branch = [[] for j in range(self.rule_num_branches)]
+			for j in range(self.split_num_branches):
+				# self.split_loss_branch = -tf.multply(self.return_weight,self.split_dist[j].log_prob(self.sampled_split),name='split_loss_branch{0}'.format(j))
+				self.split_loss_branch[j] = -self.split_dist[j].log_prob(self.sampled_split)
 
-		# Defining a log probability loss for each of the rule policy branches.
-		for j in range(self.rule_num_branches):
-			self.target_rule[j] = tf.placeholder(tf.float32,shape=(self.rule_fc_shapes[j][-1]))
+			# Now defining a split loss that selects which branch to back-propagate into.
+			# self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1,dtype=tf.int32),exclusive=True,name='sample_split')
+			self.split_loss = tf.case({tf.equal(self.split_indicator,0): lambda: self.split_loss_branch[0],tf.equal(self.split_indicator,1): lambda: self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
+			######### For primitive stream ####
 
-			# print(self.target_rule[j].shape,self.rule_fc_shapes[j][-1].shape)
-			# print(self.target_rule[j],self.rule_fc[j][-1])
-			# self.rule_loss_branch[j] = tf.multiply(self.return_weight,tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1]),name='rule_loss_branch{0}'.format(j))			
-			self.rule_loss_branch[j] = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule[j],logits=self.rule_fc[j][-1],name='rule_loss_branch{0}'.format(j))
+			self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives))
+			self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_fc[-1],name='primitive_loss')
 
-		# Defining a loss that selects which branch to back-propagate into.
-		self.rule_loss = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_loss_branch[0], tf.equal(self.rule_indicator,1): lambda: self.rule_loss_branch[1], 
-									tf.equal(self.rule_indicator,2): lambda: self.rule_loss_branch[2], tf.equal(self.rule_indicator,3): lambda: self.rule_loss_branch[3]},default=lambda: tf.zeros(1),exclusive=True,name='rule_loss')
+			######### COMBINED LOSS ###########
 
-		######## For split stream:#########
-		self.split_loss_branch = [[] for j in range(self.split_num_branches)]
+			self.policy_indicator = tf.placeholder(tf.int32)
+			# There is a fixed set of policy branches that can be applied together. 
+			# A split rule is applied with the split location --> Case 1
+			# An assignment rule is run on its own --> Case 2
+			# A primitive is run on its own --> Case 3
+			
+			self.selected_loss = tf.case({tf.equal(self.policy_indicator,0): lambda: self.rule_loss+self.split_loss, tf.equal(self.policy_indicator,1): lambda: self.rule_loss, tf.equal(self.policy_indicator,2): lambda: self.primitive_loss},default=lambda: tf.zeros(1), exclusive=True,name='selected_loss')
+			self.total_loss = tf.multiply(self.return_weight,self.selected_loss,name='total_loss')
 
-		for j in range(self.split_num_branches):
-			# self.split_loss_branch = -tf.multply(self.return_weight,self.split_dist[j].log_prob(self.sampled_split),name='split_loss_branch{0}'.format(j))
-			self.split_loss_branch[j] = -self.split_dist[j].log_prob(self.sampled_split)
-
-		# Now defining a split loss that selects which branch to back-propagate into.
-		# self.split_loss = tf.case({tf.equal(self.split_indicator,0): self.split_dist[0].sample,tf.equal(self.split_indicator,1): self.split_dist[1].sample},default=lambda: tf.zeros(1,dtype=tf.int32),exclusive=True,name='sample_split')
-		self.split_loss = tf.case({tf.equal(self.split_indicator,0): lambda: self.split_loss_branch[0],tf.equal(self.split_indicator,1): lambda: self.split_loss_branch[j]},default=lambda: tf.zeros(1),exclusive=True,name='sample_split')
-		######### For primitive stream ####
-
-		self.target_primitive = tf.placeholder(tf.float32,shape=(self.number_primitives))
-		self.primitive_loss = tf.nn.softmax_cross_entropy_with_logits(labels=self.target_primitive,logits=self.primitive_fc[-1],name='primitive_loss')
-
-		######### COMBINED LOSS ###########
-
-		self.policy_indicator = tf.placeholder(tf.int32)
-		# There is a fixed set of policy branches that can be applied together. 
-		# A split rule is applied with the split location --> Case 1
-		# An assignment rule is run on its own --> Case 2
-		# A primitive is run on its own --> Case 3
-		
-		self.selected_loss = tf.case({tf.equal(self.policy_indicator,0): lambda: self.rule_loss+self.split_loss, tf.equal(self.policy_indicator,1): lambda: self.rule_loss, tf.equal(self.policy_indicator,2): lambda: self.primitive_loss},default=lambda: tf.zeros(1), exclusive=True,name='selected_loss')
-		self.total_loss = tf.multiply(self.return_weight,self.selected_loss,name='total_loss')
-
-		#################################################################################################
+			#################################################################################################
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
@@ -1243,7 +1247,7 @@ def main(args):
 
 	# # Create a TensorFlow session with limits on GPU usage.
 	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list=args.gpu)
-	config = tf.ConfigProto(gpu_options=gpu_ops)
+	config = tf.ConfigProto(gpu_options=gpu_ops,allow_soft_placement = True)
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
