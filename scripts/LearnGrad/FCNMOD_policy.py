@@ -95,6 +95,7 @@ class hierarchical():
 
 			self.conv5_3 = self._conv_layer(self.conv5_2, "conv5_3")
 			self.pool5 = self._max_pool(self.conv5_3, 'pool5', debug)
+		with tf.device('/gpu:1'):
 
 			self.fc6 = self._fc_layer(self.pool5, "fc6")
 
