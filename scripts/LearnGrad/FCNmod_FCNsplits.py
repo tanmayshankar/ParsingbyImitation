@@ -71,6 +71,7 @@ class hierarchical():
 
 			# red, green, blue = tf.split(self.expanded_input, 3, 3)
 			red, green, blue = tf.split(self.input, 3, 3)
+
 			self.bgr = tf.concat([blue - VGG_MEAN[0],green - VGG_MEAN[1],red - VGG_MEAN[2]], axis=3)
 			self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
 			self.conv1_2 = self._conv_layer(self.conv1_1, "conv1_2")
@@ -710,17 +711,19 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.h):
 					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
 
+					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
+					categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
 	
-					if split_location>=((self.uy-self.ly)/2):
-						split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
-					else:
-						split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
+					# if split_location>=((self.uy-self.ly)/2):
+						# split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
+					# else:
+						# split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
 					
-					print(counter)			
+					# print(counter)			
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -733,15 +736,17 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.w):
 					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
 
+					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
+					categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
 		
-					if split_location>=((self.ux-self.lx)/2):
-						split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
-					else:
-						split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
+					# if split_location>=((self.ux-self.lx)/2):
+					# 	split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
+					# else:
+					# 	split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
 					
 					print(counter)			
 					counter+=1
@@ -907,7 +912,8 @@ class hierarchical():
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
 			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
-			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+			self.resized_image = copy.deepcopy(self.image_input)
+			# self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# Must set indicator functions.
 			policy_indicator = -1
@@ -987,7 +993,9 @@ class hierarchical():
 			self.lx = lowerx
 			self.ly = lowery
 
-			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+			# self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
+			self.resized_image = copy.deepcopy(self.image_input)
+
 			print("Still parsing.",len(self.parse_tree))
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
@@ -1265,7 +1273,7 @@ def main(args):
 	sess = tf.Session(config=config)
 
 	hierarchical_model = hierarchical()
-
+	# hierarchical_model.build(sess)
 	hierarchical_model.images = npy.load(args.images)
 	hierarchical_model.original_images = npy.load(args.images)
 	hierarchical_model.true_labels = npy.load(args.labels)
