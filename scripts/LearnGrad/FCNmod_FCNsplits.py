@@ -740,10 +740,11 @@ class hierarchical():
 					categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
+					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
+					split_location = npy.random.choice(range(len(categorical_prob_softmax)),p=categorical_prob_softmax)
 					print("HEEYYYY")
 					print(categorical_prob_softmax.shape)	
-					print(categorical_prob_softmax)	
+					# print(categorical_prob_softmax)	
 					# if split_location>=((self.uy-self.ly)/2):
 						# split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
 					# else:
@@ -768,10 +769,11 @@ class hierarchical():
 					categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
-					split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
+					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
+					split_location = npy.random.choice(range(len(categorical_prob_softmax)),p=categorical_prob_softmax)
 					print("HEEYYYY")
 					print(categorical_prob_softmax.shape)	
-					print(categorical_prob_softmax)	
+					# print(categorical_prob_softmax)	
 					# if split_location>=((self.ux-self.lx)/2):
 					# 	split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
 					# else:
