@@ -67,10 +67,10 @@ class hierarchical():
 		# with tf.device('/device:GPU:0'):
 		with tf.device('/gpu:0'):
 			# self.input = tf.placeholder(tf.float32,shape=(1,256,256,3))
-			self.input = tf.placeholder(tf.float32,shape=(1,None,None,3))
-
-			# red, green, blue = tf.split(self.expanded_input, 3, 3)
-			red, green, blue = tf.split(self.input, 3, 3)
+			self.input = tf.placeholder(tf.float32,shape=(None,None,3))
+			self.expanded_input = tf.expand_dims(self.input,0)
+			red, green, blue = tf.split(self.expanded_input, 3, 3)
+			# red, green, blue = tf.split(self.input, 3, 3)
 
 			self.bgr = tf.concat([blue - VGG_MEAN[0],green - VGG_MEAN[1],red - VGG_MEAN[2]], axis=3)
 			self.conv1_1 = self._conv_layer(self.bgr, "conv1_1")
@@ -681,8 +681,8 @@ class hierarchical():
 		# Four branches of the rule policy.
 		self.set_rule_indicator()
 
-		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})
-		
+		# rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})
+		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image, self.rule_indicator: self.state.rule_indicator})
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
 			selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0])
@@ -709,7 +709,8 @@ class hierarchical():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 
 				while (split_location<=0)or(split_location>=self.state.h):
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
+					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
+					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
 
 					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
@@ -734,7 +735,8 @@ class hierarchical():
 				self.state.split_indicator = 1
 
 				while (split_location<=0)or(split_location>=self.state.w):
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
+					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
+					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
 
 					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
@@ -805,7 +807,8 @@ class hierarchical():
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
 
-			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})              
+			# primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})              
+			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image})              
 
 			if self.to_train:
 				selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
@@ -960,8 +963,8 @@ class hierarchical():
 			# Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# for assigning the parent non-terminal to a region not to be painted).
 
-			self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), #self.sampled_split: int(self.parse_tree[j].split), \
-				self.sampled_split: self.parse_tree[j].boundaryscaled_split, \
+			# self.sess.run(self.train, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), #self.sampled_split: int(self.parse_tree[j].split), \
+			self.sess.run(self.train, feed_dict={self.input: self.resized_image, self.sampled_split: self.parse_tree[j].boundaryscaled_split, \
 				self.return_weight: return_weight, self.target_rule[0]: target_rule[0], self.target_rule[1]: target_rule[1], self.target_rule[2]: target_rule[2], self.target_rule[3]: target_rule[3], \
 					self.policy_indicator: policy_indicator, self.rule_indicator: rule_indicator, self.split_indicator: split_indicator , self.target_primitive: target_primitive})
 
@@ -1301,6 +1304,8 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
+
 
 
 
