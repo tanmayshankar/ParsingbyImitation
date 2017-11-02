@@ -117,32 +117,35 @@ class hierarchical():
 			# self.policy_branch_fcinput = tf.reshape(self.fc7,[-1,self.fc_input_shape])
 
 		with tf.device('/gpu:0'):
-			# if random_init_fc8:
-			# 	self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
-			# else:
-			# 	self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
+			# # if random_init_fc8:
+			# # 	self.score_fr = self._score_layer(self.fc7, "score_fr", num_classes)
+			# # else:
+			# # 	self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
 
-			# self.fc_input_shape = 8*8*num_classes	
-			# self.policy_branch_fcinput = tf.reshape(self.score_fr,[-1,self.fc_input_shape])
+			# # self.fc_input_shape = 8*8*num_classes	
+			# # self.policy_branch_fcinput = tf.reshape(self.score_fr,[-1,self.fc_input_shape])
 
-			# self.pred = tf.argmax(self.score_fr, dimension=3)
-			# self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
+			# # self.pred = tf.argmax(self.score_fr, dimension=3)
+			# # self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
 
-			# From 4096 to 128. 
-			# self.feature_dimension = 64			
-			self.num_filters = 64
-			# self.finalconv_output = self._fc_layer(self.fc7,"finalconv_output",num_classes=self.feature_dimension, relu=True)
-			###########################################################################################
-			# Putting a fully-convolutional layer here. 
-			self.W_fullyconv = tf.Variable(tf.truncated_normal([1,1,4096,64],stddev=0.1),name='W_fullyconv')
-			self.b_fullyconv = tf.Variable(tf.constant(0.1,shape=[64]),name='b_fullyconv')
+			# # From 4096 to 128. 
+			# # self.feature_dimension = 64			
+			# # self.num_filters = 64
+			# # self.finalconv_output = self._fc_layer(self.fc7,"finalconv_output",num_classes=self.feature_dimension, relu=True)
+			# ###########################################################################################
+			# # Putting a fully-convolutional layer here. 
+			# self.W_fullyconv = tf.Variable(tf.truncated_normal([1,1,4096,64],stddev=0.1),name='W_fullyconv')
+			# self.b_fullyconv = tf.Variable(tf.constant(0.1,shape=[64]),name='b_fullyconv')
 
-			self.finalconv_output = tf.nn.relu(tf.nn.conv2d(self.fc7,self.W_fullyconv,strides=[1,1,1,1],padding='SAME')+self.b_fullyconv,name='finalconv_output')
-			###########################################################################################
+			# self.finalconv_output = tf.nn.relu(tf.nn.conv2d(self.fc7,self.W_fullyconv,strides=[1,1,1,1],padding='SAME')+self.b_fullyconv,name='finalconv_output')
+			# ###########################################################################################
+
+
 			self.score_fr = self._fc_layer(self.fc7, "score_fr", num_classes=num_classes, relu=False)
 
-			self.fc_input_shape = 8*8*self.num_filters
-			self.policy_branch_fcinput = tf.reshape(self.finalconv_output,[-1,self.fc_input_shape])
+			self.fc_input_shape = 4096
+			# self.policy_branch_fcinput = tf.reshape(self.finalconv_output,[-1,self.fc_input_shape])
+			self.policy_branch_fcinput = tf.reduce_mean(self.fc7,axis=[1,2])
 
 			self.pred = tf.argmax(self.score_fr, dimension=3)
 			self.upscore2 = self._upscore_layer(self.score_fr, shape=tf.shape(self.pool4), num_classes=num_classes, debug=debug, name='upscore2', ksize=4, stride=2)
