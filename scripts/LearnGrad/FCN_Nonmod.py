@@ -705,12 +705,15 @@ class hierarchical():
 		# Hard coding ban of splits for regions smaller than minimum width.		
 		epislon = 1e-5
 		rule_probabilities += epislon
-
+		print(rule_probabilities)
 		if (self.state.h<=self.minimum_width):
 			rule_probabilities[0][[0,2]]=0.
 
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][[1,3]]=0.
+
+		# Sampling a rule:
+		rule_probabilities[0] /=rule_probabilities[0].sum()
 
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
