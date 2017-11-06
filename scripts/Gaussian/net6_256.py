@@ -722,7 +722,7 @@ class hierarchical():
 
 	def preprocess_images_labels(self):
 
-		noise = 0.2*npy.random.rand(self.num_images,self.image_size,self.image_size)
+		noise = 0.1*npy.random.rand(self.num_images,self.image_size,self.image_size)
 		# self.images[npy.where(self.images==2)]=-1
 		# self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise  
