@@ -8,7 +8,7 @@ class hierarchical():
 
 		self.num_epochs = 10
 		self.save_every = 100
-		self.num_images = 276
+		self.num_images = 500
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
