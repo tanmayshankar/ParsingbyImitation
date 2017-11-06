@@ -585,7 +585,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# Must set indicator functions.
@@ -656,7 +656,7 @@ class hierarchical():
 			lowery = max(0,self.state.y-boundary_width)
 			uppery = min(self.image_size,self.state.y+self.state.h+boundary_width)
 
-			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery, :]
+			self.image_input = self.images[image_index, lowerx:upperx, lowery:uppery]
 
 			self.imagex = upperx-lowerx
 			self.imagey = uppery-lowery
