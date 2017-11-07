@@ -721,6 +721,7 @@ class hierarchical():
 			rule_probabilities[0][[1,3]]=0.
 
 		greedy_index = npy.argmax(rule_probabilities)
+		print(len(rule_probabilities))
 		rule_probabilities =  npy.ones(len(rule_probabilities))*(self.annealed_epislon/len(rule_probabilities))
 		rule_probabilities[greedy_index] = 1-self.annealed_epislon+self.annealed_epislon/len(rule_probabilities)
 
