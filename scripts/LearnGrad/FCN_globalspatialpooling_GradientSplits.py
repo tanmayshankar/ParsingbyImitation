@@ -736,7 +736,7 @@ class hierarchical():
 					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
 					probs = copy.deepcopy(self.horizontal_grad)
 					epsilon = 0.0001
-					categorical_prob_softmax = copy.deepcopy(probs[0])
+					categorical_prob_softmax = copy.deepcopy(probs)
 					# categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
@@ -766,7 +766,7 @@ class hierarchical():
 					probs = copy.deepcopy(self.vertical_grad)
 
 					epsilon = 0.0001
-					categorical_prob_softmax = copy.deepcopy(probs[0])
+					categorical_prob_softmax = copy.deepcopy(probs)
 					# categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
