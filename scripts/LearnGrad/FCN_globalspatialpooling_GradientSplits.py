@@ -750,7 +750,7 @@ class hierarchical():
 					# else:
 						# split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
 					
-					# print(counter)			
+					print(counter)			
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -780,7 +780,7 @@ class hierarchical():
 					# else:
 					# 	split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
 					
-					# print(counter)			
+					print(counter)			
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
