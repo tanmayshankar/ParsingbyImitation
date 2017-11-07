@@ -333,6 +333,13 @@ class hierarchical():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
+		# Defining epislon and annealing rate for epislon.
+		self.initial_epislon = 1.
+		self.final_epsilon = 0.1
+		self.decay_epochs = 4
+		self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
+		self.annealed_epislon = 0.
+
 		# Defining the training optimizer. 
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
 		self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
@@ -1215,6 +1222,13 @@ class hierarchical():
 				self.propagate_rewards()                
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",jx,"TOTAL REWARD:",self.parse_tree[0].reward)
+
+				if e<self.decay_epochs:
+					epsilon_index = e*self.num_images+jx
+					self.annealed_epislon = self.initial_epislon-epsilon_index*self.annealing_rate
+				else: 
+					self.annealed_epislon = self.final_epsilon
+
 
 				if train:
 					self.backprop(i)
