@@ -1026,8 +1026,8 @@ class hierarchical():
 			self.lx = lowerx
 			self.ly = lowery
 
-			self.vertical_grad = self.gradients[i,0,self.lx:self.ux]
-			self.horizontal_grad = self.gradients[i,1,self.ly:self.uy]
+			self.vertical_grad = self.gradients[image_index,0,self.lx:self.ux]
+			self.horizontal_grad = self.gradients[image_index,1,self.ly:self.uy]
 
 			# self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 			self.resized_image = copy.deepcopy(self.image_input)
