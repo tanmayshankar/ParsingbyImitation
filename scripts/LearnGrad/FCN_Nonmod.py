@@ -725,19 +725,19 @@ class hierarchical():
 		rule_probabilities[greedy_index] = 1-self.annealed_epislon+self.annealed_epislon/len(rule_probabilities)
 
 		if (self.state.h<=self.minimum_width):
-			rule_probabilities[0][[0,2]]=0.
+			rule_probabilities[[0,2]]=0.
 
 		if (self.state.w<=self.minimum_width):
-			rule_probabilities[0][[1,3]]=0.
+			rule_probabilities[[1,3]]=0.
 
 		# Sampling a rule:
-		rule_probabilities[0] /=rule_probabilities[0].sum()
+		rule_probabilities /=rule_probabilities.sum()
 
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		if self.to_train:
-			selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0])
+			selected_rule = npy.random.choice(range(len(rule_probabilities)),p=rule_probabilities)
 		elif not(self.to_train):
-			selected_rule = npy.argmax(rule_probabilities[0])
+			selected_rule = npy.argmax(rule_probabilities)
 
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
 		# print("PARSING:")
