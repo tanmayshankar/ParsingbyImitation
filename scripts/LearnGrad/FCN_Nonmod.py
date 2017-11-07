@@ -720,10 +720,10 @@ class hierarchical():
 		if (self.state.w<=self.minimum_width):
 			rule_probabilities[0][[1,3]]=0.
 
-		greedy_index = npy.argmax(rule_probabilities)
-		print(len(rule_probabilities))
-		rule_probabilities =  npy.ones(len(rule_probabilities))*(self.annealed_epislon/len(rule_probabilities))
-		print(len(rule_probabilities))
+		greedy_index = npy.argmax(rule_probabilities[0])
+		# print(len(rule_probabilities))
+		rule_probabilities =  npy.ones(len(rule_probabilities[0]))*(self.annealed_epislon/len(rule_probabilities))
+		# print("AFter:",len(rule_probabilities))
 		rule_probabilities[greedy_index] = 1-self.annealed_epislon+self.annealed_epislon/len(rule_probabilities)
 
 		if (self.state.h<=self.minimum_width):
