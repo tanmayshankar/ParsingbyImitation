@@ -1254,6 +1254,9 @@ class hierarchical():
 		# self.true_labels *= 2
 
 		self.images = self.images.astype(float)
+		self.grads = npy.zeros((self.num_images,2,self.image_size))
+		self.grads[:,:,:-1] = copy.deepcopy(self.gradients)
+		self.gradients = copy.deepcopy(self.grads)
 		# self.image_means = self.images.mean(axis=(0,1,2))
 		# self.images -= self.image_means
 		# self.images_maxes = self.images.max(axis=(0,1,2))
