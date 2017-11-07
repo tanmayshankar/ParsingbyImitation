@@ -733,8 +733,8 @@ class hierarchical():
 
 				while (split_location<=0)or(split_location>=self.state.h):
 					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
-
+					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
+					probs = copy.deepcopy(self.horizontal_grad)
 					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
 					# categorical_prob_softmax += epsilon
@@ -762,7 +762,8 @@ class hierarchical():
 
 				while (split_location<=0)or(split_location>=self.state.w):
 					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
+					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
+					probs = copy.deepcopy(self.vertical_grad)
 
 					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
