@@ -1201,6 +1201,8 @@ class hierarchical():
 
 				# Image index to process.
 				i = image_list[jx]
+				self.vertical_grad = self.gradients[i,0]
+				self.horizontal_grad = self.gradients[i,1]
 
 				self.initialize_tree()
 				self.construct_parse_tree(i)
@@ -1289,6 +1291,7 @@ def parse_arguments():
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--train',dest='train',type=int,default=1)
+	parser.add_argument('--gradient',dest='gradients',type=str)
 
 	return parser.parse_args()
 
@@ -1309,6 +1312,7 @@ def main(args):
 	hierarchical_model.images = npy.load(args.images)
 	hierarchical_model.original_images = npy.load(args.images)
 	hierarchical_model.true_labels = npy.load(args.labels)
+	hierarchical_model.gradients = npy.load(args.gradients)
 	hierarchical_model.image_size = args.size 
 	hierarchical_model.preprocess_images_labels()
 
