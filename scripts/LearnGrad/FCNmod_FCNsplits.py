@@ -737,7 +737,7 @@ class hierarchical():
 
 					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
-					categorical_prob_softmax += epsilon
+					# categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
@@ -762,11 +762,11 @@ class hierarchical():
 
 				while (split_location<=0)or(split_location>=self.state.w):
 					# probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
+					probs = self.sess.run(self.vertical_grad, feed_dict={self.input: self.resized_image, self.split_indicator: self.state.split_indicator})	
 
 					epsilon = 0.0001
 					categorical_prob_softmax = copy.deepcopy(probs[0])
-					categorical_prob_softmax += epsilon
+					# categorical_prob_softmax += epsilon
 					categorical_prob_softmax[[0,-1]] = 0.
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)

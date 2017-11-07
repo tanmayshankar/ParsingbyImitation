@@ -699,13 +699,24 @@ class hierarchical():
 		self.set_rule_indicator()
 
 		rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3),  self.rule_indicator: self.state.rule_indicator})
-		
+	
 		split_location = -1
 		
 		# Hard coding ban of splits for regions smaller than minimum width.		
 		epislon = 1e-5
 		rule_probabilities += epislon
 		print(rule_probabilities)
+
+		if (self.state.h<=self.minimum_width):
+			rule_probabilities[0][[0,2]]=0.
+
+		if (self.state.w<=self.minimum_width):
+			rule_probabilities[0][[1,3]]=0.
+
+		greedy_index = npy.argmax(rule_probabilities)
+		rule_probabilities =  npy.ones(len(orig_rule_probabilities))*(self.annealed_epislon/len(orig_rule_probabilities))
+		rule_probabilities[greedy_index] = 1-self.annealed_epislon+self.annealed_epislon/len(orig_rule_probabilities)
+
 		if (self.state.h<=self.minimum_width):
 			rule_probabilities[0][[0,2]]=0.
 
@@ -755,7 +766,7 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
 					
-					# print(counter)			
+					print(counter)			
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -766,7 +777,7 @@ class hierarchical():
 				self.state.split_indicator = 1
 
 				while (split_location<=0)or(split_location>=self.state.w):
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
+					probs = self.sess.run(self.vertical_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
 
 					categorical_prob_softmax = copy.deepcopy(probs[0])
 					categorical_prob_softmax[[0,-1]] = 0.
@@ -780,7 +791,7 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
 					
-					# print(counter)			
+					print(counter)			
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)

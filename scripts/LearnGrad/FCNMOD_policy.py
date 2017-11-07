@@ -736,7 +736,7 @@ class hierarchical():
 					else:
 						split_location = int(npy.ceil(float(self.state.h*split_location)/self.image_size))
 					
-					# print(counter)			
+					# print(counter)			 
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -747,7 +747,7 @@ class hierarchical():
 				self.state.split_indicator = 1
 
 				while (split_location<=0)or(split_location>=self.state.w):
-					probs = self.sess.run(self.horizontal_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
+					probs = self.sess.run(self.vertical_grad, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3), self.split_indicator: self.state.split_indicator})	
 
 					categorical_prob_softmax = copy.deepcopy(probs[0])
 					categorical_prob_softmax[[0,-1]] = 0.
