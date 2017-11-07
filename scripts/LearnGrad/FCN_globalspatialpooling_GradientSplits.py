@@ -742,8 +742,8 @@ class hierarchical():
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
 					split_location = npy.random.choice(range(len(categorical_prob_softmax)),p=categorical_prob_softmax)
-					print("HEEYYYY")
-					print(categorical_prob_softmax.shape)	
+					# print("HEEYYYY")
+					# print(categorical_prob_softmax.shape)	
 					# print(categorical_prob_softmax)	
 					# if split_location>=((self.uy-self.ly)/2):
 						# split_location = int(npy.floor(float(self.state.h*split_location)/self.image_size))
@@ -772,15 +772,15 @@ class hierarchical():
 					categorical_prob_softmax = categorical_prob_softmax/categorical_prob_softmax.sum()
 					# split_location = npy.random.choice(range(self.image_size),p=categorical_prob_softmax)
 					split_location = npy.random.choice(range(len(categorical_prob_softmax)),p=categorical_prob_softmax)
-					print("HEEYYYY")
-					print(categorical_prob_softmax.shape)	
+					# print("HEEYYYY")
+					# print(categorical_prob_softmax.shape)	
 					# print(categorical_prob_softmax)	
 					# if split_location>=((self.ux-self.lx)/2):
 					# 	split_location = int(npy.floor(float(self.state.w*split_location)/self.image_size))
 					# else:
 					# 	split_location = int(npy.ceil(float(self.state.w*split_location)/self.image_size))
 					
-					print(counter)			
+					# print(counter)			
 					counter+=1
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -1029,7 +1029,7 @@ class hierarchical():
 			# self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 			self.resized_image = copy.deepcopy(self.image_input)
 
-			print("Still parsing.",len(self.parse_tree))
+			# print("Still parsing.",len(self.parse_tree))
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
 				self.parse_nonterminal(image_index)

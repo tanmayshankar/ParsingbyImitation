@@ -1006,7 +1006,7 @@ class hierarchical():
 			self.ly = lowery
 
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
-			print("Still parsing.",len(self.parse_tree))
+			# print("Still parsing.",len(self.parse_tree))
 			# If the current non-terminal is a shape.
 			if (self.state.label==0):
 				self.parse_nonterminal(image_index)
