@@ -102,8 +102,12 @@ class hierarchical():
 		self.fcs2_preslice = tf.matmul(self.fcs2_l1,self.W_split)+self.b_split
 		self.split_mean = tf.nn.sigmoid(self.fcs2_preslice[0,0])
 		# self.split_cov = tf.nn.softplus(self.fcs2_preslice[0,1])+0.05
-		self.split_cov = 0.1
-		# self.split_cov = 0.01
+		if self.to_train:
+			self.split_cov = 0.1
+		else:
+			self.split_cov = 0.001
+		# # self.split_cov = 0.1
+		# self.split_cov = 0.001
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# STARTING PRIMITIVE STREAM:		
@@ -430,7 +434,7 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
-		self.alpha = 1.0
+		self.alpha = 1.1
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
