@@ -23,6 +23,7 @@ class GradientNet():
 
 		# # Inception V3 for us has 2 outputs; adding 2 dense layers for this output.
 		x = self.base_model.output
+
 		x = keras.layers.GlobalAveragePooling2D()(x)
 		x = keras.layers.Dense(512,activation='relu')(x)		
 		# Modifying to predict 256 values instead of 2.
@@ -40,7 +41,7 @@ class GradientNet():
 		# self.model.compile(optimizer=adam,loss='kld')
 		# self.base_filepath = base_filepath
 		self.num_images = 276
-		self.num_epochs = 50
+		self.num_epochs = 500
 		# Just because so few images.
 		self.batch_size = 12
 
