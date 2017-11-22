@@ -24,7 +24,7 @@ class GradientNet():
 		# # Inception V3 for us has 2 outputs; adding 2 dense layers for this output.
 		x = self.base_model.output
 		x = keras.layers.GlobalAveragePooling2D()(x)
-		x = keras.layers.Dense(1024,activation='relu')(x)		
+		x = keras.layers.Dense(512,activation='relu')(x)		
 		# Modifying to predict 256 values instead of 2.
 		# self.class_predictions = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
 		self.pred_grads = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
