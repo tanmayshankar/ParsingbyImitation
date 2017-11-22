@@ -62,7 +62,7 @@ class GradientNet():
 		adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		self.model.compile(optimizer=adam,loss='categorical_crossentropy')
 
-	def define_crossentropy(self, true_gradients, predicted_gradients):
+	# def define_crossentropy(self, true_gradients, predicted_gradients):
 		
 
 
