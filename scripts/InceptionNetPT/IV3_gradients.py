@@ -88,7 +88,7 @@ class GradientNet():
 				# Train the model on this batch.
 				self.model.fit(self.batch_inputs,self.batch_targets)
 
-			self.save_weights(k)
+			self.save_weights(e)
 			self.forward(e)
 
 	# def evaluator(self):
