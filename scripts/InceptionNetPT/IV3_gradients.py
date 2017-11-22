@@ -31,7 +31,7 @@ class GradientNet():
 		# Compiling the model.
 		self.model = keras.models.Model(inputs=self.base_model.input, outputs=self.pred_grads)
 		
-		adam = keras.optimizers.Adam(lr=0.01, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+		adam = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		self.model.compile(optimizer=adam,loss='categorical_crossentropy')
 		# self.model.compile(optimizer=adam,loss='kld')
 		# self.base_filepath = base_filepath
