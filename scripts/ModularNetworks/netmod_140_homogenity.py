@@ -965,7 +965,7 @@ def main(args):
 	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.minimum_width = args.minwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
-	# hierarchical_model.homogenity_lambda = args.hlambda
+	hierarchical_model.homogenity_lambda = args.hlambda
 
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
