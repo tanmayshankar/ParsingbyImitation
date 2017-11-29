@@ -541,7 +541,7 @@ class hierarchical():
 
 			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
 
-		# self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 		self.state.reward += self.homogenity_lambda*abs(self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h].sum())
 
 		self.state.stroke_term = copy.deepcopy(self.strokelength_term)
@@ -562,6 +562,7 @@ class hierarchical():
 
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)			
+		
 		self.alpha = 1.0
 		
 		# Non-linearizing rewards.
