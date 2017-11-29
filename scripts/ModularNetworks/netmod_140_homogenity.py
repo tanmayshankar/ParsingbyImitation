@@ -18,7 +18,7 @@ class hierarchical():
 		self.true_labels = []
 		self.image_size = -1
 		self.intermittent_lambda = 0.
-		self.homogenity_lambda = 0.
+		self.homogenity_lambda = 1.
 		self.suffix = []
 
 	def initialize_tensorflow_model(self, sess, model_file=None):
@@ -541,7 +541,7 @@ class hierarchical():
 
 			self.parse_tree[self.current_parsing_index].primitive = selected_primitive
 
-		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
+		# self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 		self.state.reward += self.homogenity_lambda*abs(self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h].sum())
 
 		self.state.stroke_term = copy.deepcopy(self.strokelength_term)
@@ -964,7 +964,7 @@ def main(args):
 	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.minimum_width = args.minwidth
 	hierarchical_model.intermittent_lambda = args.inter_lambda
-	hierarchical_model.homogenity_lambda = args.hlambda
+	# hierarchical_model.homogenity_lambda = args.hlambda
 
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
