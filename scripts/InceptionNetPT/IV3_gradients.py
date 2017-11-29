@@ -19,7 +19,7 @@ class GradientNet():
 		self.image_size = (256,256,3)
 		# self.batch_size = 32
 		self.base_model = keras.applications.inception_v3.InceptionV3(include_top=False, weights='imagenet', input_tensor=None, input_shape=self.image_size)
-		self.image_mean = npy.array([ 175.5183833 ,  176.6830765 ,  192.35719172])
+		# self.image_mean = npy.array([ 175.5183833 ,  176.6830765 ,  192.35719172])
 
 		# # Inception V3 for us has 2 outputs; adding 2 dense layers for this output.
 		x = self.base_model.output
@@ -48,15 +48,16 @@ class GradientNet():
 		self.batch_size = 12
 
 	def preprocess(self):
+		for i in range(self.num_images):
+			self.images[i] = cv2.cvtColor(self.images[i],cv2.COLOR_RGB2BGR)
+		
 		self.images = self.images.astype(float)
-		self.images -= self.image_mean
+		self.images -= self.images.mean(axis=(0,1,2))
+		
 		self.image_gradients = npy.zeros((self.num_images,2,self.image_size[0]))
 		for i in range(self.num_images):
 			self.image_gradients[i,0,:-1] = self.gradients[i][0]
 			self.image_gradients[i,1,:-1] = self.gradients[i][1]
-
-		for i in range(self.num_images):
-			self.images[i] = cv2.cvtColor(self.images[i],cv2.COLOR_RGB2BGR)
 
 	def save_weights(self,k):
 		self.model.save_weights("model_epoch{0}.h5".format(k))
