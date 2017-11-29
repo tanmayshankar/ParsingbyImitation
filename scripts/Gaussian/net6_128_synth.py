@@ -7,7 +7,7 @@ class hierarchical():
 	def __init__(self):
 
 		self.num_epochs = 10
-		self.save_every = 100
+		self.save_every = 1000
 		self.num_images = 5000
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
@@ -49,10 +49,10 @@ class hierarchical():
 		# Layer 2 
 		self.W_conv2 = tf.Variable(tf.truncated_normal([self.conv2_size,self.conv2_size,self.conv1_num_filters,self.conv2_num_filters],stddev=0.1),name='W_conv2')
 		self.b_conv2 = tf.Variable(tf.constant(0.1,shape=[self.conv2_num_filters]),name='b_conv2')
-		self.conv2 = tf.add(tf.nn.conv2d(self.relu_conv1,self.W_conv2,strides=[1,2,2,1],padding='VALID'),self.b_conv2,name='conv2')
+		self.conv2 = tf.add(tf.nn.conv2d(self.relu_conv1,self.W_conv2,strides=[1,1,1,1],padding='VALID'),self.b_conv2,name='conv2')
 		self.relu_conv2 = tf.nn.relu(self.conv2)
 
-		# Layer 3
+		# Layer 3o
 		self.W_conv3 = tf.Variable(tf.truncated_normal([self.conv3_size,self.conv3_size,self.conv2_num_filters,self.conv3_num_filters],stddev=0.1),name='W_conv3')
 		self.b_conv3 = tf.Variable(tf.constant(0.1,shape=[self.conv3_num_filters]),name='b_conv3')
 		self.conv3 = tf.add(tf.nn.conv2d(self.relu_conv2,self.W_conv3,strides=[1,2,2,1],padding='VALID'),self.b_conv3,name='conv3')
@@ -434,7 +434,7 @@ class hierarchical():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
-		self.alpha = 1.0
+		self.alpha = 1.1
 		# Non-linearizing rewards.
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
@@ -727,8 +727,8 @@ class hierarchical():
 	def preprocess_images_labels(self):
 
 		noise = 0.1*npy.random.rand(self.num_images,self.image_size,self.image_size)
-		# self.images[npy.where(self.images==2)]=-1
-		# self.true_labels[npy.where(self.true_labels==2)]=-1
+		self.images[npy.where(self.images==2)]=-1
+		self.true_labels[npy.where(self.true_labels==2)]=-1
 		self.images += noise  
 
 		# INSTEAD OF ADDING NOISE to the images, now we are going to normalize the images to -1 to 1 (float values).
