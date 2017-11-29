@@ -49,7 +49,8 @@ class hierarchical():
 		# Layer 2 
 		self.W_conv2 = tf.Variable(tf.truncated_normal([self.conv2_size,self.conv2_size,self.conv1_num_filters,self.conv2_num_filters],stddev=0.1),name='W_conv2')
 		self.b_conv2 = tf.Variable(tf.constant(0.1,shape=[self.conv2_num_filters]),name='b_conv2')
-		self.conv2 = tf.add(tf.nn.conv2d(self.relu_conv1,self.W_conv2,strides=[1,2,2,1],padding='VALID'),self.b_conv2,name='conv2')
+		# self.conv2 = tf.add(tf.nn.conv2d(self.relu_conv1,self.W_conv2,strides=[1,2,2,1],padding='VALID'),self.b_conv2,name='conv2')
+		self.conv2 = tf.add(tf.nn.conv2d(self.relu_conv1,self.W_conv2,strides=[1,1,1,1],padding='VALID'),self.b_conv2,name='conv2')
 		self.relu_conv2 = tf.nn.relu(self.conv2)
 
 		# Layer 3
@@ -71,7 +72,8 @@ class hierarchical():
 		self.relu_conv5 = tf.nn.relu(self.conv5)
 
 		# Now going to flatten this and move to a fully connected layer.s
-		self.fc_input_shape = 14*14*self.conv5_num_filters
+		# self.fc_input_shape = 14*14*self.conv5_num_filters
+		self.fc_input_shape = 16*16*self.conv5_num_filters
 		self.relu_conv5_flat = tf.reshape(self.relu_conv5,[-1,self.fc_input_shape])
 		
 		#Splitting into 3 streams: Choosing Rules, Splits, and Primitives		
