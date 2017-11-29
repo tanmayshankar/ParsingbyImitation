@@ -23,9 +23,11 @@ class GradientNet():
 
 		# # Inception V3 for us has 2 outputs; adding 2 dense layers for this output.
 		x = self.base_model.output
-
+		print(x)
 		x = keras.layers.GlobalAveragePooling2D()(x)
+		print(x)
 		x = keras.layers.Dense(512,activation='relu')(x)		
+		print(x)
 		# Modifying to predict 256 values instead of 2.
 		# self.class_predictions = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
 		self.pred_grads = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
@@ -52,6 +54,9 @@ class GradientNet():
 		for i in range(self.num_images):
 			self.image_gradients[i,0,:-1] = self.gradients[i][0]
 			self.image_gradients[i,1,:-1] = self.gradients[i][1]
+
+		for i in range(self.num_images):
+			self.images[i] = cv2.cvtColor(self.images[i],cv2.COLOR_RGB2BGR)
 
 	def save_weights(self,k):
 		self.model.save_weights("model_epoch{0}.h5".format(k))
