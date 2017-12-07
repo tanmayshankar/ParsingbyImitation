@@ -249,7 +249,7 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.h):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
-
+					print("VS:",split_location)					
 					split_copy = copy.deepcopy(split_location)
 					# inter_split = split_location*self.state.h
 					# inter_split = split_location*self.imagey-self.state.y+self.ly
@@ -277,7 +277,7 @@ class hierarchical():
 				while (split_location<=0)or(split_location>=self.state.w):
 					split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
 					counter+=1
-					
+					print("HS:",split_location)					
 					split_copy = copy.deepcopy(split_location)
 					# inter_split = split_location*self.state.w
 					# inter_split = split_location*self.imagex-self.state.x+self.lx
