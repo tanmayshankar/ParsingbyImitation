@@ -45,7 +45,7 @@ class GradientNet():
 		self.num_images = 276
 		self.num_epochs = 500
 		# Just because so few images.
-		self.batch_size = 12
+		self.batch_size = 1
 
 	def preprocess(self):
 		for i in range(self.num_images):
