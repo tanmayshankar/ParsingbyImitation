@@ -75,7 +75,7 @@ class GradientNet():
 		self.batch_targets = npy.zeros((self.batch_size,self.image_size[0]))
 
 		e = 0	
-		 print("########################################")
+		print("########################################")
 		print("Processing Epoch:",e)
 
 		for e in range(1,self.num_epochs+1):
