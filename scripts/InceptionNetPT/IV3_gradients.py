@@ -9,6 +9,7 @@ import cv2
 import sys
 import h5py
 import argparse
+from IPython import embed
 
 class GradientNet():
 
@@ -34,12 +35,14 @@ class GradientNet():
 		# Compiling the model.
 		self.model = keras.models.Model(inputs=self.base_model.input, outputs=self.pred_grads)
 		
-		adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+		adam = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		
-		for layer in self.base_model.layers:
-			layer.trainable = False
-			
+		# for layer in self.base_model.layers:
+		# 	layer.trainable = False
+		
+		# self.model.compile(optimizer='adam',loss='categorical_crossentropy')
 		self.model.compile(optimizer=adam,loss='categorical_crossentropy')
+
 		# self.model.compile(optimizer=adam,loss='kld')
 		# self.base_filepath = base_filepath
 		self.num_images = 276
@@ -75,8 +78,6 @@ class GradientNet():
 
 	# def define_crossentropy(self, true_gradients, predicted_gradients):
 
-
-
 	def train(self):
 		
 		self.batch_inputs = npy.zeros((self.batch_size,self.image_size[0],self.image_size[1],self.image_size[2]))
@@ -99,10 +100,10 @@ class GradientNet():
 				self.batch_inputs = self.images[[indices]]
 				# Picking up HORIZONTAL GRADIENTS now
 				self.batch_targets = self.image_gradients[[indices],0].reshape((self.batch_size,self.image_size[0]))
-
+				
 				# Train the model on this batch.
 				self.model.fit(self.batch_inputs,self.batch_targets)
-
+			# embed()
 			self.save_weights(e)
 			self.forward(e)
 
@@ -132,7 +133,7 @@ def main(args):
 	args = parse_arguments()
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list='0,1')
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list='2,3')
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 	
