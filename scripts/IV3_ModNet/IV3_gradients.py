@@ -18,12 +18,13 @@ class GradientNet():
 
 		# Modifying to predict 512 values instead of 256.
 		# First predict 512 values with no activation, then apply a softmax individually. 
-		self.horizontal_grads = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
-		self.vertical_grads = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
+		self.horizontal_grads = keras.layers.Dense(self.image_size[0],activation='softmax',name='horizontal_grads')(x)
+		self.vertical_grads = keras.layers.Dense(self.image_size[0],activation='softmax',name='vertical_grads')(x)
 
 		# Compiling the model.
 		# self.model = keras.models.Model(inputs=self.base_model.input, outputs={'horizontal_grads': self.horizontal_grads, 'vertical_grads': self.vertical_grads})
-		self.model = keras.models.Model(inputs=self.base_model.input, outputs=self.horizontal_grads)
+		self.model = keras.models.Model(inputs=self.base_model.input, outputs=[self.horizontal_grads, self.vertical_grads])
+		# self.model = keras.models.Model(inputs=self.base_model.input, outputs=self.horizontal_grads)
 		
 		adam = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		
@@ -88,12 +89,9 @@ class GradientNet():
 
 				indices = index_list[i*self.batch_size:(i+1)*self.batch_size]
 				self.batch_inputs = self.images[[indices]]
-				# Picking up HORIZONTAL GRADIENTS now
-				self.batch_targets = self.image_gradients[[indices],0].reshape((self.batch_size,self.image_size[0]))
-				
-				# Train the model on this batch.
-				# self.model.fit(self.batch_inputs,self.batch_targets)
-				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[[indices],0],'vertical_grads': self.image_gradients[[indices],1]})
+				# embed()
+				# Train the model on this batch.				
+				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[indices,0],'vertical_grads': self.image_gradients[indices,1]})
 			# embed()
 			self.save_weights(e)
 			self.forward(e)
