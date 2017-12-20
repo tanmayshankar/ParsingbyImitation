@@ -22,7 +22,8 @@ class GradientNet():
 		self.vertical_grads = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
 
 		# Compiling the model.
-		self.model = keras.models.Model(inputs=self.base_model.input, outputs={'horizontal_grads': self.horizontal_grads, 'vertical_grads': self.vertical_grads})
+		# self.model = keras.models.Model(inputs=self.base_model.input, outputs={'horizontal_grads': self.horizontal_grads, 'vertical_grads': self.vertical_grads})
+		self.model = keras.models.Model(inputs=self.base_model.input, outputs=self.horizontal_grads)
 		
 		adam = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		
