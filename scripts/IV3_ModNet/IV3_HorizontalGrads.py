@@ -8,30 +8,30 @@ class GradientNet():
 
 		# Defining Inception V3 Architecture pre-trained on imagenet. 
 		self.image_size = (256,256,3)
-
+		# self.batch_size = 32
 		self.base_model = keras.applications.inception_v3.InceptionV3(include_top=False, weights='imagenet', input_tensor=None, input_shape=self.image_size)
+		# self.image_mean = npy.array([ 175.5183833 ,  176.6830765 ,  192.35719172])
 
 		# # Inception V3 for us has 2 outputs; adding 2 dense layers for this output.
 		x = self.base_model.output
+		print(x)
 		x = keras.layers.GlobalAveragePooling2D()(x)
+		print(x)
 		x = keras.layers.Dense(512,activation='relu')(x)		
-
-		# Modifying to predict 512 values instead of 256.
-		# First predict 512 values with no activation, then apply a softmax individually. 
-		self.presf_grads = keras.layers.Dense(2*self.image_size[0])(x)
-
-		self.horizontal_grads = keras.activations.softmax(self.presf_grads[0][:self.image_size[0]])
-		self.vertical_grads = keras.activations.softmax(self.presf_grads[0][self.image_size[0]:])
-
+		print(x)
+		# Modifying to predict 256 values instead of 2.
+		# self.class_predictions = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
+		self.pred_grads = keras.layers.Dense(self.image_size[0],activation='softmax')(x)
 		# Compiling the model.
-		self.model = keras.models.Model(inputs=self.base_model.input, outputs={'horizontal_grads': self.horizontal_grads, 'vertical_grads': self.vertical_grads})
+		self.model = keras.models.Model(inputs=self.base_model.input, outputs=self.pred_grads)
 		
 		adam = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		
 		# for layer in self.base_model.layers:
 		# 	layer.trainable = False
 		
-		self.model.compile(optimizer=adam,loss={'horizontal_grads': 'categorical_crossentropy', 'vertical_grads': 'categorical_crossentropy'})
+		# self.model.compile(optimizer='adam',loss='categorical_crossentropy')
+		self.model.compile(optimizer=adam,loss='categorical_crossentropy')
 
 		# self.model.compile(optimizer=adam,loss='kld')
 		# self.base_filepath = base_filepath
@@ -48,7 +48,6 @@ class GradientNet():
 		self.images -= self.images.mean(axis=(0,1,2))
 		
 		self.image_gradients = npy.zeros((self.num_images,2,self.image_size[0]))
-
 		for i in range(self.num_images):
 			self.image_gradients[i,0,:-1] = self.gradients[i][0]
 			self.image_gradients[i,1,:-1] = self.gradients[i][1]
@@ -75,7 +74,7 @@ class GradientNet():
 		self.batch_targets = npy.zeros((self.batch_size,self.image_size[0]))
 
 		e = 0	
-		 print("########################################")
+		print("########################################")
 		print("Processing Epoch:",e)
 
 		for e in range(1,self.num_epochs+1):
@@ -93,8 +92,7 @@ class GradientNet():
 				self.batch_targets = self.image_gradients[[indices],0].reshape((self.batch_size,self.image_size[0]))
 				
 				# Train the model on this batch.
-				# self.model.fit(self.batch_inputs,self.batch_targets)
-				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[[indices],0],'vertical_grads': self.image_gradients[[indices],1]})
+				self.model.fit(self.batch_inputs,self.batch_targets)
 			# embed()
 			self.save_weights(e)
 			self.forward(e)
