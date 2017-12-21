@@ -893,6 +893,12 @@ class hierarchical():
                 print("#___________________________________________________________________________")
                 print("Epoch:",e,"Training Image:",jx,"TOTAL REWARD:",self.parse_tree[0].reward)
 
+                if e<self.decay_epochs:
+                    epsilon_index = e*self.num_images+jx
+                    self.annealed_epislon = self.initial_epislon-epsilon_index*self.annealing_rate
+                else: 
+                    self.annealed_epislon = self.final_epsilon
+
                 if train:
                     self.backprop(i)
                 self.start_list = []
