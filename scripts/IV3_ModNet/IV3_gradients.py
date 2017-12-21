@@ -14,7 +14,7 @@ class GradientNet():
 		# # Inception V3 for us has 2 outputs; adding 2 dense layers for this output.
 		x = self.base_model.output
 		x = keras.layers.GlobalAveragePooling2D()(x)
-		x = keras.layers.Dense(512,activation='relu')(x)		
+		x = keras.layers.Dense(512,activation='relu',name='fc6_features')(x)		
 
 		# Modifying to predict 512 values instead of 256.
 		# First predict 512 values with no activation, then apply a softmax individually. 
@@ -93,7 +93,7 @@ class GradientNet():
 				# Train the model on this batch.				
 				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[indices,0],'vertical_grads': self.image_gradients[indices,1]})
 			# embed()
-			
+
 			self.save_weights(e)
 			self.forward(e)
 
