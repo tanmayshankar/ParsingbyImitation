@@ -54,7 +54,10 @@ class GradientNet():
 			self.image_gradients[i,1,:-1] = self.gradients[i][1]
 
 	def save_weights(self,k):
-		self.model.save_weights("model_epoch{0}.h5".format(k))
+		self.model.save_weights("model_weights_epoch{0}.h5".format(k))
+
+	def save_model(self,k):
+		self.model.save("model_file_epoch{0}.h5".format(k))
 
 	def load_model_weights(self, model_file, weight_file):
 
@@ -94,7 +97,8 @@ class GradientNet():
 				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[indices,0],'vertical_grads': self.image_gradients[indices,1]})
 			# embed()
 
-			self.save_weights(e)
+			# self.save_weights(e)
+			self.save_model(e)
 			self.forward(e)
 
 	# def evaluator(self):
