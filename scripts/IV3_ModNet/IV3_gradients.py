@@ -93,20 +93,21 @@ class GradientNet():
 				# Train the model on this batch.				
 				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[indices,0],'vertical_grads': self.image_gradients[indices,1]})
 			# embed()
+				self.forward(e)
 			self.save_weights(e)
-			self.forward(e)
+			
 
 	# def evaluator(self):
 	def forward(self, epoch):
 
 		index_list = range(self.num_images)
-		self.predicted_gradients = npy.zeros((self.num_images,self.image_size[0]))
+		self.predicted_gradients = npy.zeros((2,self.num_images,self.image_size[0]))
 
 		for i in range(self.num_images/self.batch_size):
 			indices = index_list[i*self.batch_size:(i+1)*self.batch_size]
 			self.batch_inputs = self.images[[indices]]
 			
-			self.predicted_gradients[[indices],:] = self.model.predict_on_batch(self.batch_inputs)
+			self.predicted_gradients[:,indices,:] = self.model.predict_on_batch(self.batch_inputs)
 
 		npy.save("Predicted_gradients_{0}.npy".format(epoch),self.predicted_gradients)
 
