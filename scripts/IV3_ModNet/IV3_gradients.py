@@ -93,9 +93,9 @@ class GradientNet():
 				# Train the model on this batch.				
 				self.model.fit(self.batch_inputs,{'horizontal_grads': self.image_gradients[indices,0],'vertical_grads': self.image_gradients[indices,1]})
 			# embed()
-				self.forward(e)
-			self.save_weights(e)
 			
+			self.save_weights(e)
+			self.forward(e)
 
 	# def evaluator(self):
 	def forward(self, epoch):
