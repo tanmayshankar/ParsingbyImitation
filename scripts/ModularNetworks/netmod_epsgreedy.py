@@ -6,7 +6,7 @@ class hierarchical():
 
     def __init__(self):
 
-        self.num_epochs = 10
+        self.num_epochs = 20
         self.save_every = 100
         self.num_images = 276
         self.current_parsing_index = 0
@@ -33,9 +33,9 @@ class hierarchical():
         self.conv_strides = npy.array([1,2,2,2,2])
 
         # Defining epislon and annealing rate for epislon.
-        self.initial_epislon = 0.5
+        self.initial_epislon = 0.9
         self.final_epsilon = 0.1
-        self.decay_epochs = 3
+        self.decay_epochs = 5
         self.annealing_rate = (self.initial_epislon-self.final_epsilon)/(self.decay_epochs*self.num_images)
         self.annealed_epislon = 0.
 
