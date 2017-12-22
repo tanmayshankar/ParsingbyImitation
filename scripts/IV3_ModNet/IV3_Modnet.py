@@ -63,35 +63,62 @@ class ModularNet():
 		# self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_probabilities[0], tf.equal(self.rule_indicator,1): lambda: self.rule_probabilities[1], 
 		# 							tf.equal(self.rule_indicator,2): lambda: self.rule_probabilities[2], tf.equal(self.rule_indicator,3): lambda: self.rule_probabilities[3]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
 
-		self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_fc[0][1], tf.equal(self.rule_indicator,1): lambda: self.rule_fc[1][1], 
-									tf.equal(self.rule_indicator,2): lambda: self.rule_fc[2][1], tf.equal(self.rule_indicator,3): lambda: self.rule_fc[3][1]},default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
+		# self.rule_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='rule_indicator')
+		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
 
-def parse_arguments():
+		self.rule_indicator = keras.backend.variable(0,dtype='int32',name='rule_indicator')
+		self.split_indicator = keras.backend.variable(0,dtype='int32',name='split_indicator')
 
-	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
-	parser.add_argument('--images',dest='images',type=str)
-	parser.add_argument('--gradients',dest='gradients',type=str)
-	return parser.parse_args()
+		self.selected_rule_probabilities = tf.case({tf.equal(self.rule_indicator,0): lambda: self.rule_fc[0][1],
+													tf.equal(self.rule_indicator,1): lambda: self.rule_fc[1][1],
+													tf.equal(self.rule_indicator,2): lambda: self.rule_fc[2][1],
+													tf.equal(self.rule_indicator,3): lambda: self.rule_fc[3][1]},
+													default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities')
 
-def main(args):
+		############################################################################################### 
+		# Split FC values are already defined
+		# Creating Split distributions.
 
-	args = parse_arguments()
-
-	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list='2,3')
-	config = tf.ConfigProto(gpu_options=gpu_ops)
-	sess = tf.Session(config=config)
+		self.horizontal_split_dist = tf.contrib.distributions.Categorical(probs=self.horizontal_grads,name='horizontal_split_dist')
+		self.vertical_split_dist = tf.contrib.distributions.Categorical(probs=self.vertical_grads,name='vertical_split_dist')
 	
-	KTF.set_session(sess)
+		# Providing split location probabilities rather than the sampled split location, 
+		# because with Categorical distribution of splits, can now do epsilon greedy sampling. 
+		# With Gaussian distributions, we didn't need this because we could control variance.
+		self.split_location_probabilities = tf.case({tf.equal(self.split_indicator,0): lambda: self.horizontal_grads,
+									 				 tf.equal(self.split_indicator,1): lambda: self.vertical_grads},
+									 				 default=lambda: -tf.ones(1),exclusive=True,name='sample_split')		
 
-	gradnet = GradientNet(sess)
+		############################################################################################### 
+		# Defining primitive FC layers.
+		self.primitive_num_hidden = 256
+		self.num_primitives = 4
+		self.primitive_fc0 = keras.layers.Dense(self.primitive_num_hidden,activation='relu')(self.fc6_features)
+		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
+		self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities,name='primitive_dist')
+		self.sampled_primitive = self.primitive_dist.sample()
 
-	gradnet.images = npy.load(args.images)
-	gradnet.gradients = npy.load(args.gradients)
-	gradnet.preprocess()
+		############################################################################################### 
+		# Defining the new model.
+		self.model = keras.models.Model(inputs=[self.base_model.input,self.rule_indicator,self.split_indicator],
+										outputs=[self.selected_rule_probabilities, self.split_location_probabilities, self.primitive_probabilities])
 
-	gradnet.train()
+		adam = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+	
+		# Option to freeze base model layers.
+		# for layer in self.base_model.layers:
+		# 	layer.trainable = False
+		
+		# Compiling the new model
+		self.model.compile(optimizer=adam,loss={'': 'categorical_crossentropy',
+												'vertical_grads': 'categorical_crossentropy'})
 
-if __name__ == '__main__':
-	main(sys.argv)
 
+###JUST FOR TRIAL:
+
+gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
+config = tf.ConfigProto(gpu_options=gpu_ops)
+sess = tf.Session(config=config)
+
+mn = ModularNet()
+mn.initialize_keras_model(sess,)
