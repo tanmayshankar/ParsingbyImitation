@@ -21,7 +21,7 @@ class GradientNet():
 		self.horizontal_presf_grads = keras.layers.Dense(self.image_size[0],name='horizontal_presf_grads')(x)
 		self.horizontal_grads = keras.layers.Activation(activation='softmax',name='horizontal_grads')(self.horizontal_presf_grads)
 
-		self.vertical_presf_grads = keras.layers.Dense(self.image_size[0],name='vertical_grads')(x)
+		self.vertical_presf_grads = keras.layers.Dense(self.image_size[0],name='vertical_presf_grads')(x)
 		self.vertical_grads = keras.layers.Activation(activation='softmax',name='vertical_grads')(self.vertical_presf_grads)
 
 		# Compiling the model.
