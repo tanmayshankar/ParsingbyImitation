@@ -18,8 +18,11 @@ class GradientNet():
 
 		# Modifying to predict 512 values instead of 256.
 		# First predict 512 values with no activation, then apply a softmax individually. 
-		self.horizontal_grads = keras.layers.Dense(self.image_size[0],activation='softmax',name='horizontal_grads')(x)
-		self.vertical_grads = keras.layers.Dense(self.image_size[0],activation='softmax',name='vertical_grads')(x)
+		self.horizontal_presf_grads = keras.layers.Dense(self.image_size[0],name='horizontal_presf_grads')(x)
+        self.horizontal_grads = keras.layers.Activation(activation='softmax',name='horizontal_grads')(self.horizontal_presf_grads)
+
+		self.vertical_presf_grads = keras.layers.Dense(self.image_size[0],name='vertical_grads')(x)
+        self.vertical_grads = keras.layers.Activation(activation='softmax',name='vertical_grads')(self.vertical_presf_grads)
 
 		# Compiling the model.
 		# self.model = keras.models.Model(inputs=self.base_model.input, outputs={'horizontal_grads': self.horizontal_grads, 'vertical_grads': self.vertical_grads})
