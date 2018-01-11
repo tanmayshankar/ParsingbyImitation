@@ -16,7 +16,7 @@ class ModularNet():
 		self.images = []
 		self.original_images = []
 		self.true_labels = []
-		self.image_size = -1
+		self.image_size = 256
 		self.intermittent_lambda = 0.
 		self.suffix = []
 
@@ -57,23 +57,46 @@ class ModularNet():
 		self.rule_num_fclayers = 2
 		self.rule_num_hidden = 256
 
-		self.rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
-		
+		# self.rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
+		self.rule_fc = [[] for j in range(self.rule_num_branches)] 
+		self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
+
+		self.rule_targets = [[] for j in range(self.rule_num_branches)]	
+
 		for j in range(self.rule_num_branches):
-			self.rule_fc[j][0] = keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features)
-			self.rule_fc[j][1] = keras.layers.Dense(self.target_rule_shapes[j],activation='softmax')(self.rule_fc[j][0])
+			# self.rule_fc[j][0] = keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features)
+			# self.rule_fc[j][1] = keras.layers.Dense(self.target_rule_shapes[j],activation='softmax')(self.rule_fc[j][0])
+			self.rule_fc[j] = keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features)
+			self.rule_probabilities = keras.layers.Dense(self.target_rule_shapes[j],activation='softmax')(self.rule_fc[j])
+
+			self.rule_targets[j] = keras.backend.placeholder(shape=(self.target_rule_shapes[j]),name='target_rule_{0}'.format(j))
 
 		# Maintaining the rule indicators as Keras input layers, rather than just variables. 
 		self.rule_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='rule_indicator')
-		
+	
+		# Selecting which target to use (for shape purposes).
+		self.lambda_rule_target = keras.layers.Lambda(lambda x: keras.backend.control_flow_ops.case({tf.equal(x,0)[0]: lambda: self.rule_targets[0],
+																									tf.equal(x,1)[0]: lambda: self.rule_targets[1],
+																									tf.equal(x,2)[0]: lambda: self.rule_targets[2],
+																									tf.equal(x,3)[0]: lambda: self.rule_targets[3]},
+																									default=lambda: -tf.zeros(1),exclusive=True),name='selected_rule_target')(self.rule_indicator)
+																									# default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities'))(self.rule_indicator) 
+
 		# Selecting which rule probability distribution to sample from.
 		self.lambda_rule_probs = keras.layers.Lambda(lambda x: keras.backend.control_flow_ops.case({tf.equal(x,0)[0]: lambda: self.rule_fc[0][1],
 																									tf.equal(x,1)[0]: lambda: self.rule_fc[1][1],
 																									tf.equal(x,2)[0]: lambda: self.rule_fc[2][1],
 																									tf.equal(x,3)[0]: lambda: self.rule_fc[3][1]},
-																									default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities'))(self.rule_indicator)
+																									default=lambda: -tf.zeros(1),exclusive=True),name='selected_rule_probabilities')(self.rule_indicator)
+																									# default=lambda: -tf.zeros(1),exclusive=True,name='selected_rule_probabilities'))(self.rule_indicator)
 		#No need to explicitly define losses for each branch. 
 		#Providing targets and the selected lambda rule probabilities should take care of this. 
+		#Still need to make target variables though. 
+
+	# def custom_rule_loss(self):
+	# 	def rule_cross_entropy(y_true,y_pred):
+	# 		return keras.losses.categorical_crossentropy(self.lambda_rule_target,y_pred)
+	# 	return rule_cross_entropy
 
 	def define_split_stream(self):
 		# Split FC values are already defined; now creating Split distributions.
@@ -83,13 +106,17 @@ class ModularNet():
 		self.horizontal_split_dist = tf.contrib.distributions.Categorical(probs=self.horizontal_grads,name='horizontal_split_dist')
 		self.vertical_split_dist = tf.contrib.distributions.Categorical(probs=self.vertical_grads,name='vertical_split_dist')
 	
+		#Only need one set of targets for splits. 
+		self.split_targets = keras.backend.placeholder(shape=(self.image_size),name='split_targets')		
+
 		# Providing split location probabilities rather than the sampled split location, 
 		# because with Categorical distribution of splits, can now do epsilon greedy sampling. 
 		# With Gaussian distributions, we didn't need this because we could control variance.
 		self.lambda_split_probs = keras.layers.Lambda(lambda x: keras.backend.control_flow_ops.case({tf.equal(x,0)[0]: lambda: self.horizontal_grads,
 																									 tf.equal(x,1)[0]: lambda: self.vertical_grads},
-																									 default=lambda: -tf.ones(1),exclusive=True,name='selected_split_probabilities' ) )(self.split_indicator)
-		#No need to explicitly define losses for each branch. 
+																									 default=lambda: -tf.ones(1),exclusive=True),name='selected_split_probabilities')(self.split_indicator)
+																									 # default=lambda: -tf.ones(1),exclusive=True,name='selected_split_probabilities'))(self.split_indicator)
+		#No need to explicitly define losses for each branch. 										 
 		#Providing targets and the selected lambda split probabilities should take care of this. 
 
 	def define_primitive_stream(self):
@@ -98,8 +125,11 @@ class ModularNet():
 		self.num_primitives = 4
 		self.primitive_fc0 = keras.layers.Dense(self.primitive_num_hidden,activation='relu')(self.fc6_features)
 		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
-		self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities,name='primitive_dist')
-		self.sampled_primitive = self.primitive_dist.sample()
+
+		self.primitive_targets = keras.backend.placeholder(shape=(self.num_primitives),name='primitive_targets')
+		# Not using a distribution, we're going to do Epsilon greedy sampling.
+		# self.primitive_dist = tf.contrib.distributions.Categorical(probs=self.primitive_probabilities,name='primitive_dist')
+		# self.sampled_primitive = self.primitive_dist.sample()
 
 	def define_keras_model(self):
 		############################################################################################### 
@@ -116,9 +146,20 @@ class ModularNet():
 		# 	layer.trainable = False
 		
 		# Compiling the new model
-		self.model.compile(optimizer=adam,loss={'selected_rule_probabilities': 'categorical_crossentropy',
+		embed()
+
+		self.model.compile(optimizer=adam,loss={'selected_rule_probabilities': self.rule_cross_entropy,
 												'selected_split_probabilities': 'categorical_crossentropy',
 												'primitive_probabilities': 'categorical_crossentropy'})
+
+		# self.model.compile(optimizer=adam,loss='categorical_crossentropy',target_tensors={'selected_rule_probabilities': 'selected_rule_target',
+		# 																				'selected_split_probabilities': 'split_targets',
+		# 										 										'primitive_probabilities': 'primitive_targets'})
+
+	def save_keras_model(self):
+		pass 
+	def load_keras_model(self):
+		pass
 
 	def create_modular_net(self, sess, model_file=None):
 		self.load_base_model(sess, model_file)
@@ -126,8 +167,6 @@ class ModularNet():
 		self.define_split_stream()
 		self.define_primitive_stream()
 		self.define_keras_model()
-
-###JUST FOR TRIAL:
 
 gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list="1,2")
 config = tf.ConfigProto(gpu_options=gpu_ops)
