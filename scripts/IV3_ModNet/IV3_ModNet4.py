@@ -505,15 +505,14 @@ class ModularNet():
 			# # Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# # for assigning the parent non-terminal to a region not to be painted).
 
-			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0],
-																								  'rule_probabilities1': target_rule[1],
-																								  'rule_probabilities2': target_rule[2],
-																								  'rule_probabilities3': target_rule[3],
-																								  'horizontal_grads': target_splits[0],
-																								  'vertical_grads': target_splits[1],
-																								  'primitive_probabilities': target_primitive})	
-		
-
+			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
+																								  'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
+																								  'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
+																								  'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
+																								  'horizontal_grads': target_splits[0].reshape((1,self.image_size)),
+																								  'vertical_grads': target_splits[1].reshape((1,self.image_size))
+																								  'primitive_probabilities': target_primitive.reshape((1,self.num_primitives))})	
+																								  		
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
