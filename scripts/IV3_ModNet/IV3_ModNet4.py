@@ -510,9 +510,9 @@ class ModularNet():
 																								  'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
 																								  'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
 																								  'horizontal_grads': target_splits[0].reshape((1,self.image_size)),
-																								  'vertical_grads': target_splits[1].reshape((1,self.image_size))
+																								  'vertical_grads': target_splits[1].reshape((1,self.image_size)),
 																								  'primitive_probabilities': target_primitive.reshape((1,self.num_primitives))})	
-																								  		
+
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
 		# WHILE WE TERMINATE THAT PARSE:
