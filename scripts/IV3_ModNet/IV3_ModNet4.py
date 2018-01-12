@@ -696,6 +696,7 @@ class ModularNet():
 
 		# For all epochs
 		for e in range(self.num_epochs):
+			self.save_model(e)				
 			for i in range(self.num_images):
 
 				self.initialize_tree()
