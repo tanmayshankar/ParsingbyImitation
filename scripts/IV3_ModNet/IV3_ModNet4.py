@@ -60,12 +60,14 @@ class ModularNet():
 
 		self.rule_fc = [keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features) for j in range(self.rule_num_branches)]
 		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in range(self.rule_num_branches)]
-		self.rule_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
+		# self.rule_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
+		self.rule_loss_weight = [keras.backend.variable(0.,name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
 
 	def define_split_stream(self):
 		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
-	
-		self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
+		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
+		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
+
 
 	def define_primitive_stream(self):
 		# Defining primitive FC layers.
@@ -77,7 +79,7 @@ class ModularNet():
 
 		self.primitive_targets = keras.backend.placeholder(shape=(self.num_primitives),name='primitive_targets')
 		# self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),dtype='float64',name='primitive_loss_weight')
-		self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),name='primitive_loss_weight')
+		self.primitive_loss_weight = keras.backend.variable(0.,name='primitive_loss_weight')
 
 	def define_keras_model(self):
 		############################################################################################### 
@@ -476,11 +478,11 @@ class ModularNet():
 			# 		policy_indicator = 1					
 
 			for k in range(self.rule_num_branches):
-				keras.backend.set_value(self.rule_loss_weight[k],npy.zeros(1,dtype=npy.float64))
+				keras.backend.set_value(self.rule_loss_weight[k],npy.zeros(1))
 			for k in range(2):
-				keras.backend.set_value(self.split_loss_weight[k],npy.zeros(1,dtype=npy.float64))
+				keras.backend.set_value(self.split_loss_weight[k],npy.zeros(1))
 
-			keras.backend.set_value(self.primitive_loss_weight,npy.zeros(1,dtype=npy.float64))
+			keras.backend.set_value(self.primitive_loss_weight,npy.zeros(1))
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
@@ -495,7 +497,7 @@ class ModularNet():
 						target_splits[0][self.parse_tree[j].split] = 1.
 					if self.parse_tree[j].rule_applied%2==1:
 						target_splits[1][self.parse_tree[j].split] = 1.
- 				
+				
 			# If it was a terminal symbol that was to be painted:
 			if self.parse_tree[j].label==1:
 				# Set the target primitive and policy branch.
@@ -698,7 +700,7 @@ class ModularNet():
 
 		# For all epochs
 		for e in range(self.num_epochs):
-			self.save_model(e)				
+			self.save_model_weights(e)				
 			for i in range(self.num_images):
 
 				self.initialize_tree()
@@ -725,7 +727,7 @@ class ModularNet():
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 
 				if ((e%self.save_every)==0):
-					self.save_model(e)				
+					self.save_model_weights(e)				
 			else: 
 				npy.save("validation_{0}.npy".format(self.suffix),self.predicted_labels)
 				npy.save("validation_painted_{0}.npy".format(self.suffix))
