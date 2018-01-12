@@ -60,7 +60,7 @@ class ModularNet():
 
 		self.rule_fc = [keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features) for j in range(self.rule_num_branches)]
 		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in range(self.rule_num_branches)]
-		self.rule_loss_weight = [keras.backend.variable(npy.zeros((1,1)),dtype=float,name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
+		self.rule_loss_weight = [keras.backend.variable(npy.zeros((1,1)),name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
 
 	def define_split_stream(self):
 		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
