@@ -76,7 +76,8 @@ class ModularNet():
 		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
 
 		self.primitive_targets = keras.backend.placeholder(shape=(self.num_primitives),name='primitive_targets')
-		self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),dtype='float64',name='primitive_loss_weight')
+		# self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),dtype='float64',name='primitive_loss_weight')
+		self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),name='primitive_loss_weight')
 
 	def define_keras_model(self):
 		############################################################################################### 
@@ -450,7 +451,7 @@ class ModularNet():
 
 			# Set the return weight for the loss globally., i.e. for all losses.
 			# return_weight = self.parse_tree[j].reward
-			return_weight = self.parse_tree[j].reward.astype(npy.float64)
+			return_weight = self.parse_tree[j].reward
 
 			# # Here, we set the indicator functions for the various cases.
 			# # If it's a non-terminal:
