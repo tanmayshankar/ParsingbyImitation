@@ -474,10 +474,10 @@ class ModularNet():
 			# 	else:
 			# 		policy_indicator = 1					
 
-			for j in range(self.rule_num_branches):
-				keras.backend.set_value(self.rule_loss_weight[j],0.)
-			for j in range(2):
-				keras.backend.set_value(self.split_loss_weight[j],0.)
+			for k in range(self.rule_num_branches):
+				keras.backend.set_value(self.rule_loss_weight[k],0.)
+			for k in range(2):
+				keras.backend.set_value(self.split_loss_weight[k],0.)
 
 			keras.backend.set_value(self.primitive_loss_weight,0.)
 
@@ -504,6 +504,15 @@ class ModularNet():
 
 			# # Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# # for assigning the parent non-terminal to a region not to be painted).
+
+			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0],
+																								  'rule_probabilities1': target_rule[1],
+																								  'rule_probabilities2': target_rule[2],
+																								  'rule_probabilities3': target_rule[3],
+																								  'horizontal_grads': target_splits[0],
+																								  'vertical_grads': target_splits[1],
+																								  'primitive_probabilities': target_primitive})	
+		
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
