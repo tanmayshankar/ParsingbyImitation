@@ -449,7 +449,8 @@ class ModularNet():
 			# target_primitive = npy.ones(self.num_primitives)/self.num_primitives
 
 			# Set the return weight for the loss globally., i.e. for all losses.
-			return_weight = self.parse_tree[j].reward
+			# return_weight = self.parse_tree[j].reward
+			return_weight = self.parse_tree[j].reward.astype(npy.float64)
 
 			# # Here, we set the indicator functions for the various cases.
 			# # If it's a non-terminal:
@@ -474,11 +475,11 @@ class ModularNet():
 			# 		policy_indicator = 1					
 
 			for k in range(self.rule_num_branches):
-				keras.backend.set_value(self.rule_loss_weight[k],npy.zeros(1))
+				keras.backend.set_value(self.rule_loss_weight[k],npy.zeros(1,dtype=npy.float64))
 			for k in range(2):
-				keras.backend.set_value(self.split_loss_weight[k],npy.zeros(1))
+				keras.backend.set_value(self.split_loss_weight[k],npy.zeros(1,dtype=npy.float64))
 
-			keras.backend.set_value(self.primitive_loss_weight,npy.zeros(1))
+			keras.backend.set_value(self.primitive_loss_weight,npy.zeros(1,dtype=npy.float64))
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
