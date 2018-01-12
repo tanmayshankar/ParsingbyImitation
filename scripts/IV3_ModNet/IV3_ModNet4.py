@@ -59,12 +59,8 @@ class ModularNet():
 		self.rule_num_fclayers = 2
 		self.rule_num_hidden = 256
 
-		# self.rule_fc = [[[] for i in range(self.rule_num_fclayers)] for j in range(self.rule_num_branches)]
-		self.rule_fc = [[] for j in range(self.rule_num_branches)] 
-		self.rule_probabilities = [[] for j in range(self.rule_num_branches)]
-
 		self.rule_fc = [keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features) for j in range(self.rule_num_branches)]
-		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in  range(self.rule_num_branches)]
+		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in range(self.rule_num_branches)]
 		self.rule_loss_weight = [keras.backend.variable(0.) for j in range(self.rule_num_branches)]
 
 	def define_split_stream(self):
@@ -85,9 +81,8 @@ class ModularNet():
 		############################################################################################### 
 
 		# Defining the new model.
-		self.model = keras.models.Model(inputs=[self.base_model.input],
+		self.model = keras.models.Model(inputs=self.base_model.input,
 										outputs=[self.rule_probabilities[0],self.rule_probabilities[1],self.rule_probabilities[2],self.rule_probabilities[3],
-												 # self.horizontal_split_probs.output,self.vertical_split_probs.output,self.primitive_probabilities])
 												 self.horizontal_split_probs,self.vertical_split_probs,self.primitive_probabilities])
 		print("Model successfully defined.")
 			
@@ -131,6 +126,7 @@ class ModularNet():
 		if load_pretrained_mod:
 			self.load_pretrained_model(model_file)
 		else:	
+			print("Training Policy from base model.")
 			self.load_base_model(sess, model_file)
 			self.define_rule_stream()
 			self.define_split_stream()
@@ -193,7 +189,7 @@ class ModularNet():
 		self.set_rule_indicator()
 
 		# rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
-		rule_probabilities = self.sess.run(self.rule_probabilities[self.state.rule_indicator],feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+		rule_probabilities = self.sess.run(self.rule_probabilities[self.state.rule_indicator],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 			
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		# CHECK IF ITS rule_probabilities[0] still
@@ -219,7 +215,7 @@ class ModularNet():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
 					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
-					split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+					split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epislon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epislon+self.annealed_epislon/self.image_size
 
@@ -247,7 +243,7 @@ class ModularNet():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
 					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
-					split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+					split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epislon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epislon+self.annealed_epislon/self.image_size
 
@@ -763,7 +759,9 @@ def main(args):
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
-	keras.backend.tensorflow_backend.set_session(sess)
+	# keras.backend.tensorflow_backend.set_session(sess)
+	keras.backend.set_session(sess)
+	keras.backend.set_learning_phase(1)
 
 	hierarchical_model = ModularNet()
 	hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
@@ -781,11 +779,6 @@ def main(args):
 	
 	if hierarchical_model.to_train:
 		hierarchical_model.suffix = args.suffix
-
-	# if args.model:
-	# 	hierarchical_model.initialize_tensorflow_model(sess,args.model)
-	# else:
-	# 	hierarchical_model.initialize_tensorflow_model(sess)
 
 	hierarchical_model.meta_training(train=args.train)
 
