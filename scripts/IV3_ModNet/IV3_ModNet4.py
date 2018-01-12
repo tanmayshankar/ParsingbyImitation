@@ -478,11 +478,11 @@ class ModularNet():
 			# 		policy_indicator = 1					
 
 			for k in range(self.rule_num_branches):
-				keras.backend.set_value(self.rule_loss_weight[k],npy.zeros(1))
+				keras.backend.set_value(self.rule_loss_weight[k],0.)
 			for k in range(2):
-				keras.backend.set_value(self.split_loss_weight[k],npy.zeros(1))
+				keras.backend.set_value(self.split_loss_weight[k],0.)
 
-			keras.backend.set_value(self.primitive_loss_weight,npy.zeros(1))
+			keras.backend.set_value(self.primitive_loss_weight,0.)
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
