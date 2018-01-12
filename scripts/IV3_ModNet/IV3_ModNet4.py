@@ -37,7 +37,6 @@ class ModularNet():
 
 		# Define a KERAS / tensorflow session. 
 		self.sess = sess
-
 		# We are always loading the model from the the gradient file at the least. 
 		self.base_model = keras.models.load_model(model_file)
 		
@@ -65,12 +64,14 @@ class ModularNet():
 
 	def define_split_stream(self):
 		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
+	
 		self.split_loss_weight = [keras.backend.variable(0.) for j in range(2)]
 
 	def define_primitive_stream(self):
 		# Defining primitive FC layers.
 		self.primitive_num_hidden = 256
 		self.num_primitives = 4
+
 		self.primitive_fc0 = keras.layers.Dense(self.primitive_num_hidden,activation='relu')(self.fc6_features)
 		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
 
@@ -79,7 +80,7 @@ class ModularNet():
 
 	def define_keras_model(self):
 		############################################################################################### 
-
+	
 		# Defining the new model.
 		self.model = keras.models.Model(inputs=self.base_model.input,
 										outputs=[self.rule_probabilities[0],self.rule_probabilities[1],self.rule_probabilities[2],self.rule_probabilities[3],
@@ -102,6 +103,8 @@ class ModularNet():
 																									   'horizontal_grads': self.split_loss_weight[0],
 																									   'vertical_grads': self.split_loss_weight[1],
 																									   'primitive_probabilities': self.primitive_loss_weight})	
+		print("Supposed to have compiled model.")
+		# embed()
 		# Because of how this is defined, we must call a Callback in Fit. 
 
 	def save_model_weights(self,k):
@@ -189,8 +192,13 @@ class ModularNet():
 		self.set_rule_indicator()
 
 		# rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
-		rule_probabilities = self.sess.run(self.rule_probabilities[self.state.rule_indicator],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+
+		# self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))
+		# self.sess.run(self.model.output[-1],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+		# rule_probabilities = self.sess.run(self.rule_probabilities[self.state.rule_indicator],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 			
+		rule_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[self.state.rule_indicator]
+
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		# CHECK IF ITS rule_probabilities[0] still
 		if self.to_train:
@@ -214,10 +222,12 @@ class ModularNet():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
-					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
-					split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epislon/self.image_size)						
-					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epislon+self.annealed_epislon/self.image_size
+
+					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]
+
+					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
+					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 
 					counter+=1
 
@@ -230,7 +240,7 @@ class ModularNet():
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: H",self.state.h, "Split fraction:",split_copy, "Split location:",split_location)
+						print("State: H",self.state.h, "Split fraction:",inter_split, "Split location:",split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
@@ -242,10 +252,12 @@ class ModularNet():
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
-					# split_location = self.sess.run(self.sample_split, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1), self.split_indicator: self.state.split_indicator})
-					split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epislon/self.image_size)						
-					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epislon+self.annealed_epislon/self.image_size
+
+					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[5]
+
+					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
+					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 
 					counter+=1
 
@@ -258,7 +270,7 @@ class ModularNet():
 						split_location = int(npy.ceil(inter_split))
 
 					if counter>25:
-						print("State: W",self.state.w, "Split fraction:",split_copy, "Split location:",split_location)
+						print("State: W",self.state.w, "Split fraction:",inter_split, "Split location:",split_location)
 
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=split_location,h=self.state.h,backward_index=self.current_parsing_index)
@@ -314,11 +326,11 @@ class ModularNet():
 
 		# If it is a region to be painted and assigned a primitive:
 		if (self.state.label==1):
-
-			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})				
+			# primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})				
+			primitive_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[-1]
 
 			if self.to_train:
-				selected_primitive = npy.random.choice(range(self.number_primitives),p=primitive_probabilities[0])
+				selected_primitive = npy.random.choice(range(self.num_primitives),p=primitive_probabilities[0])
 			if not(self.to_train):
 				selected_primitive = npy.argmax(primitive_probabilities[0])
 
@@ -430,12 +442,12 @@ class ModularNet():
 			# Declare target rule and primitives.
 			target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
 			target_splits = [npy.zeros(self.image_size) for k in range(2)]
-			target_primitive = npy.zeros(self.number_primitives)
+			target_primitive = npy.zeros(self.num_primitives)
 
 			# # Declare target rule and primitives.
 			# target_rule = [npy.ones(self.target_rule_shapes[k])/self.target_rule_shapes[k] for k in range(self.rule_num_branches)]
 			# target_splits = [npy.ones(self.image_size)/self.image_size for k in range(2)]
-			# target_primitive = npy.ones(self.number_primitives)/self.num_primitives
+			# target_primitive = npy.ones(self.num_primitives)/self.num_primitives
 
 			# Set the return weight for the loss globally., i.e. for all losses.
 			return_weight = self.parse_tree[j].reward
@@ -462,18 +474,21 @@ class ModularNet():
 			# 	else:
 			# 		policy_indicator = 1					
 
-			keras.backend.set_value(self.rule_loss_weight,0.)
-			keras.backend.set_value(self.split_loss_weight,0.)
+			for j in range(self.rule_num_branches):
+				keras.backend.set_value(self.rule_loss_weight[j],0.)
+			for j in range(2):
+				keras.backend.set_value(self.split_loss_weight[j],0.)
+				
 			keras.backend.set_value(self.primitive_loss_weight,0.)
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
 				# target_rule[self.parse_tree[j].rule_indicator][:] = 0.
 				target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
-				keras.backend.set_value(self.rule_loss_weight,return_weight)
+				keras.backend.set_value(self.rule_loss_weight[self.parse_tree[j].rule_indicator],return_weight)
 
 				if self.parse_tree[j].rule_applied<=3:					
-					keras.backend.set_value(self.split_loss_weight,return_weight)
+					keras.backend.set_value(self.split_loss_weight[self.parse_tree[j].rule_applied%2],return_weight)
 					
 					if self.parse_tree[j].rule_applied%2==0:
 						target_splits[0][self.parse_tree[j].inter_split] = 1.
@@ -759,10 +774,11 @@ def main(args):
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 
-	# keras.backend.tensorflow_backend.set_session(sess)
+	keras.backend.tensorflow_backend.set_session(sess)
 	keras.backend.set_session(sess)
 	keras.backend.set_learning_phase(1)
 
+	# with sess.as_default():
 	hierarchical_model = ModularNet()
 	hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
 
@@ -779,7 +795,7 @@ def main(args):
 	
 	if hierarchical_model.to_train:
 		hierarchical_model.suffix = args.suffix
-
+	
 	hierarchical_model.meta_training(train=args.train)
 
 if __name__ == '__main__':
