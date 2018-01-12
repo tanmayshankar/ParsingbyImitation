@@ -707,10 +707,10 @@ class ModularNet():
 	
 				if e<self.decay_epochs:
 					epsilon_index = e*self.num_images+i
-					self.annealed_epislon = self.initial_epislon-epsilon_index*self.annealing_rate
+					self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
 				else: 
-					self.annealed_epislon = self.final_epsilon
-					
+					self.annealed_epsilon = self.final_epsilon
+
 				if train:
 					self.backprop(i)
 
