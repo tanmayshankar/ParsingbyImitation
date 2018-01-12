@@ -60,12 +60,12 @@ class ModularNet():
 
 		self.rule_fc = [keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features) for j in range(self.rule_num_branches)]
 		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in range(self.rule_num_branches)]
-		self.rule_loss_weight = [keras.backend.variable(0.) for j in range(self.rule_num_branches)]
+		self.rule_loss_weight = [keras.backend.variable(npy.zeros(1)) for j in range(self.rule_num_branches)]
 
 	def define_split_stream(self):
 		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
 	
-		self.split_loss_weight = [keras.backend.variable(0.) for j in range(2)]
+		self.split_loss_weight = [keras.backend.variable(npy.zeros(1)) for j in range(2)]
 
 	def define_primitive_stream(self):
 		# Defining primitive FC layers.
@@ -76,7 +76,7 @@ class ModularNet():
 		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
 
 		self.primitive_targets = keras.backend.placeholder(shape=(self.num_primitives),name='primitive_targets')
-		self.primitive_loss_weight = keras.backend.variable(0.)
+		self.primitive_loss_weight = keras.backend.variable(npy.zeros(1))
 
 	def define_keras_model(self):
 		############################################################################################### 
@@ -474,11 +474,11 @@ class ModularNet():
 			# 		policy_indicator = 1					
 
 			for k in range(self.rule_num_branches):
-				keras.backend.set_value(self.rule_loss_weight[k],0.)
+				keras.backend.set_value(self.rule_loss_weight[k],npy.zeros(1))
 			for k in range(2):
-				keras.backend.set_value(self.split_loss_weight[k],0.)
+				keras.backend.set_value(self.split_loss_weight[k],npy.zeros(1))
 
-			keras.backend.set_value(self.primitive_loss_weight,0.)
+			keras.backend.set_value(self.primitive_loss_weight,npy.zeros(1))
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
