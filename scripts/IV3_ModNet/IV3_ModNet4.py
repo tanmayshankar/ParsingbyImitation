@@ -235,9 +235,9 @@ class ModularNet():
 					inter_split = copy.deepcopy(split_location)
 
 					if inter_split>(self.state.h/2):
-						split_location = int(npy.floor(inter_split))
+						split_location = int(npy.floor(float(inter_split)*self.state.h/self.image_size))
 					else:
-						split_location = int(npy.ceil(inter_split))
+						split_location = int(npy.ceil(float(inter_split)*self.state.h/self.image_size))
 
 					if counter>25:
 						print("State: H",self.state.h, "Split fraction:",inter_split, "Split location:",split_location)
@@ -265,9 +265,9 @@ class ModularNet():
 					inter_split = copy.deepcopy(split_location)
 	
 					if inter_split>(self.state.w/2):
-						split_location = int(npy.floor(inter_split))
+						split_location = int(npy.floor(float(inter_split)*self.state.w/self.image_size))
 					else:
-						split_location = int(npy.ceil(inter_split))
+						split_location = int(npy.ceil(float(inter_split)*self.state.w/self.image_size))
 
 					if counter>25:
 						print("State: W",self.state.w, "Split fraction:",inter_split, "Split location:",split_location)
@@ -478,7 +478,7 @@ class ModularNet():
 				keras.backend.set_value(self.rule_loss_weight[j],0.)
 			for j in range(2):
 				keras.backend.set_value(self.split_loss_weight[j],0.)
-				
+
 			keras.backend.set_value(self.primitive_loss_weight,0.)
 
 			# If it was a non terminal:
@@ -491,9 +491,9 @@ class ModularNet():
 					keras.backend.set_value(self.split_loss_weight[self.parse_tree[j].rule_applied%2],return_weight)
 					
 					if self.parse_tree[j].rule_applied%2==0:
-						target_splits[0][self.parse_tree[j].inter_split] = 1.
+						target_splits[0][self.parse_tree[j].split] = 1.
 					if self.parse_tree[j].rule_applied%2==1:
-						target_splits[1][self.parse_tree[j].inter_split] = 1.
+						target_splits[1][self.parse_tree[j].split] = 1.
  				
 			# If it was a terminal symbol that was to be painted:
 			if self.parse_tree[j].label==1:
