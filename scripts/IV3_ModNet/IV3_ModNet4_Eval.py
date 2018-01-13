@@ -717,6 +717,7 @@ class ModularNet():
 					self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
 				else: 
 					# self.annealed_epsilon = self.final_epsilon
+					# Completely greedy policy for testing.
 					self.annealed_epsilon = 0.
 
 				if train:
