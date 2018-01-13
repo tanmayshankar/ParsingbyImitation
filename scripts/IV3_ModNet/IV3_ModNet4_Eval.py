@@ -712,13 +712,14 @@ class ModularNet():
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 	
-				if e<self.decay_epochs:
-					epsilon_index = e*self.num_images+i
-					self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
-				else: 
-					self.annealed_epsilon = self.final_epsilon
-					# Completely greedy policy for testing.
-					# self.annealed_epsilon = 0.
+				# if e<self.decay_epochs:
+				# 	epsilon_index = e*self.num_images+i
+				# 	self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
+				# else: 
+				# 	self.annealed_epsilon = self.final_epsilon
+				# 	# Completely greedy policy for testing.
+				# 	# self.annealed_epsilon = 0.
+				self.annealed_epsilon = 0.1
 
 				if train:
 					self.backprop(i)
