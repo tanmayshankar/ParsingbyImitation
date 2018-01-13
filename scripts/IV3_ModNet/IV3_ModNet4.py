@@ -236,7 +236,7 @@ class ModularNet():
 
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-					embed()
+					# embed()
 					counter+=1
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
