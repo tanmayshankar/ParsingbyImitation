@@ -231,7 +231,7 @@ class ModularNet():
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]
-					
+
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 					embed()
@@ -713,14 +713,13 @@ class ModularNet():
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i,"TOTAL REWARD:",self.parse_tree[0].reward)
 	
-				if e<self.decay_epochs:
-					epsilon_index = e*self.num_images+i
-					self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
-				else: 
-					self.annealed_epsilon = self.final_epsilon
-
 				if train:
 					self.backprop(i)
+					if e<self.decay_epochs:
+						epsilon_index = e*self.num_images+i
+						self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
+					else: 
+						self.annealed_epsilon = self.final_epsilon
 
 				self.start_list = []
 				self.goal_list = []
