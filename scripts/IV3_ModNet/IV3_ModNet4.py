@@ -204,11 +204,13 @@ class ModularNet():
 		# rule_probabilities = self.sess.run(self.rule_probabilities[self.state.rule_indicator],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 			
 		rule_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[self.state.rule_indicator]
+		epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
+		epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
 
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		# CHECK IF ITS rule_probabilities[0] still
 		if self.to_train:
-			selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=rule_probabilities[0])
+			selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=epsgreedy_rule_probs)
 		elif not(self.to_train):
 			selected_rule = npy.argmax(rule_probabilities[0])
 
@@ -333,9 +335,12 @@ class ModularNet():
 		if (self.state.label==1):
 			# primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})				
 			primitive_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[-1]
+			epsgreedy_primitive_probs = npy.ones((self.num_primitives))*(self.annealed_epsilon/self.num_primitives)
+			epsgreedy_primitive_probs[primitive_probabilities.argmax()] = 1.-self.annealed_epsilon +self.annealed_epsilon/self.num_primitives
 
 			if self.to_train:
-				selected_primitive = npy.random.choice(range(self.num_primitives),p=primitive_probabilities[0])
+				# selected_primitive = npy.random.choice(range(self.num_primitives),p=primitive_probabilities[0])
+				selected_primitive = npy.random.choice(range(self.num_primitives),p=epsgreedy_primitive_probs)
 			if not(self.to_train):
 				selected_primitive = npy.argmax(primitive_probabilities[0])
 
