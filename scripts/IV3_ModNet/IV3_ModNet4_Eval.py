@@ -716,7 +716,8 @@ class ModularNet():
 					epsilon_index = e*self.num_images+i
 					self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
 				else: 
-					self.annealed_epsilon = self.final_epsilon
+					# self.annealed_epsilon = self.final_epsilon
+					self.annealed_epsilon = 0.
 
 				if train:
 					self.backprop(i)
