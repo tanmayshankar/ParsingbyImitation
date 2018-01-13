@@ -233,7 +233,7 @@ class ModularNet():
 
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-
+					embed()
 					counter+=1
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
@@ -705,6 +705,7 @@ class ModularNet():
 			self.save_model_weights(e)				
 			for i in range(self.num_images):
 
+				self.annealed_epsilon = 0.1
 				self.initialize_tree()
 				self.construct_parse_tree(i)
 				self.propagate_rewards()				
@@ -719,7 +720,7 @@ class ModularNet():
 				# 	self.annealed_epsilon = self.final_epsilon
 				# 	# Completely greedy policy for testing.
 				# 	# self.annealed_epsilon = 0.
-				self.annealed_epsilon = 0.1
+				# self.annealed_epsilon = 0.1
 
 				if train:
 					self.backprop(i)
