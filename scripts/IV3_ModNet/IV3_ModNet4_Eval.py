@@ -130,16 +130,15 @@ class ModularNet():
 	def load_model_weights(self,weight_file):
 		self.model.load_weights(weight_file)
 
-	def create_modular_net(self, sess, load_pretrained_mod=False, model_file=None):
+	def create_modular_net(self, sess, load_pretrained_mod=False, base_model_file=None, pretrained_weight_file=None):
+		print("Training Policy from base model.")
+		self.load_base_model(sess, base_model_file)
+		self.define_rule_stream()
+		self.define_split_stream()
+		self.define_primitive_stream()
+		self.define_keras_model()
 		if load_pretrained_mod:
-			self.load_pretrained_model(model_file)
-		else:	
-			print("Training Policy from base model.")
-			self.load_base_model(sess, model_file)
-			self.define_rule_stream()
-			self.define_split_stream()
-			self.define_primitive_stream()
-			self.define_keras_model()
+			self.load_model_weights(pretrained_weight_file)	
 
 	###########################################################################################
 	############################## NOW MOVING TO PARSING CODE #################################
@@ -753,7 +752,6 @@ class ModularNet():
 		self.images -= self.images.mean(axis=(0,1,2))
 		
 		# self.image_gradients = npy.zeros((self.num_images,2,self.image_size[0]))
-
 		# for i in range(self.num_images):
 		# 	self.image_gradients[i,0,:-1] = self.gradients[i][0]
 		# 	self.image_gradients[i,1,:-1] = self.gradients[i][1]
@@ -801,7 +799,8 @@ def main(args):
 
 	# with sess.as_default():
 	hierarchical_model = ModularNet()
-	hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
+	# hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
+	hierarchical_model.create_modular_net(sess,load_pretrained_mod=True,base_model_file=args.base_model,pretrained_weight_file=args.model)
 
 	hierarchical_model.images = npy.load(args.images)
 	hierarchical_model.true_labels = npy.load(args.labels) 
@@ -817,7 +816,6 @@ def main(args):
 	if hierarchical_model.to_train:
 		hierarchical_model.suffix = args.suffix
 	
-	hierarchical_model.load_model_weights(args.model)
 	hierarchical_model.meta_training(train=args.train)
 
 if __name__ == '__main__':
