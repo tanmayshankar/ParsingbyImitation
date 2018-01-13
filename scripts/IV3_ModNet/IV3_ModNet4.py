@@ -128,6 +128,9 @@ class ModularNet():
 		# adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 		# self.model.compile(optimizer=adam,loss='categorical_crossentropy')
 
+	def load_model_weights(self,weight_file):
+		self.model.load_weights(weight_file)
+
 	def create_modular_net(self, sess, load_pretrained_mod=False, model_file=None):
 		if load_pretrained_mod:
 			self.load_pretrained_model(model_file)
@@ -228,10 +231,10 @@ class ModularNet():
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]
-
+					
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-
+					embed()
 					counter+=1
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
