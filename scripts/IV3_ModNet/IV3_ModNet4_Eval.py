@@ -138,6 +138,7 @@ class ModularNet():
 		self.define_primitive_stream()
 		self.define_keras_model()
 		if load_pretrained_mod:
+			print("Now loading pretrained model.")
 			self.load_model_weights(pretrained_weight_file)	
 
 	###########################################################################################
