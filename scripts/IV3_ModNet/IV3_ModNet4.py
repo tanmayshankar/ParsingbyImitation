@@ -68,7 +68,6 @@ class ModularNet():
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
 
-
 	def define_primitive_stream(self):
 		# Defining primitive FC layers.
 		self.primitive_num_hidden = 256
@@ -762,18 +761,6 @@ class ModularNet():
 		# for i in range(self.num_images):
 		# 	self.image_gradients[i,0,:-1] = self.gradients[i][0]
 		# 	self.image_gradients[i,1,:-1] = self.gradients[i][1]
-
-# def main(args):
-
-# 	# # Create a TensorFlow session with limits on GPU usage.
-# 	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list='2,3')
-# 	config = tf.ConfigProto(gpu_options=gpu_ops)
-# 	sess = tf.Session(config=config)
-
-# 	keras.backend.tensorflow_backend.set_session(sess)
-
-# 	modnet = ModularNet()
-# 	modnet.create_modular_net(sess,load_pretrained_mod=False,model_file="T2_named/model_file_epoch374.h5")
 
 def parse_arguments():
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
