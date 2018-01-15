@@ -33,6 +33,9 @@ class ModularNet():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
+		self.max_parse_steps = 6 
+		#If the parse tree length goes greater than this, it assigns all unparsed non-terminals to terminals. 	
+
 	def load_base_model(self, sess, model_file=None):
 
 		# Define a KERAS / tensorflow session. 
@@ -191,10 +194,13 @@ class ModularNet():
 			self.state.rule_indicator = 0
 
 	# Checked this - should be good - 11/1/18
-	def parse_nonterminal(self, image_index):
+	def parse_nonterminal(self, image_index, max_parse=False):
 
-		# Four branches of the rule policy.
-		self.set_rule_indicator()
+		if max_parse:
+			self.state.rule_indicator = 3
+		else:
+			# Four branches of the rule policy.
+			self.set_rule_indicator()
 
 		# rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
 
@@ -532,7 +538,7 @@ class ModularNet():
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
 		
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
-	
+		
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -553,16 +559,27 @@ class ModularNet():
 
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
-			# If the current non-terminal is a shape.
-			if (self.state.label==0):
-				self.parse_nonterminal(image_index)
+			# If we exceeded the number of parse steps allowed, AND there are non-terminals left, assign them to TERMINAL symbols. 		
+			if (len(self.parse_tree) > self.max_parse_steps)):
+				# If the current non-terminal is a shape.
+				if (self.state.label==0):
+					self.parse_nonterminal(image_index, max_parse=True)
+				# If the current non-terminal is a region assigned a particular primitive.
+				if (self.state.label==1) or (self.state.label==2):
+					self.parse_primitive_terminal(image_index)
 
-			# If the current non-terminal is a region assigned a particular primitive.
-			if (self.state.label==1) or (self.state.label==2):
-				self.parse_primitive_terminal(image_index)
+			else:
+				# If the current non-terminal is a shape.
+				if (self.state.label==0):
+					self.parse_nonterminal(image_index)
+
+				# If the current non-terminal is a region assigned a particular primitive.
+				if (self.state.label==1) or (self.state.label==2):
+					self.parse_primitive_terminal(image_index)
 			
 			self.update_plot_data(image_index)
 			# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
+
 
 	def attention_plots(self):
 		self.mask = -npy.ones((self.image_size,self.image_size))

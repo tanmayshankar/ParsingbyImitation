@@ -33,6 +33,9 @@ class ModularNet():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
+		self.max_parse_steps = 6 
+		#If the parse tree length goes greater than this, it assigns all unparsed non-terminals to terminals. 	
+
 	def load_base_model(self, sess, model_file=None):
 
 		# Define a KERAS / tensorflow session. 
@@ -149,27 +152,6 @@ class ModularNet():
 	def insert_node(self, state, index):    
 		self.parse_tree.insert(index,state)
 
-	# def remap_rule_indices(self, rule_index):
-
-	# 	if self.state.rule_indicator==0:
-	# 		# Remember, allowing all 6 rules.
-	# 		return rule_index
-	# 	elif self.state.rule_indicator==1: 
-	# 		# Now allowing only vertical splits and assignments. 
-	# 		if rule_index>=2:
-	# 			return rule_index+2
-	# 		else:
-	# 			return rule_index*2
-	# 	elif self.state.rule_indicator==2:
-	# 		# Now allowing only horizontal splits and assignments.
-	# 		if rule_index>=2:
-	# 			return rule_index+2
-	# 		else:
-	# 			return rule_index*2+1
-	# 	elif self.state.rule_indicator==3:
-	# 		# Now allowing only assignment rules.
-	# 		return rule_index+4
-
 	def set_rule_indicator(self):
 		if self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
 			# Allowing only assignment.
@@ -185,7 +167,7 @@ class ModularNet():
 			self.state.rule_indicator = 0
 
 	# Checked this - should be good - 11/1/18
-	def parse_nonterminal(self, image_index):
+	def parse_nonterminal(self, image_index, max_parse=False):
 
 		# Four branches of the rule policy.
 		self.set_rule_indicator()
@@ -199,6 +181,8 @@ class ModularNet():
 			epsgreedy_rule_probs[[0,2]]=0.
 		if (self.state.w<=self.minimum_width):
 			epsgreedy_rule_probs[[1,3]]=0.
+		if max_parse:
+			epsgreedy_rule_probs[[0,1,2,3]]=0.
 
 		epsgreedy_rule_probs/=epsgreedy_rule_probs.sum()
 
@@ -557,13 +541,22 @@ class ModularNet():
 
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
-			# If the current non-terminal is a shape.
-			if (self.state.label==0):
-				self.parse_nonterminal(image_index)
+			# If we exceeded the number of parse steps allowed, AND there are non-terminals left, assign them to TERMINAL symbols. 		
+			if (len(self.parse_tree) > self.max_parse_steps)):
+				# If the current non-terminal is a shape.
+				if (self.state.label==0):
+					self.parse_nonterminal(image_index, max_parse=True)
+				# If the current non-terminal is a region assigned a particular primitive.
+				if (self.state.label==1) or (self.state.label==2):
+					self.parse_primitive_terminal(image_index)
+			else:
+				# If the current non-terminal is a shape.
+				if (self.state.label==0):
+					self.parse_nonterminal(image_index)
 
-			# If the current non-terminal is a region assigned a particular primitive.
-			if (self.state.label==1) or (self.state.label==2):
-				self.parse_primitive_terminal(image_index)
+				# If the current non-terminal is a region assigned a particular primitive.
+				if (self.state.label==1) or (self.state.label==2):
+					self.parse_primitive_terminal(image_index)
 			
 			self.update_plot_data(image_index)
 			# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
