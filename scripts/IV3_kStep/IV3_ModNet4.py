@@ -560,7 +560,7 @@ class ModularNet():
 			self.resized_image = cv2.resize(self.image_input,(self.image_size,self.image_size))
 
 			# If we exceeded the number of parse steps allowed, AND there are non-terminals left, assign them to TERMINAL symbols. 		
-			if (len(self.parse_tree) > self.max_parse_steps)):
+			if (len(self.parse_tree) > self.max_parse_steps):
 				# If the current non-terminal is a shape.
 				if (self.state.label==0):
 					self.parse_nonterminal(image_index, max_parse=True)
