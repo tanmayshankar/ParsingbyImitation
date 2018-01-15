@@ -60,7 +60,7 @@ class ModularNet():
 		self.rule_num_hidden = 256
 
 		self.rule_fc = keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features)
-		self.rule_probabilities = keras.layers.Dense(self.target_rule_shape,activation='softmax',name='rule_probabilities')(self.rule_fc[j])
+		self.rule_probabilities = keras.layers.Dense(self.target_rule_shape,activation='softmax',name='rule_probabilities')(self.rule_fc)
 		self.rule_loss_weight = keras.backend.variable(0.,name='rule_loss_weight')
 
 	def define_split_stream(self):
