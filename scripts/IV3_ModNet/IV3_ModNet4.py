@@ -93,8 +93,8 @@ class ModularNet():
 		self.adam_optimizer = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
 		# Option to freeze base model layers.
-		# for layer in self.base_model.layers:
-		# 	layer.trainable = False
+		for layer in self.base_model.layers:
+			layer.trainable = False
 		
 		# Compiling the new model
 		# Now not feeding separate losses or target tensors. Just setting loss weights as Keras variables. 
