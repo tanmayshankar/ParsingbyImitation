@@ -33,7 +33,7 @@ class ModularNet():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
-		self.max_parse_steps = 6 
+		self.max_parse_steps = 9
 		#If the parse tree length goes greater than this, it assigns all unparsed non-terminals to terminals. 	
 
 	def load_base_model(self, sess, model_file=None):
@@ -95,9 +95,9 @@ class ModularNet():
 		# Defining optimizer.
 		self.adam_optimizer = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
-		# Option to freeze base model layers.
-		for layer in self.base_model.layers:
-			layer.trainable = False
+		# # Option to freeze base model layers.
+		# for layer in self.base_model.layers:
+		# 	layer.trainable = False
 		
 		# Compiling the new model
 		# Now not feeding separate losses or target tensors. Just setting loss weights as Keras variables. 
@@ -713,7 +713,7 @@ class ModularNet():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-		self.minimum_width = self.paintwidth
+		# self.minimum_width = self.paintwidth
 		
 		if self.plot:			
 			self.define_plots()
@@ -785,6 +785,7 @@ def parse_arguments():
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--paintwidth',dest='paintwidth',type=int)
+	parser.add_argument('--minwidth',dest='minimum_width',type=int)
 	parser.add_argument('--lambda',dest='inter_lambda',type=float)
 	parser.add_argument('--base_model',dest='base_model',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
@@ -817,6 +818,7 @@ def main(args):
 	hierarchical_model.preprocess()
 
 	hierarchical_model.paintwidth = args.paintwidth
+	hierarchical_model.minimum_width = args.minimum_width
 	hierarchical_model.intermittent_lambda = args.inter_lambda
 
 	hierarchical_model.plot = args.plot
