@@ -8,7 +8,7 @@ class ModularNet():
 
 		self.num_epochs = 20
 		self.save_every = 2
-		self.num_images = 276
+		self.num_images = 163
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -33,7 +33,7 @@ class ModularNet():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
-		self.max_parse_steps = 6 
+		self.max_parse_steps = 9 
 		#If the parse tree length goes greater than this, it assigns all unparsed non-terminals to terminals. 	
 
 	def load_base_model(self, sess, model_file=None):
