@@ -8,7 +8,7 @@ class ModularNet():
 
 		self.num_epochs = 20
 		self.save_every = 2
-		self.num_images = 163
+		self.num_images = 276
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -33,7 +33,7 @@ class ModularNet():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
-		self.max_parse_steps = 9 
+		self.max_parse_steps = 9
 		#If the parse tree length goes greater than this, it assigns all unparsed non-terminals to terminals. 	
 
 	def load_base_model(self, sess, model_file=None):
@@ -57,18 +57,19 @@ class ModularNet():
 	def define_rule_stream(self):
 		# Now defining rule FC:
 		self.rule_num_branches = 4
-		# self.target_rule_shapes = [6,4,4,2]
-		self.target_rule_shape = 6
+		self.target_rule_shapes = [6,4,4,2]
 		self.rule_num_fclayers = 2
 		self.rule_num_hidden = 256
 
-		self.rule_fc = keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features)
-		self.rule_probabilities = keras.layers.Dense(self.target_rule_shape,activation='softmax',name='rule_probabilities')(self.rule_fc)
-		self.rule_loss_weight = keras.backend.variable(0.,name='rule_loss_weight')
+		self.rule_fc = [keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features) for j in range(self.rule_num_branches)]
+		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in range(self.rule_num_branches)]
+		# self.rule_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
+		self.rule_loss_weight = [keras.backend.variable(0.,name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
 
 	def define_split_stream(self):
-		# self.split_loss_weight = keras.backend.variable(0.,name='split_loss_weight')
+		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
+		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
 
 	def define_primitive_stream(self):
 		# Defining primitive FC layers.
@@ -79,6 +80,7 @@ class ModularNet():
 		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
 
 		self.primitive_targets = keras.backend.placeholder(shape=(self.num_primitives),name='primitive_targets')
+		# self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),dtype='float64',name='primitive_loss_weight')
 		self.primitive_loss_weight = keras.backend.variable(0.,name='primitive_loss_weight')
 
 	def define_keras_model(self):
@@ -86,19 +88,23 @@ class ModularNet():
 	
 		# Defining the new model.
 		self.model = keras.models.Model(inputs=self.base_model.input,
-										outputs=[self.rule_probabilities,self.horizontal_split_probs,self.vertical_split_probs,self.primitive_probabilities])
+										outputs=[self.rule_probabilities[0],self.rule_probabilities[1],self.rule_probabilities[2],self.rule_probabilities[3],
+												 self.horizontal_split_probs,self.vertical_split_probs,self.primitive_probabilities])
 		print("Model successfully defined.")
-	
+			
 		# Defining optimizer.
 		self.adam_optimizer = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
 
-		# Option to freeze base model layers.
+		# # Option to freeze base model layers.
 		# for layer in self.base_model.layers:
 		# 	layer.trainable = False
 		
 		# Compiling the new model
 		# Now not feeding separate losses or target tensors. Just setting loss weights as Keras variables. 
-		self.model.compile(optimizer=self.adam_optimizer,loss='categorical_crossentropy',loss_weights={'rule_probabilities': self.rule_loss_weight,
+		self.model.compile(optimizer=self.adam_optimizer,loss='categorical_crossentropy',loss_weights={'rule_probabilities0': self.rule_loss_weight[0],
+																									   'rule_probabilities1': self.rule_loss_weight[1],
+																									   'rule_probabilities2': self.rule_loss_weight[2],
+																									   'rule_probabilities3': self.rule_loss_weight[3],
 																									   'horizontal_grads': self.split_loss_weight[0],
 																									   'vertical_grads': self.split_loss_weight[1],
 																									   'primitive_probabilities': self.primitive_loss_weight})	
@@ -127,16 +133,27 @@ class ModularNet():
 	def load_model_weights(self,weight_file):
 		self.model.load_weights(weight_file)
 
-	def create_modular_net(self, sess, load_pretrained_mod=False, model_file=None):
+	# def create_modular_net(self, sess, load_pretrained_mod=False, model_file=None):
+	# 	if load_pretrained_mod:
+	# 		self.load_pretrained_model(model_file)
+	# 	else:	
+	# 		print("Training Policy from base model.")
+	# 		self.load_base_model(sess, model_file)
+	# 		self.define_rule_stream()
+	# 		self.define_split_stream()
+	# 		self.define_primitive_stream()
+	# 		self.define_keras_model()
+
+	def create_modular_net(self, sess, load_pretrained_mod=False, base_model_file=None, pretrained_weight_file=None):
+		print("Training Policy from base model.")
+		self.load_base_model(sess, base_model_file)
+		self.define_rule_stream()
+		self.define_split_stream()
+		self.define_primitive_stream()
+		self.define_keras_model()
 		if load_pretrained_mod:
-			self.load_pretrained_model(model_file)
-		else:	
-			print("Training Policy from base model.")
-			self.load_base_model(sess, model_file)
-			self.define_rule_stream()
-			self.define_split_stream()
-			self.define_primitive_stream()
-			self.define_keras_model()
+			print("Now loading pretrained model.")
+			self.load_model_weights(pretrained_weight_file)	
 
 	###########################################################################################
 	############################## NOW MOVING TO PARSING CODE #################################
@@ -151,6 +168,27 @@ class ModularNet():
 
 	def insert_node(self, state, index):    
 		self.parse_tree.insert(index,state)
+
+	def remap_rule_indices(self, rule_index):
+
+		if self.state.rule_indicator==0:
+			# Remember, allowing all 6 rules.
+			return rule_index
+		elif self.state.rule_indicator==1: 
+			# Now allowing only vertical splits and assignments. 
+			if rule_index>=2:
+				return rule_index+2
+			else:
+				return rule_index*2
+		elif self.state.rule_indicator==2:
+			# Now allowing only horizontal splits and assignments.
+			if rule_index>=2:
+				return rule_index+2
+			else:
+				return rule_index*2+1
+		elif self.state.rule_indicator==3:
+			# Now allowing only assignment rules.
+			return rule_index+4
 
 	def set_rule_indicator(self):
 		if self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
@@ -169,22 +207,21 @@ class ModularNet():
 	# Checked this - should be good - 11/1/18
 	def parse_nonterminal(self, image_index, max_parse=False):
 
-		# Four branches of the rule policy.
-		self.set_rule_indicator()
-		
-		rule_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[0]
+		if max_parse:
+			self.state.rule_indicator = 3
+		else:
+			# Four branches of the rule policy.
+			self.set_rule_indicator()
+
+		# rule_probabilities = self.sess.run(self.selected_rule_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1),  self.rule_indicator: self.state.rule_indicator})
+
+		# self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))
+		# self.sess.run(self.model.output[-1],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+		# rule_probabilities = self.sess.run(self.rule_probabilities[self.state.rule_indicator],feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
+			
+		rule_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[self.state.rule_indicator]
 		epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
 		epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
-
-		epsgreedy_rule_probs += 1e-7
-		if (self.state.h<=self.minimum_width):
-			epsgreedy_rule_probs[[0,2]]=0.
-		if (self.state.w<=self.minimum_width):
-			epsgreedy_rule_probs[[1,3]]=0.
-		if max_parse:
-			epsgreedy_rule_probs[[0,1,2,3]]=0.
-
-		epsgreedy_rule_probs/=epsgreedy_rule_probs.sum()
 
 		# Must handle the fact that branches now index rules differently, using remap_rule_indices.
 		# CHECK IF ITS rule_probabilities[0] still
@@ -194,7 +231,7 @@ class ModularNet():
 			selected_rule = npy.argmax(rule_probabilities[0])
 
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
-		# selected_rule = self.remap_rule_indices(selected_rule)		
+		selected_rule = self.remap_rule_indices(selected_rule)
 		indices = self.map_rules_to_state_labels(selected_rule)
 		split_location = -1
 
@@ -211,7 +248,8 @@ class ModularNet():
 				while (split_location<=0)or(split_location>=self.state.h):
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[1]
+					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]
+
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 					# embed()
@@ -240,7 +278,7 @@ class ModularNet():
 				while (split_location<=0)or(split_location>=self.state.w):
 
 					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[2]
+					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[5]
 					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 
@@ -428,8 +466,7 @@ class ModularNet():
 			# What we really need to set is the loss weights and targets. Then you can just call Keras fit. 
 
 			# Declare target rule and primitives.
-			# target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
-			target_rule = npy.zeros(self.target_rule_shape)
+			target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
 			target_splits = [npy.zeros(self.image_size) for k in range(2)]
 			target_primitive = npy.zeros(self.num_primitives)
 
@@ -464,20 +501,18 @@ class ModularNet():
 			# 	else:
 			# 		policy_indicator = 1					
 
-			# for k in range(self.rule_num_branches):
-			# 	keras.backend.set_value(self.rule_loss_weight[k],0.)
+			for k in range(self.rule_num_branches):
+				keras.backend.set_value(self.rule_loss_weight[k],0.)
 			for k in range(2):
 				keras.backend.set_value(self.split_loss_weight[k],0.)
-			keras.backend.set_value(self.rule_loss_weight,0.)
+
 			keras.backend.set_value(self.primitive_loss_weight,0.)
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
-
-				target_rule[self.parse_tree[j].rule_indicator] = 1.
-				keras.backend.set_value(self.rule_loss_weight,return_weight)
-				# target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
-				# keras.backend.set_value(self.rule_loss_weight[self.parse_tree[j].rule_indicator],return_weight)
+				# target_rule[self.parse_tree[j].rule_indicator][:] = 0.
+				target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
+				keras.backend.set_value(self.rule_loss_weight[self.parse_tree[j].rule_indicator],return_weight)
 
 				if self.parse_tree[j].rule_applied<=3:					
 					keras.backend.set_value(self.split_loss_weight[self.parse_tree[j].rule_applied%2],return_weight)
@@ -497,19 +532,13 @@ class ModularNet():
 			# # Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# # for assigning the parent non-terminal to a region not to be painted).
 
-			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities': target_rule.reshape((1,self.target_rule_shape)),
+			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
+																								  'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
+																								  'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
+																								  'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
 																								  'horizontal_grads': target_splits[0].reshape((1,self.image_size)),
 																								  'vertical_grads': target_splits[1].reshape((1,self.image_size)),
 																								  'primitive_probabilities': target_primitive.reshape((1,self.num_primitives))})	
-
-			# self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
-			# 																					  'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
-			# 																					  'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
-			# 																					  'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
-			# 																					  'horizontal_grads': target_splits[0].reshape((1,self.image_size)),
-			# 																					  'vertical_grads': target_splits[1].reshape((1,self.image_size)),
-			# 																					  'primitive_probabilities': target_primitive.reshape((1,self.num_primitives))})	
-
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
@@ -520,7 +549,7 @@ class ModularNet():
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
 		
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
-	
+		
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -549,6 +578,7 @@ class ModularNet():
 				# If the current non-terminal is a region assigned a particular primitive.
 				if (self.state.label==1) or (self.state.label==2):
 					self.parse_primitive_terminal(image_index)
+
 			else:
 				# If the current non-terminal is a shape.
 				if (self.state.label==0):
@@ -560,6 +590,7 @@ class ModularNet():
 			
 			self.update_plot_data(image_index)
 			# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
+
 
 	def attention_plots(self):
 		self.mask = -npy.ones((self.image_size,self.image_size))
@@ -790,7 +821,8 @@ def main(args):
 
 	# with sess.as_default():
 	hierarchical_model = ModularNet()
-	hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
+	# hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
+	hierarchical_model.create_modular_net(sess,load_pretrained_mod=True,base_model_file=args.base_model,pretrained_weight_file=args.model)
 
 	hierarchical_model.images = npy.load(args.images)
 	hierarchical_model.true_labels = npy.load(args.labels) 

@@ -696,7 +696,7 @@ class ModularNet():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
-		self.minimum_width = self.paintwidth
+		# self.minimum_width = self.paintwidth
 		
 		if self.plot:			
 			self.define_plots()
@@ -784,6 +784,7 @@ def parse_arguments():
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--paintwidth',dest='paintwidth',type=int)
+	parser.add_argument('--minwidth',dest='minimum_width',type=int)
 	parser.add_argument('--lambda',dest='inter_lambda',type=float)
 	parser.add_argument('--base_model',dest='base_model',type=str)
 	parser.add_argument('--model',dest='model',type=str)
@@ -818,6 +819,7 @@ def main(args):
 	hierarchical_model.preprocess()
 
 	hierarchical_model.paintwidth = args.paintwidth
+	hierarchical_model.minimum_width = args.minimum_width
 	hierarchical_model.intermittent_lambda = args.inter_lambda
 
 	hierarchical_model.plot = args.plot
