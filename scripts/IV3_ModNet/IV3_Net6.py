@@ -8,7 +8,7 @@ class ModularNet():
 
 		self.num_epochs = 20
 		self.save_every = 2
-		self.num_images = 276
+		self.num_images = 163
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
