@@ -6,8 +6,8 @@ class ModularNet():
 
 	def __init__(self):
 
-		self.num_epochs = 20
-		self.save_every = 2
+		self.num_epochs = 200
+		self.save_every = 5
 		self.num_images = 163
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
@@ -23,7 +23,7 @@ class ModularNet():
 		# For Epsilon Greedy Policy: 
 		self.initial_epsilon = 0.5
 		self.final_epsilon = 0.1
-		self.decay_epochs = 5
+		self.decay_epochs = 25
 		self.annealing_rate = (self.initial_epsilon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epsilon = 0.
 
