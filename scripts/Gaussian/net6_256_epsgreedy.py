@@ -364,8 +364,8 @@ class hierarchical():
 		if (self.state.label==1):
 
 			primitive_probabilities = self.sess.run(self.primitive_probabilities, feed_dict={self.input: self.resized_image.reshape(1,self.image_size,self.image_size,1)})
-			epsgreedy_primitive_probs = npy.ones((self.num_primitives))*(self.annealed_epsilon/self.num_primitives)
-			epsgreedy_primitive_probs[primitive_probabilities.argmax()] = 1.-self.annealed_epsilon +self.annealed_epsilon/self.num_primitives
+			epsgreedy_primitive_probs = npy.ones((self.number_primitives))*(self.annealed_epsilon/self.number_primitives)
+			epsgreedy_primitive_probs[primitive_probabilities.argmax()] = 1.-self.annealed_epsilon +self.annealed_epsilon/self.number_primitives
 
 			if self.to_train:
 				selected_primitive = npy.random.choice(range(self.number_primitives),p=epsgreedy_primitive_probs)
