@@ -23,7 +23,7 @@ class ModularNet():
 		# For Epsilon Greedy Policy: 
 		self.initial_epsilon = 0.9
 		self.final_epsilon = 0.1
-		self.decay_epochs = 100
+		self.decay_epochs = 50
 		self.annealing_rate = (self.initial_epsilon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epsilon = 0.
 
