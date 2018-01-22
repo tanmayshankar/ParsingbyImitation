@@ -426,6 +426,7 @@ class ModularNet():
 
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
+		self.current_parsing_index += 1
 	def propagate_rewards(self):
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
@@ -550,9 +551,9 @@ class ModularNet():
 		self.painted_image = -npy.ones((self.image_size,self.image_size))
 		self.alternate_painted_image = -npy.ones((self.image_size,self.image_size))
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
-		
+			
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
-	
+			print("In main parsing loop.")
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
@@ -724,14 +725,18 @@ class ModularNet():
 		self.to_train = train		
 		if not(train):
 			self.num_epochs=1
-
+		print("Entering Training Loops.")
 		# For all epochs
 		for e in range(self.num_epochs):
+
 			self.save_model_weights(e)				
 			for i in range(self.num_images):
 
+				print("Initializing Tree.")
 				self.initialize_tree()
+				print("Starting Parse Tree.")
 				self.construct_parse_tree(i)
+				print("Propagating Rewards.")
 				self.propagate_rewards()				
 
 				print("#___________________________________________________________________________")
@@ -813,21 +818,23 @@ def main(args):
 	hierarchical_model = ModularNet()
 	hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,model_file=args.base_model)
 
+	print("Loading Images.")
 	hierarchical_model.images = npy.load(args.images)
+	print("Loading Labels.")
 	hierarchical_model.true_labels = npy.load(args.labels) 
+
 	hierarchical_model.image_size = args.size 
+	print("Preprocessing Images.")
 	hierarchical_model.preprocess()
 
-	hierarchical_model.paintwidth = args.paintwidth
 	hierarchical_model.minimum_width = args.minimum_width
-	hierarchical_model.intermittent_lambda = args.inter_lambda
 
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
 	
 	if hierarchical_model.to_train:
 		hierarchical_model.suffix = args.suffix
-	
+	print("Starting to Train.")
 	hierarchical_model.meta_training(train=args.train)
 
 if __name__ == '__main__':
