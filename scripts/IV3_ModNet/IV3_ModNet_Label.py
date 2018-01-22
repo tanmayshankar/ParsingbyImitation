@@ -427,6 +427,7 @@ class ModularNet():
 		self.state.reward = (self.true_labels[image_index, self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]*self.painted_image[self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]).sum()
 
 		self.current_parsing_index += 1
+
 	def propagate_rewards(self):
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
@@ -472,7 +473,7 @@ class ModularNet():
 			# Declare target rule and primitives.
 			target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
 			target_splits = [npy.zeros(self.image_size) for k in range(2)]
-			target_primitive = npy.zeros(self.num_primitives)
+			# target_primitive = npy.zeros(self.num_primitives)
 
 			# # Declare target rule and primitives.
 			# target_rule = [npy.ones(self.target_rule_shapes[k])/self.target_rule_shapes[k] for k in range(self.rule_num_branches)]
@@ -510,7 +511,7 @@ class ModularNet():
 			for k in range(2):
 				keras.backend.set_value(self.split_loss_weight[k],0.)
 
-			keras.backend.set_value(self.primitive_loss_weight,0.)
+			# keras.backend.set_value(self.primitive_loss_weight,0.)
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
@@ -526,12 +527,12 @@ class ModularNet():
 					if self.parse_tree[j].rule_applied%2==1:
 						target_splits[1][self.parse_tree[j].split] = 1.
 				
-			# If it was a terminal symbol that was to be painted:
-			if self.parse_tree[j].label==1:
-				# Set the target primitive and policy branch.
-				# target_primitive[:] = 0.
-				target_primitive[self.parse_tree[j].primitive] = 1.				
-				keras.backend.set_value(self.primitive_loss_weight,return_weight)
+			# # If it was a terminal symbol that was to be painted:
+			# if self.parse_tree[j].label==1:
+			# 	# Set the target primitive and policy branch.
+			# 	# target_primitive[:] = 0.
+			# 	target_primitive[self.parse_tree[j].primitive] = 1.				
+			# 	keras.backend.set_value(self.primitive_loss_weight,return_weight)
 
 			# # Remember, we don't backprop for a terminal not to be painted (since we already would've backpropagated gradients
 			# # for assigning the parent non-terminal to a region not to be painted).
@@ -541,8 +542,7 @@ class ModularNet():
 																								  'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
 																								  'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
 																								  'horizontal_grads': target_splits[0].reshape((1,self.image_size)),
-																								  'vertical_grads': target_splits[1].reshape((1,self.image_size)),
-																								  'primitive_probabilities': target_primitive.reshape((1,self.num_primitives))})	
+																								  'vertical_grads': target_splits[1].reshape((1,self.image_size))})	
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
@@ -553,7 +553,7 @@ class ModularNet():
 		self.alternate_predicted_labels = npy.zeros((self.image_size,self.image_size))
 			
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
-			print("In main parsing loop.")
+			# print("In main parsing loop.")
 			# Forward pass of the rule policy- basically picking which rule.
 			self.state = self.parse_tree[self.current_parsing_index]
 			# Pick up correct portion of image.
