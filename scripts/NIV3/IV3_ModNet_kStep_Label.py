@@ -33,7 +33,7 @@ class ModularNet():
 		self.previous_goal = npy.zeros(2)
 		self.current_start = npy.zeros(2)
 
-		self.max_parse_steps = 100
+		self.max_parse_steps = 9
 
 	def load_base_model(self, sess, model_file=None):
 
