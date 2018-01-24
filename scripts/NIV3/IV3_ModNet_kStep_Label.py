@@ -693,6 +693,7 @@ def parse_arguments():
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--pretrain',dest='pretrain',type=int,default=0)
 	parser.add_argument('--model',dest='model',type=str)
+	parser.add_argument('--parse_steps',dest='steps',type=int,default=9)
 	return parser.parse_args()
 
 def main(args):
@@ -729,7 +730,7 @@ def main(args):
 	hierarchical_model.preprocess()
 
 	hierarchical_model.minimum_width = args.minimum_width
-
+	hierarchical_model.max_parse_steps = args.steps
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train
 	
