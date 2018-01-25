@@ -271,7 +271,7 @@ class ModularNet():
 						split_location = int(npy.floor(float(inter_split)*self.state.h/self.image_size))
 					else:
 						split_location = int(npy.ceil(float(inter_split)*self.state.h/self.image_size))
-
+					embed()
 					if counter>25:
 						print("State: H",self.state.h, "Split fraction:",inter_split, "Split location:",split_location)
 			
@@ -304,7 +304,7 @@ class ModularNet():
 						split_location = int(npy.floor(float(inter_split)*self.state.w/self.image_size))
 					else:
 						split_location = int(npy.ceil(float(inter_split)*self.state.w/self.image_size))
-
+					embed()
 					if counter>25:
 						print("State: W",self.state.w, "Split fraction:",inter_split, "Split location:",split_location)
 
