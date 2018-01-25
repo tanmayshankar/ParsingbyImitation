@@ -224,6 +224,8 @@ class ModularNet():
 			selected_rule = npy.argmax(rule_probabilities[0])
 
 		print("Select Rule to apply now: Set selected_rule.")
+		print("State:")
+		self.state.disp()
 		embed()
 		
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
@@ -255,6 +257,8 @@ class ModularNet():
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
 
 					print("Select split to apply now: Set split_location.")
+					print("State:")
+					self.state.disp()
 					embed()
 					# if self.to_train:
 					# 	split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
@@ -291,6 +295,8 @@ class ModularNet():
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
 					print("Select split to apply now: Set split_location.")
+					print("State:")
+					self.state.disp()
 					embed()
 					inter_split = copy.deepcopy(split_location)
 	
