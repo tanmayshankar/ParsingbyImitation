@@ -18,10 +18,10 @@ class GradientNet():
 
 		# Modifying to predict 512 values instead of 256.
 		# First predict 512 values with no activation, then apply a softmax individually. 
-		self.horizontal_presf_grads = keras.layers.Dense(self.image_size[0],name='horizontal_presf_grads')(x)
+		self.horizontal_presf_grads = keras.layers.Dense(self.image_size[0]-1,name='horizontal_presf_grads')(x)
 		self.horizontal_grads = keras.layers.Activation(activation='softmax',name='horizontal_grads')(self.horizontal_presf_grads)
 
-		self.vertical_presf_grads = keras.layers.Dense(self.image_size[0],name='vertical_presf_grads')(x)
+		self.vertical_presf_grads = keras.layers.Dense(self.image_size[0]-1,name='vertical_presf_grads')(x)
 		self.vertical_grads = keras.layers.Activation(activation='softmax',name='vertical_grads')(self.vertical_presf_grads)
 
 		# Compiling the model.
@@ -38,7 +38,7 @@ class GradientNet():
 
 		# self.model.compile(optimizer=adam,loss='kld')
 		# self.base_filepath = base_filepath
-		self.num_images = 276
+		self.num_images = 362
 		self.num_epochs = 500
 		# Just because so few images.
 		self.batch_size = 12
@@ -50,11 +50,11 @@ class GradientNet():
 		self.images = self.images.astype(float)
 		self.images -= self.images.mean(axis=(0,1,2))
 		
-		self.image_gradients = npy.zeros((self.num_images,2,self.image_size[0]))
+		self.image_gradients = npy.zeros((self.num_images,2,self.image_size[0]-1))
 
 		for i in range(self.num_images):
-			self.image_gradients[i,0,:-1] = self.gradients[i][0]
-			self.image_gradients[i,1,:-1] = self.gradients[i][1]
+			self.image_gradients[i,0] = self.hgradients[i]
+			self.image_gradients[i,1] = self.vgradients[i]
 
 	def save_weights(self,k):
 		self.model.save_weights("model_weights_epoch{0}.h5".format(k))
@@ -123,7 +123,8 @@ def parse_arguments():
 
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
 	parser.add_argument('--images',dest='images',type=str)
-	parser.add_argument('--gradients',dest='gradients',type=str)
+	parser.add_argument('--hgradients',dest='hgradients',type=str)
+	parser.add_argument('--vgradients',dest='vgradients',type=str)
 	return parser.parse_args()
 
 def main(args):
@@ -131,7 +132,7 @@ def main(args):
 	args = parse_arguments()
 
 	# # Create a TensorFlow session with limits on GPU usage.
-	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list='2,3')
+	gpu_ops = tf.GPUOptions(allow_growth=True,visible_device_list='0,1')
 	config = tf.ConfigProto(gpu_options=gpu_ops)
 	sess = tf.Session(config=config)
 	
@@ -140,7 +141,8 @@ def main(args):
 	gradnet = GradientNet(sess)
 
 	gradnet.images = npy.load(args.images)
-	gradnet.gradients = npy.load(args.gradients)
+	gradnet.hgradients = npy.load(args.hgradients)
+	gradnet.vgradients = npy.load(args.vgradients)
 	gradnet.preprocess()
 
 	gradnet.train()
