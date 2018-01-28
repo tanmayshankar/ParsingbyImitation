@@ -109,7 +109,7 @@ class GradientNet():
 	def forward(self, epoch):
 
 		index_list = range(self.num_images)
-		self.predicted_gradients = npy.zeros((2,self.num_images,self.image_size[0]))
+		self.predicted_gradients = npy.zeros((2,self.num_images,self.image_size[0]-1))
 
 		for i in range(self.num_images/self.batch_size):
 			indices = index_list[i*self.batch_size:(i+1)*self.batch_size]
