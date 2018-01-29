@@ -70,8 +70,8 @@ class ModularNet():
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
 
-		self.split_mask = keras.backend.placeholder(shape=(self.image_size-1),name='split_mask')
-		
+		self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),shape=(self.image_size-1),name='split_mask')
+
 		self.masked_unnorm_horizontal_probs = keras.layers.Multiply(self.horizontal_split_probs,self.split_mask)
 		self.masked_unnorm_vertical_probs = keras.layers.Multiply(self.vertical_split_probs,self.split_mask)
 
@@ -252,55 +252,52 @@ class ModularNet():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
 
+					self.split_mask_vect = npy.zeros((self.image_size-1))
+					self.split_mask_vect[self.state.y:self.state.y+self.state.h]=1.
+
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[5]
+					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
+					epsgreedy_rule_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
+					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
+					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 
-					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
-					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 					# embed()
 					counter+=1
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
-					# if self.to_train:
-					# 	split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
-					# elif not(self.to_train):
-					# 	split_location = npy.argmax(split_probs)
 					inter_split = copy.deepcopy(split_location)
-
-					if (float(inter_split)*self.state.h/self.image_size) > (self.state.h/2):
-					# if inter_split>(self.state.h/2):
-						split_location = int(npy.floor(float(inter_split)*self.state.h/self.image_size))
-					else:
-						split_location = int(npy.ceil(float(inter_split)*self.state.h/self.image_size))
+					split_location -= self.state.y
 
 					if counter>25:
 						print("State: H",self.state.h, "Split fraction:",inter_split, "Split location:",split_location)
 			
 				# Create splits.
 				s1 = parse_tree_node(label=indices[0],x=self.state.x,y=self.state.y,w=self.state.w,h=split_location,backward_index=self.current_parsing_index)
-				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)
+				s2 = parse_tree_node(label=indices[1],x=self.state.x,y=self.state.y+split_location,w=self.state.w,h=self.state.h-split_location,backward_index=self.current_parsing_index)			
 
 			if ((selected_rule==1) or (selected_rule==3)):
 				counter = 0
-				self.state.split_indicator = 1
+				self.state.split_indicator = 1				
 
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
 
+					self.split_mask_vect = npy.zeros((self.image_size-1))
+					self.split_mask_vect[self.state.x:self.state.x+self.state.w]=1.
+
 					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]
-					epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
-					epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
+					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]		
+					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
+					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
+					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
+					epsgreedy_rule_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
 
 					counter+=1
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
 					inter_split = copy.deepcopy(split_location)
-	
-					if (float(inter_split)*self.state.w/self.image_size) > (self.state.w/2):
-						split_location = int(npy.floor(float(inter_split)*self.state.w/self.image_size))
-					else:
-						split_location = int(npy.ceil(float(inter_split)*self.state.w/self.image_size))
+					split_location -= self.state.x
 
 					if counter>25:
 						print("State: W",self.state.w, "Split fraction:",inter_split, "Split location:",split_location)
@@ -406,6 +403,7 @@ class ModularNet():
 			self.resized_image = copy.deepcopy(self.attended_image)
 			# What we really need to set is the loss weights and targets. Then you can just call Keras fit. 
 
+
 			# Declare target rule and primitives.
 			target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
 			target_splits = [npy.zeros(self.image_size) for k in range(2)]
@@ -418,25 +416,31 @@ class ModularNet():
 			for k in range(2):
 				keras.backend.set_value(self.split_loss_weight[k],0.)
 
+			keras.backend.set_value(self.split_mask,npy.zeros(self.image_size-1))
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
 				target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
 				keras.backend.set_value(self.rule_loss_weight[self.parse_tree[j].rule_indicator],return_weight)
 
-				if self.parse_tree[j].rule_applied<=3:					
-					# keras.backend.set_value(self.split_loss_weight[self.parse_tree[j].rule_applied%2],return_weight)
-					
-					# if self.parse_tree[j].rule_applied%2==0:
-					# 	target_splits[0][self.parse_tree[j].split] = 1.
-					# if self.parse_tree[j].rule_applied%2==1:
-					# 	target_splits[1][self.parse_tree[j].split] = 1.
-				
+				if self.parse_tree[j].rule_applied<=3:								
 					keras.backend.set_value(self.split_loss_weight[1-self.parse_tree[j].rule_applied%2],return_weight)
 					
+					# REMEMBER, THIS CONDITION IS FOR: 
 					if self.parse_tree[j].rule_applied%2==1:
 						target_splits[0][self.parse_tree[j].split] = 1.
+
+						self.split_mask_vect = npy.zeros(self.image_size-1)
+						self.split_mask_vect[lowerx:upperx] = 1.
+						keras.backend.set_value(self.split_mask,split_mask_vect)
+
+					# THIS CONDITION IS FOR: 
 					if self.parse_tree[j].rule_applied%2==0:
 						target_splits[1][self.parse_tree[j].split] = 1.
+
+						self.split_mask_vect = npy.zeros(self.image_size-1)
+						self.split_mask_vect[lowery:uppery] = 1.
+						keras.backend.set_value(self.split_mask,split_mask_vect)
+
 
 			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
 																								  'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
