@@ -70,7 +70,7 @@ class ModularNet():
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
 
-		self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),shape=(self.image_size-1),name='split_mask')
+		self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),name='split_mask')
 
 		self.masked_unnorm_horizontal_probs = keras.layers.Multiply(self.horizontal_split_probs,self.split_mask)
 		self.masked_unnorm_vertical_probs = keras.layers.Multiply(self.vertical_split_probs,self.split_mask)
