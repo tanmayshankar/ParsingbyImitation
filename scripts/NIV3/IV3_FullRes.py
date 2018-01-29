@@ -108,7 +108,7 @@ class ModularNet():
 		print("Model successfully defined.")
 			
 		# Defining optimizer.
-		self.adam_optimizer = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
+		self.adam_optimizer = keras.optimizers.Adam(lr=0.0001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0, clipvalue=10.)
 
 		# # Option to freeze base model layers.
 		# for layer in self.base_model.layers:
