@@ -72,11 +72,13 @@ class ModularNet():
 
 		self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),name='split_mask')
 
-		self.masked_unnorm_horizontal_probs = keras.layers.Multiply(self.horizontal_split_probs,self.split_mask)
-		self.masked_unnorm_vertical_probs = keras.layers.Multiply(self.vertical_split_probs,self.split_mask)
-
-		self.masked_hgrad_sum = keras.backend.sum(self.masked_unnorm_horizontal_probs,name='hgrad_sum')		
-		self.masked_vgrad_sum = keras.backend.sum(self.masked_unnorm_vertical_probs,name='vgrad_sum')
+		self.masked_unnorm_horizontal_probs = keras.layers.Multiply()([self.horizontal_split_probs,self.split_mask])
+		self.masked_unnorm_vertical_probs = keras.layers.Multiply()([self.vertical_split_probs,self.split_mask])
+		# self.masked_unnorm_horizontal_probs = tf.multiply(self.horizontal_split_probs,self.split_mask)
+		# self.masked_unnorm_vertical_probs = tf.multiply(self.vertical_split_probs,self.split_mask)
+		# embed()
+		self.masked_hgrad_sum = keras.backend.sum(self.masked_unnorm_horizontal_probs)		
+		self.masked_vgrad_sum = keras.backend.sum(self.masked_unnorm_vertical_probs)
 		
 		self.masked_norm_horizontal_probs = keras.layers.Lambda(lambda x,y: tf.divide(x,y), arguments={'y': self.masked_hgrad_sum},name='masked_horizontal_probabilities')(self.masked_unnorm_horizontal_probs)
 		self.masked_norm_vertical_probs = keras.layers.Lambda(lambda x,y: tf.divide(x,y), arguments={'y': self.masked_vgrad_sum},name='masked_vertical_probabilities')(self.masked_unnorm_vertical_probs)
@@ -103,7 +105,6 @@ class ModularNet():
 
 		self.model = keras.models.Model(inputs=self.base_model.input,
 										outputs=[self.rule_probabilities[0],self.rule_probabilities[1],self.rule_probabilities[2],self.rule_probabilities[3],
-												 # self.horizontal_split_probs,self.vertical_split_probs])
 												 self.masked_norm_horizontal_probs, self.masked_norm_vertical_probs])		
 		print("Model successfully defined.")
 			
@@ -128,8 +129,8 @@ class ModularNet():
 																									   'rule_probabilities1': self.rule_loss_weight[1],
 																									   'rule_probabilities2': self.rule_loss_weight[2],
 																									   'rule_probabilities3': self.rule_loss_weight[3],
-																									   'horizontal_grads': self.split_loss_weight[0],
-																									   'vertical_grads': self.split_loss_weight[1]})
+																									   'masked_horizontal_probabilities': self.split_loss_weight[0],
+																									   'masked_vertical_probabilities': self.split_loss_weight[1]})
 
 		print("Supposed to have compiled model.")
 		# embed()
