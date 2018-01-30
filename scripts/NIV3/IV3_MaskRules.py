@@ -259,7 +259,7 @@ class ModularNet():
 			selected_rule = npy.argmax(rule_probabilities)
 
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
-		selected_rule = self.remap_rule_indices(selected_rule)
+		# selected_rule = self.remap_rule_indices(selected_rule)
 		indices = self.map_rules_to_state_labels(selected_rule)
 		split_location = -1
 
