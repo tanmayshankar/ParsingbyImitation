@@ -57,27 +57,27 @@ class ModularNet():
 	def define_rule_stream(self):
 		# Now defining rule FC:
 		self.rule_num_branches = 4
-		self.target_rule_shapes = [6,4,4,2]
+		self.target_rule_shapes = 6
 		self.rule_num_fclayers = 2
 		self.rule_num_hidden = 256
 
-		self.rule_fc = [keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features) for j in range(self.rule_num_branches)]
-		self.rule_probabilities = [keras.layers.Dense(self.target_rule_shapes[j],activation='softmax',name='rule_probabilities{0}'.format(j))(self.rule_fc[j]) for j in range(self.rule_num_branches)]
-		# self.rule_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
-		self.rule_loss_weight = [keras.backend.variable(0.,name='rule_loss_weight{0}'.format(j)) for j in range(self.rule_num_branches)]
+		self.rule_fc = keras.layers.Dense(self.rule_num_hidden,activation='relu')(self.fc6_features)
+		self.premask_rule_probabilities = keras.layers.Dense(self.target_rule_shapes,activation='softmax',name='rule_probabilities')(self.rule_fc)
+		self.rule_mask = keras.layers.Input(batch_shape=(1,self.target_rule_shapes),name='rule_mask')
+
+		self.masked_unnorm_rule_probs = keras.layers.Multiply()([self.premask_rule_probabilities,self.rule_mask])
+		self.masked_rule_sum = keras.backend.sum(self.masked_unnorm_rule_probs)
+		self.masked_norm_rule_probs = keras.layers.Lambda(lambda x,y: tf.divide(x,y), arguments={'y': self.masked_rule_sum}, name='masked_norm_rule_probs')(self.masked_unnorm_rule_probs)
+
+		self.rule_loss_weight = keras.backend.variable(0.,name='rule_loss_weight')
 
 	def define_split_stream(self):
-		# self.split_indicator = keras.layers.Input(batch_shape=(1,),dtype='int32',name='split_indicator')
-		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
-		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
 
-		# self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),name='split_mask')
+		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		self.split_mask = keras.layers.Input(batch_shape=(1,self.image_size-1),name='split_mask')
+
 		self.masked_unnorm_horizontal_probs = keras.layers.Multiply()([self.horizontal_split_probs,self.split_mask])
 		self.masked_unnorm_vertical_probs = keras.layers.Multiply()([self.vertical_split_probs,self.split_mask])
-		
-		# self.masked_unnorm_horizontal_probs = tf.multiply(self.horizontal_split_probs,self.split_mask)
-		# self.masked_unnorm_vertical_probs = tf.multiply(self.vertical_split_probs,self.split_mask)
 		
 		self.masked_hgrad_sum = keras.backend.sum(self.masked_unnorm_horizontal_probs)		
 		self.masked_vgrad_sum = keras.backend.sum(self.masked_unnorm_vertical_probs)
@@ -94,17 +94,13 @@ class ModularNet():
 		self.primitive_probabilities = keras.layers.Dense(self.num_primitives,activation='softmax',name='primitive_probabilities')(self.primitive_fc0)		
 
 		self.primitive_targets = keras.backend.placeholder(shape=(self.num_primitives),name='primitive_targets')
-		# self.primitive_loss_weight = keras.backend.variable(npy.zeros(1),dtype='float64',name='primitive_loss_weight')
 		self.primitive_loss_weight = keras.backend.variable(0.,name='primitive_loss_weight')
 
 	def define_keras_model(self):
 		############################################################################################### 
 	
-		self.model = keras.models.Model(inputs=[self.base_model.input,self.split_mask],
-										outputs=[self.rule_probabilities[0],
-												 self.rule_probabilities[1],
-												 self.rule_probabilities[2],
-												 self.rule_probabilities[3],
+		self.model = keras.models.Model(inputs=[self.base_model.input,self.split_mask,self.rule_mask],
+										outputs=[self.masked_norm_rule_probs,
 												 self.masked_norm_horizontal_probs,
 												 self.masked_norm_vertical_probs])		
 
@@ -116,21 +112,8 @@ class ModularNet():
 		# # Option to freeze base model layers.
 		# for layer in self.base_model.layers:
 		# 	layer.trainable = False
-		
-		# Compiling the new model
-		# Now not feeding separate losses or target tensors. Just setting loss weights as Keras variables. 
-		# self.model.compile(optimizer=self.adam_optimizer,loss='categorical_crossentropy',loss_weights={'rule_probabilities0': self.rule_loss_weight[0],
-		# 																							   'rule_probabilities1': self.rule_loss_weight[1],
-		# 																							   'rule_probabilities2': self.rule_loss_weight[2],
-		# 																							   'rule_probabilities3': self.rule_loss_weight[3],
-		# 																							   'horizontal_grads': self.split_loss_weight[0],
-		# 																							   'vertical_grads': self.split_loss_weight[1],
-		# 																							   'primitive_probabilities': self.primitive_loss_weight})	
-		
-		self.model.compile(optimizer=self.adam_optimizer,loss='categorical_crossentropy',loss_weights={'rule_probabilities0': self.rule_loss_weight[0],
-																									   'rule_probabilities1': self.rule_loss_weight[1],
-																									   'rule_probabilities2': self.rule_loss_weight[2],
-																									   'rule_probabilities3': self.rule_loss_weight[3],
+			
+		self.model.compile(optimizer=self.adam_optimizer,loss='categorical_crossentropy',loss_weights={'masked_norm_rule_probs': self.rule_loss_weight,
 																									   'masked_horizontal_probabilities': self.split_loss_weight[0],
 																									   'masked_vertical_probabilities': self.split_loss_weight[1]})
 
@@ -177,61 +160,103 @@ class ModularNet():
 	def insert_node(self, state, index):    
 		self.parse_tree.insert(index,state)
 
-	def remap_rule_indices(self, rule_index):
+	# def remap_rule_indices(self, rule_index):
 
-		if self.state.rule_indicator==0:
-			# Remember, allowing all 6 rules.
-			return rule_index
-		elif self.state.rule_indicator==1: 
-			# Now allowing only vertical splits and assignments. 
-			if rule_index>=2:
-				return rule_index+2
-			else:
-				return rule_index*2
-		elif self.state.rule_indicator==2:
-			# Now allowing only horizontal splits and assignments.
-			if rule_index>=2:
-				return rule_index+2
-			else:
-				return rule_index*2+1
-		elif self.state.rule_indicator==3:
-			# Now allowing only assignment rules.
-			return rule_index+4
+	# 	if self.state.rule_indicator==0:
+	# 		# Remember, allowing all 6 rules.
+	# 		return rule_index
+	# 	elif self.state.rule_indicator==1: 
+	# 		# Now allowing only vertical splits and assignments. 
+	# 		if rule_index>=2:
+	# 			return rule_index+2
+	# 		else:
+	# 			return rule_index*2
+	# 	elif self.state.rule_indicator==2:
+	# 		# Now allowing only horizontal splits and assignments.
+	# 		if rule_index>=2:
+	# 			return rule_index+2
+	# 		else:
+	# 			return rule_index*2+1
+	# 	elif self.state.rule_indicator==3:
+	# 		# Now allowing only assignment rules.
+	# 		return rule_index+4
 
 	def set_rule_indicator(self):
+
 		if self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
 			# Allowing only assignment.
 			self.state.rule_indicator = 3
+
 		elif self.state.h<=self.minimum_width:
 			# Allowing only horizontal splits and assignment.
 			self.state.rule_indicator = 2
+
 		elif self.state.w<=self.minimum_width:
 			# Allowing only vertical splits and assignment.
 			self.state.rule_indicator = 1
+
 		else:
 			# Allowing anything and everything.
 			self.state.rule_indicator = 0
+
+	def set_rule_mask(self):
+
+		############################
+		# Rule numbers:
+		# 0 (Shape) -> (Shape)(Shape) 								(Vertical split)
+		# 1 (Shape) -> (Shape)(Shape) 								(Horizontal split)
+		# 2 (Shape) -> (Shape)(Shape) 								(Vertical split with opposite order: top-bottom expansion)
+		# 3 (Shape) -> (Shape)(Shape) 								(Horizontal split with opposite order: right-left expansion)
+		# 4 (Shape) -> (Region with primitive #) 
+		# 5 (Shape) -> (Region not to be painted)
+		############################
+
+		if self.state.rule_indicator==3:		
+			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
+			self.rule_mask_vect[[4,5]] = 1.
+
+		elif self.state.rule_indicator==2:
+			# Allowing only horizontal splits and assignment.
+			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
+			self.rule_mask_vect[[0,2,4,5]] = 1.
+		
+		elif self.state.rule_indicator==1:
+			# Allowing only vertical splits and assignment.		
+			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
+			self.rule_mask_vect[[1,3,4,5]] = 1.
+		elif self.state.rule_indicator==0:
+			# Allowing anything and everything.
+			self.rule_mask_vect = npy.ones((self.target_rule_shapes))
 
 	# Checked this - should be good - 11/1/18
 	def parse_nonterminal(self, image_index, max_parse=False):
 
 		if max_parse:
 			self.state.rule_indicator = 3
+			self.set_rule_mask()
 		else:
 			# Four branches of the rule policiesly.
 			self.set_rule_indicator()
+			self.set_rule_mask()
 		
 		# split_mask_input = npy.zeros((self.image_size-1))
 		self.split_mask_vect = npy.zeros((self.image_size-1))
 
-		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[self.state.rule_indicator]
-		epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
-		epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
+		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
+												 self.split_mask_vect.reshape((1,self.image_size-1)),
+												 self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[0]
+
+		epsgreedy_rule_probs = copy.deepcopy(self.rule_mask_vect)*self.annealed_epsilon/npy.count_nonzero(self.rule_mask_vect)
+		epsgreedy_rule_probs[rule_probabilities.argmax()] += 1.-self.annealed_epsilon
+		epsgreedy_rule_probs /= epsgreedy_rule_probs
+
+		# epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
+		# epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
 
 		if self.to_train:
-			selected_rule = npy.random.choice(range(len(rule_probabilities[0])),p=epsgreedy_rule_probs)
+			selected_rule = npy.random.choice(range(self.target_rule_shapes),p=epsgreedy_rule_probs)
 		elif not(self.to_train):
-			selected_rule = npy.argmax(rule_probabilities[0])
+			selected_rule = npy.argmax(rule_probabilities)
 
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
 		selected_rule = self.remap_rule_indices(selected_rule)
@@ -252,8 +277,9 @@ class ModularNet():
 
 					self.split_mask_vect[self.state.y:self.state.y+self.state.h]=1.
 
-					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[5]
+					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
+												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
+												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[2]
 					
 					epsgreedy_split_probs = npy.zeros((self.image_size-1))
 					epsgreedy_split_probs[self.state.y:self.state.y+self.state.h]= self.annealed_epsilon/self.state.h		
@@ -289,7 +315,10 @@ class ModularNet():
 					self.split_mask_vect[self.state.x:self.state.x+self.state.w]=1.
 
 					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[4]		
+					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
+												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
+												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[1]
+
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 					epsgreedy_split_probs = npy.zeros((self.image_size-1))
@@ -410,23 +439,23 @@ class ModularNet():
 
 
 			# Declare target rule and primitives.
-			target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
+			target_rule = npy.zeros(self.target_rule_shapes)
 			target_splits = [npy.zeros(self.image_size-1) for k in range(2)]
 
 			# Set the return weight for the loss globally., i.e. for all losses.
 			return_weight = self.parse_tree[j].reward
 
-			for k in range(self.rule_num_branches):
-				keras.backend.set_value(self.rule_loss_weight[k],0.)
+			keras.backend.set_value(self.rule_loss_weight,0.)
 			for k in range(2):
 				keras.backend.set_value(self.split_loss_weight[k],0.)
 
 			self.split_mask_vect = npy.zeros((self.image_size-1))
+			self.set_rule_mask()
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
-				target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
-				keras.backend.set_value(self.rule_loss_weight[self.parse_tree[j].rule_indicator],return_weight)
+				target_rule[self.parse_tree[j].rule_applied] = 1.			
+				keras.backend.set_value(self.rule_loss_weight,return_weight)
 
 				if self.parse_tree[j].rule_applied<=3:								
 					keras.backend.set_value(self.split_loss_weight[1-self.parse_tree[j].rule_applied%2],return_weight)
@@ -445,12 +474,12 @@ class ModularNet():
 						self.split_mask_vect = npy.zeros(self.image_size-1)
 						self.split_mask_vect[lowery:uppery] = 1.
 
-			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),self.split_mask_vect.reshape((1,self.image_size-1))],y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
-																								  						 'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
-																								  						 'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
-																								  						 'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
-																								  						 'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size-1)),
-																								  						 'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size-1))})	
+			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),
+							  self.split_mask_vect.reshape((1,self.image_size-1)),
+							  self.rule_mask_vect.reshape((1,self.target_rule_shapes))],
+						   y={'masked_norm_rule_probs': target_rule.reshape((1,self.target_rule_shapes)),
+						      'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size-1)),
+						      'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size-1))})	
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
