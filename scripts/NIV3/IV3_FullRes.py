@@ -40,6 +40,7 @@ class ModularNet():
 		# Define a KERAS / tensorflow session. 
 		self.sess = sess
 		# We are always loading the model from the the gradient file at the least. 
+		print(model_file)
 		self.base_model = keras.models.load_model(model_file)
 		
 		# The common FC layers are defined here: Input features are keras layer outputs of base model. 
@@ -70,13 +71,14 @@ class ModularNet():
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		# self.split_loss_weight = [keras.backend.variable(npy.zeros(1),dtype='float64',name='split_loss_weight{0}'.format(j)) for j in range(2)]
 
-		self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),name='split_mask')
-
+		# self.split_mask = keras.backend.variable(npy.zeros(self.image_size-1),name='split_mask')
+		self.split_mask = keras.layers.Input(batch_shape=(1,255),name='split_mask')
 		self.masked_unnorm_horizontal_probs = keras.layers.Multiply()([self.horizontal_split_probs,self.split_mask])
 		self.masked_unnorm_vertical_probs = keras.layers.Multiply()([self.vertical_split_probs,self.split_mask])
+		
 		# self.masked_unnorm_horizontal_probs = tf.multiply(self.horizontal_split_probs,self.split_mask)
 		# self.masked_unnorm_vertical_probs = tf.multiply(self.vertical_split_probs,self.split_mask)
-		# embed()
+		
 		self.masked_hgrad_sum = keras.backend.sum(self.masked_unnorm_horizontal_probs)		
 		self.masked_vgrad_sum = keras.backend.sum(self.masked_unnorm_vertical_probs)
 		
@@ -98,14 +100,14 @@ class ModularNet():
 	def define_keras_model(self):
 		############################################################################################### 
 	
-		# # Defining the new model.
-		# self.model = keras.models.Model(inputs=self.base_model.input,
-		# 								outputs=[self.rule_probabilities[0],self.rule_probabilities[1],self.rule_probabilities[2],self.rule_probabilities[3],
-		# 										 self.horizontal_split_probs,self.vertical_split_probs,self.primitive_probabilities])
+		self.model = keras.models.Model(inputs=[self.base_model.input,self.split_mask],
+										outputs=[self.rule_probabilities[0],
+												 self.rule_probabilities[1],
+												 self.rule_probabilities[2],
+												 self.rule_probabilities[3],
+												 self.masked_norm_horizontal_probs,
+												 self.masked_norm_vertical_probs])		
 
-		self.model = keras.models.Model(inputs=self.base_model.input,
-										outputs=[self.rule_probabilities[0],self.rule_probabilities[1],self.rule_probabilities[2],self.rule_probabilities[3],
-												 self.masked_norm_horizontal_probs, self.masked_norm_vertical_probs])		
 		print("Model successfully defined.")
 			
 		# Defining optimizer.
@@ -145,15 +147,7 @@ class ModularNet():
 	def load_pretrained_model(self, model_file):
 		# Load the model - instead of defining from scratch.
 		self.model = keras.models.load_model(model_file)
-
-		# with open(model_file,"r") as f:
-		# 	self.model = keras.models.model_from_yaml(f.read())
-
-		# # Load the weights:
-		# self.model.load_weights(weight_file)
-		# adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=0.0)
-		# self.model.compile(optimizer=adam,loss='categorical_crossentropy')
-
+		
 	def load_model_weights(self,weight_file):
 		self.model.load_weights(weight_file)
 
@@ -227,7 +221,10 @@ class ModularNet():
 			# Four branches of the rule policiesly.
 			self.set_rule_indicator()
 		
-		rule_probabilities = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[self.state.rule_indicator]
+		# split_mask_input = npy.zeros((self.image_size-1))
+		self.split_mask_vect = npy.zeros((self.image_size-1))
+
+		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect])[self.state.rule_indicator]
 		epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
 		epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
 
@@ -253,11 +250,10 @@ class ModularNet():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.h):
 
-					self.split_mask_vect = npy.zeros((self.image_size-1))
 					self.split_mask_vect[self.state.y:self.state.y+self.state.h]=1.
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[5]
+					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect])[5]
 					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
 					epsgreedy_rule_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
@@ -268,6 +264,8 @@ class ModularNet():
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
 					inter_split = copy.deepcopy(split_location)
+
+					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
 					split_location -= self.state.y
 
 					if counter>25:
@@ -284,11 +282,10 @@ class ModularNet():
 				# SAMPLING SPLIT LOCATION INSIDE THIS CONDITION:
 				while (split_location<=0)or(split_location>=self.state.w):
 
-					self.split_mask_vect = npy.zeros((self.image_size-1))
 					self.split_mask_vect[self.state.x:self.state.x+self.state.w]=1.
 
 					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict(self.resized_image.reshape(1,self.image_size,self.image_size,3))[4]		
+					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect])[4]		
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
@@ -298,6 +295,8 @@ class ModularNet():
 
 					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
 					inter_split = copy.deepcopy(split_location)
+
+					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
 					split_location -= self.state.x
 
 					if counter>25:
@@ -426,7 +425,7 @@ class ModularNet():
 				if self.parse_tree[j].rule_applied<=3:								
 					keras.backend.set_value(self.split_loss_weight[1-self.parse_tree[j].rule_applied%2],return_weight)
 					
-					# REMEMBER, THIS CONDITION IS FOR: 
+					# REMEMBER, THIS CONDITION IS FOR: RULES 1 and 3 
 					if self.parse_tree[j].rule_applied%2==1:
 						target_splits[0][self.parse_tree[j].split] = 1.
 
@@ -434,7 +433,7 @@ class ModularNet():
 						self.split_mask_vect[lowerx:upperx] = 1.
 						keras.backend.set_value(self.split_mask,split_mask_vect)
 
-					# THIS CONDITION IS FOR: 
+					# THIS CONDITION IS FOR: RULES 0 and 2
 					if self.parse_tree[j].rule_applied%2==0:
 						target_splits[1][self.parse_tree[j].split] = 1.
 
@@ -442,13 +441,12 @@ class ModularNet():
 						self.split_mask_vect[lowery:uppery] = 1.
 						keras.backend.set_value(self.split_mask,split_mask_vect)
 
-
-			self.model.fit(x=self.resized_image.reshape((1,self.image_size,self.image_size,3)),y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
-																								  'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
-																								  'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
-																								  'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
-																								  'horizontal_grads': target_splits[0].reshape((1,self.image_size)),
-																								  'vertical_grads': target_splits[1].reshape((1,self.image_size))})	
+			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),self.split_mask_vect],y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
+																								  						 'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
+																								  						 'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
+																								  						 'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
+																								  						 'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size)),
+																								  						 'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size))})	
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
@@ -744,8 +742,6 @@ def main(args):
 	else:
 		hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,base_model_file=args.base_model)
 	
-	embed()
-
 	print("Loading Images.")
 	hierarchical_model.images = npy.load(args.images)
 	print("Loading Labels.")
