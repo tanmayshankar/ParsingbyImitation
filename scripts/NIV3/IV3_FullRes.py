@@ -224,7 +224,7 @@ class ModularNet():
 		# split_mask_input = npy.zeros((self.image_size-1))
 		self.split_mask_vect = npy.zeros((self.image_size-1))
 
-		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect])[self.state.rule_indicator]
+		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[self.state.rule_indicator]
 		epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
 		epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
 
@@ -253,7 +253,7 @@ class ModularNet():
 					self.split_mask_vect[self.state.y:self.state.y+self.state.h]=1.
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect])[5]
+					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[5]
 					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
 					epsgreedy_rule_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
@@ -285,7 +285,7 @@ class ModularNet():
 					self.split_mask_vect[self.state.x:self.state.x+self.state.w]=1.
 
 					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
-					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect])[4]		
+					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[4]		
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
@@ -441,7 +441,7 @@ class ModularNet():
 						self.split_mask_vect[lowery:uppery] = 1.
 						keras.backend.set_value(self.split_mask,split_mask_vect)
 
-			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),self.split_mask_vect],y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
+			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),self.split_mask_vect.reshape((1,self.image_size-1))],y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
 																								  						 'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
 																								  						 'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
 																								  						 'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
