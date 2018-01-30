@@ -416,7 +416,8 @@ class ModularNet():
 			for k in range(2):
 				keras.backend.set_value(self.split_loss_weight[k],0.)
 
-			keras.backend.set_value(self.split_mask,npy.zeros(self.image_size-1))
+			self.split_mask_vect = npy.zeros((self.image_size-1))
+
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
 				target_rule[self.parse_tree[j].rule_indicator][self.parse_tree[j].rule_applied] = 1.
@@ -431,7 +432,6 @@ class ModularNet():
 
 						self.split_mask_vect = npy.zeros(self.image_size-1)
 						self.split_mask_vect[lowerx:upperx] = 1.
-						keras.backend.set_value(self.split_mask,split_mask_vect)
 
 					# THIS CONDITION IS FOR: RULES 0 and 2
 					if self.parse_tree[j].rule_applied%2==0:
@@ -439,7 +439,6 @@ class ModularNet():
 
 						self.split_mask_vect = npy.zeros(self.image_size-1)
 						self.split_mask_vect[lowery:uppery] = 1.
-						keras.backend.set_value(self.split_mask,split_mask_vect)
 
 			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),self.split_mask_vect.reshape((1,self.image_size-1))],y={'rule_probabilities0': target_rule[0].reshape((1,self.target_rule_shapes[0])),
 																								  						 'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
