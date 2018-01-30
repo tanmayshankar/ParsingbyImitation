@@ -218,12 +218,12 @@ class ModularNet():
 		elif self.state.rule_indicator==2:
 			# Allowing only horizontal splits and assignment.
 			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
-			self.rule_mask_vect[[0,2,4,5]] = 1.
+			self.rule_mask_vect[[1,3,4,5]] = 1.
 		
 		elif self.state.rule_indicator==1:
 			# Allowing only vertical splits and assignment.		
 			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
-			self.rule_mask_vect[[1,3,4,5]] = 1.
+			self.rule_mask_vect[[0,2,4,5]] = 1.
 		elif self.state.rule_indicator==0:
 			# Allowing anything and everything.
 			self.rule_mask_vect = npy.ones((self.target_rule_shapes))
