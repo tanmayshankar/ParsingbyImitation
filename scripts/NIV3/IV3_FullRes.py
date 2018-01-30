@@ -449,8 +449,8 @@ class ModularNet():
 																								  						 'rule_probabilities1': target_rule[1].reshape((1,self.target_rule_shapes[1])),
 																								  						 'rule_probabilities2': target_rule[2].reshape((1,self.target_rule_shapes[2])),
 																								  						 'rule_probabilities3': target_rule[3].reshape((1,self.target_rule_shapes[3])),
-																								  						 'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size)),
-																								  						 'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size))})	
+																								  						 'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size-1)),
+																								  						 'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size-1))})	
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
