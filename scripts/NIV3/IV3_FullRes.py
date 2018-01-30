@@ -411,7 +411,7 @@ class ModularNet():
 
 			# Declare target rule and primitives.
 			target_rule = [npy.zeros(self.target_rule_shapes[k]) for k in range(self.rule_num_branches)]
-			target_splits = [npy.zeros(self.image_size) for k in range(2)]
+			target_splits = [npy.zeros(self.image_size-1) for k in range(2)]
 
 			# Set the return weight for the loss globally., i.e. for all losses.
 			return_weight = self.parse_tree[j].reward
