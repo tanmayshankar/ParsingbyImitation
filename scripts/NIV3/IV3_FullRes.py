@@ -254,8 +254,8 @@ class ModularNet():
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[5]
-					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
-					epsgreedy_rule_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
+					epsgreedy_split_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
+					epsgreedy_split_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 
@@ -288,8 +288,8 @@ class ModularNet():
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[4]		
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-					epsgreedy_rule_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
-					epsgreedy_rule_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
+					epsgreedy_split_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
+					epsgreedy_split_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
 
 					counter+=1
 
