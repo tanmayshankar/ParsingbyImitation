@@ -262,7 +262,7 @@ class ModularNet():
 					# embed()
 					counter+=1
 
-					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
+					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
 					inter_split = copy.deepcopy(split_location)
 
 					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
@@ -293,7 +293,7 @@ class ModularNet():
 
 					counter+=1
 
-					split_location = npy.random.choice(range(self.image_size),p=epsgreedy_split_probs)
+					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
 					inter_split = copy.deepcopy(split_location)
 
 					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
