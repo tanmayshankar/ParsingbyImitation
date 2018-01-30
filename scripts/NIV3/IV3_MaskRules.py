@@ -248,7 +248,7 @@ class ModularNet():
 
 		epsgreedy_rule_probs = copy.deepcopy(self.rule_mask_vect)*self.annealed_epsilon/npy.count_nonzero(self.rule_mask_vect)
 		epsgreedy_rule_probs[rule_probabilities.argmax()] += 1.-self.annealed_epsilon
-		epsgreedy_rule_probs /= epsgreedy_rule_probs
+		epsgreedy_rule_probs /= epsgreedy_rule_probs.sum()
 
 		# epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
 		# epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
