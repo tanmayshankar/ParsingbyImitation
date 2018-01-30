@@ -254,8 +254,12 @@ class ModularNet():
 
 					# split_probs = self.sess.run(self.horizontal_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[5]
-					epsgreedy_split_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
-					epsgreedy_split_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
+					
+					epsgreedy_split_probs = npy.zeros((self.image_size-1))
+					epsgreedy_split_probs[self.state.y:self.state.y+self.state.h]= self.annealed_epsilon/self.state.h		
+					epsgreedy_split_probs[(split_probs).argmax()] += 1.-self.annealed_epsilon
+					epsgreedy_split_probs/=epsgreedy_split_probs.sum()
+
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
 
@@ -288,11 +292,12 @@ class ModularNet():
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),self.split_mask_vect.reshape((1,self.image_size-1))])[4]		
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-					epsgreedy_split_probs = copy.deepcopy(self.split_mask_vect)/self.split_mask_vect.sum()
-					epsgreedy_split_probs[(split_probs*self.split_mask_vect).argmax()] += 1.-self.annealed_epsilon
+					epsgreedy_split_probs = npy.zeros((self.image_size-1))
+					epsgreedy_split_probs[self.state.x:self.state.x+self.state.w]= self.annealed_epsilon/self.state.w
+					epsgreedy_split_probs[(split_probs).argmax()] += 1.-self.annealed_epsilon
+					epsgreedy_split_probs/=epsgreedy_split_probs.sum()
 
 					counter+=1
-
 					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
 					inter_split = copy.deepcopy(split_location)
 
