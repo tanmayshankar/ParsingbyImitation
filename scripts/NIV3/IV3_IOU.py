@@ -403,7 +403,10 @@ class ModularNet():
 		intersection = npy.count_nonzero(self.true_labels_paint*self.preds_paint)
 		union = npy.count_nonzero(self.true_labels_paint|self.preds_paint)		
 
-		self.state.reward = float(intersection)/union
+		if union:
+			self.state.reward = float(intersection)/union
+		else:
+			self.state.reward = 1.
 		self.current_parsing_index +=1 
 
 	def propagate_rewards(self):
