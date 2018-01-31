@@ -400,12 +400,12 @@ class ModularNet():
 		self.true_labels_paint = self.true_labels[image_index,self.state.x:self.state.x+self.state.w, self.state.y:self.state.y+self.state.h]==1
 		self.preds_paint = self.painted_image[self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]==1
 
-		intersection = npy.count_nonzeros(self.true_labels_paint*self.preds_paint)
+		intersection = npy.count_nonzero(self.true_labels_paint*self.preds_paint)
 		union = npy.count_nonzero(self.true_labels_paint|self.preds_paint)		
 
 		self.state.reward = float(intersection)/union
 		self.current_parsing_index +=1 
-		
+
 	def propagate_rewards(self):
 
 		# Traverse the tree in reverse order, accumulate rewards into parent nodes recursively as sum of rewards of children.
