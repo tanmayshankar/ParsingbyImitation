@@ -8,7 +8,8 @@ class ModularNet():
 
 		self.num_epochs = 200
 		self.save_every = 5
-		self.num_images = 362
+		# self.num_images = 362
+		self.num_images = 223
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -452,6 +453,8 @@ class ModularNet():
 
 						self.split_mask_vect = npy.zeros(self.image_size-1)
 						self.split_mask_vect[lowery:uppery] = 1.
+			
+			# embed()
 
 			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),
 							  self.split_mask_vect.reshape((1,self.image_size-1)),
@@ -710,7 +713,17 @@ class ModularNet():
 			return 2
 
 	def preprocess(self):
+		images_unflat = [2,7,12,15,28,24,25,26,31,32,37,39,42,44,48,50,51,57,60,64,67,72,74,75,77,79,80,82,83,84,86,87,88,90,
+  		92,94,99,105,106,107,108,111,112,113,117,118,120,124,125,127,129,135,138,139,142,144,145,146,148,150,151,152,153,154,
+  		157,158,159,160,161,162,163,165,166,170,172,173,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
+  		193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,
+  		222,223,224,225,226,227,228,229,230,232,233,234,235,236,237,238,239,240,241,242,243,244,246,247,248,249,250,251,252,
+  		253,254,255,256,257,258,259,261,262,263,264,267,269,275,276,281,282,285,286,287,288,289,290,291,292,293,294,295,296,
+  		297,299,300,301,302,303,305,307,308,309,311,312,313,314,315,317,320,321,325,326,327,329,331,333,334,335,336,339,340,341,342,344,346,347,348,350,353,355,356,357,359,360,361]
 
+
+		self.binary_images = self.binary_images[images_unflat]
+		self.true_labels = self.true_labels[images_unflat]
 		self.images = npy.zeros((self.num_images,self.image_size,self.image_size,3))
 
 		for i in range(self.num_images):
