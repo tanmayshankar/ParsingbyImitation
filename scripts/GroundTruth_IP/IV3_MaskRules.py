@@ -684,7 +684,7 @@ class ModularNet():
 						self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
 					else: 
 						self.annealed_epsilon = self.final_epsilon
-				embed()
+				# embed()
 				self.start_list = []
 				self.goal_list = []
 							
