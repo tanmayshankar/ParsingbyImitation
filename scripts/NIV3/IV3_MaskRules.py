@@ -47,10 +47,18 @@ class ModularNet():
 		for layers in self.base_model.layers:
 			if layers.name=='fc6_features':
 				self.fc6_features = layers.output
-			if layers.name=='vertical_grads':
+			# if layers.name=='vertical_grads':
+			# 	self.vertical_split_probs = layers.output
+			# 	# self.vertical_split_probs = layers
+			# if layers.name=='horizontal_grads':
+			# 	self.horizontal_split_probs = layers.output
+			# 	# self.horizontal_split_probs = layers
+
+			# Switching to presoftmax values. This is because we are masking then normalizing. 
+			if layers.name=='vertical_presf_grads':
 				self.vertical_split_probs = layers.output
 				# self.vertical_split_probs = layers
-			if layers.name=='horizontal_grads':
+			if layers.name=='horizontal_presf_grads':
 				self.horizontal_split_probs = layers.output
 				# self.horizontal_split_probs = layers
 
@@ -159,27 +167,6 @@ class ModularNet():
 
 	def insert_node(self, state, index):    
 		self.parse_tree.insert(index,state)
-
-	# def remap_rule_indices(self, rule_index):
-
-	# 	if self.state.rule_indicator==0:
-	# 		# Remember, allowing all 6 rules.
-	# 		return rule_index
-	# 	elif self.state.rule_indicator==1: 
-	# 		# Now allowing only vertical splits and assignments. 
-	# 		if rule_index>=2:
-	# 			return rule_index+2
-	# 		else:
-	# 			return rule_index*2
-	# 	elif self.state.rule_indicator==2:
-	# 		# Now allowing only horizontal splits and assignments.
-	# 		if rule_index>=2:
-	# 			return rule_index+2
-	# 		else:
-	# 			return rule_index*2+1
-	# 	elif self.state.rule_indicator==3:
-	# 		# Now allowing only assignment rules.
-	# 		return rule_index+4
 
 	def set_rule_indicator(self):
 
@@ -420,7 +407,7 @@ class ModularNet():
 	def backprop(self, image_index):
 		# Must decide whether to do this stochastically or in batches. # For now, do it stochastically, moving forwards through the tree.
 		for j in range(len(self.parse_tree)):
-			
+			# embed()			
 			self.state = self.parse_tree[j]
 			boundary_width = 0
 			lowerx = max(0,self.state.x-boundary_width)
@@ -454,7 +441,7 @@ class ModularNet():
 
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
-				target_rule[self.parse_tree[j].rule_applied] = 1.			
+				target_rule[self.parse_tree[j].rule_applied] = 1.
 				keras.backend.set_value(self.rule_loss_weight,return_weight)
 
 				if self.parse_tree[j].rule_applied<=3:								
@@ -473,7 +460,7 @@ class ModularNet():
 
 						self.split_mask_vect = npy.zeros(self.image_size-1)
 						self.split_mask_vect[lowery:uppery] = 1.
-
+			# embed()			
 			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),
 							  self.split_mask_vect.reshape((1,self.image_size-1)),
 							  self.rule_mask_vect.reshape((1,self.target_rule_shapes))],
