@@ -48,10 +48,10 @@ class ModularNet():
 		for layers in self.base_model.layers:
 			if layers.name=='fc6_features':
 				self.fc6_features = layers.output
-			if layers.name=='vertical_grads':
+			if layers.name=='vertical_presf_grads':
 				self.vertical_split_probs = layers.output
 				# self.vertical_split_probs = layers
-			if layers.name=='horizontal_grads':
+			if layers.name=='horizontal_presf_grads':
 				self.horizontal_split_probs = layers.output
 				# self.horizontal_split_probs = layers
 
@@ -557,7 +557,8 @@ class ModularNet():
 
 				if self.parse_tree[j].label==0:
 
-					rule_app_map = self.remap_rule_indices(self.parse_tree[j].rule_applied)
+					# rule_app_map = self.remap_rule_indices(self.parse_tree[j].rule_applied)
+					rule_app_map = self.parse_tree[j].rule_applied
 
 					if (self.parse_tree[j].alter_rule_applied==1) or (self.parse_tree[j].alter_rule_applied==3):
 						sc = self.parse_tree[j].boundaryscaled_split
@@ -633,7 +634,7 @@ class ModularNet():
 
 			self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
-			self.sc3.set_clim([-1,1.2])
+			self.sc3.set_clim([0,255])
 			self.ax[2].set_title("Actual Image")
 			self.ax[2].set_adjustable('box-forced')
 
