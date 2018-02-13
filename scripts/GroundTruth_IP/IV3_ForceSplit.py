@@ -166,7 +166,11 @@ class ModularNet():
 
 	def set_rule_indicator(self):
 
-		if self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
+		if self.current_parsing_index==0:
+			# Allow only splits. 
+			self.state.rule_indicator = 4
+
+		elif self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
 			# Allowing only assignment.
 			self.state.rule_indicator = 3
 
@@ -193,6 +197,9 @@ class ModularNet():
 		# 4 (Shape) -> (Region with primitive #) 
 		# 5 (Shape) -> (Region not to be painted)
 		############################
+		if self.state.rule_indicator==4:
+			self.rule_mask_vect = npy.ones((self.target_rule_shapes))
+			self.rule_mask_vect[[4,5]] = 0.
 
 		if self.state.rule_indicator==3:		
 			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
@@ -219,6 +226,7 @@ class ModularNet():
 			self.set_rule_mask()
 		else:
 			# Four branches of the rule policiesly.
+
 			self.set_rule_indicator()
 			self.set_rule_mask()
 		
@@ -388,11 +396,11 @@ class ModularNet():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
-		self.alpha = 1.1
+		# self.alpha = 1.1
 		
-		# Non-linearizing rewards.
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# # Non-linearizing rewards.
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 		# 	# # Additional term for continuity. 
 		# for j in range(len(self.parse_tree)):

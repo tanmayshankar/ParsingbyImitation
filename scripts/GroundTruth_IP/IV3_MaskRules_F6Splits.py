@@ -22,9 +22,9 @@ class ModularNet():
 		self.suffix = []
 
 		# For Epsilon Greedy Policy: 
-		self.initial_epsilon = 0.3
-		self.final_epsilon = 0.05
-		self.decay_epochs = 15
+		self.initial_epsilon = 0.4
+		self.final_epsilon = 0.1
+		self.decay_epochs = 20
 		self.annealing_rate = (self.initial_epsilon-self.final_epsilon)/(self.decay_epochs*self.num_images)
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
 
@@ -48,12 +48,6 @@ class ModularNet():
 		for layers in self.base_model.layers:
 			if layers.name=='fc6_features':
 				self.fc6_features = layers.output
-			if layers.name=='vertical_presf_grads':
-				self.vertical_split_presf = layers.output
-				# self.vertical_split_probs = layers
-			if layers.name=='horizontal_presf_grads':
-				self.horizontal_split_presf = layers.output
-				# self.horizontal_split_probs = layers
 
 	def define_rule_stream(self):
 		# Now defining rule FC:
@@ -77,8 +71,9 @@ class ModularNet():
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		self.split_mask = keras.layers.Input(batch_shape=(1,self.image_size-1),name='split_mask')
 
-		self.horizontal_split_preprobs = keras.layers.Dense(self.image_size-1,activation='softmax',name='horizontal_split_preprobs')(self.horizontal_split_presf)
-		self.vertical_split_preprobs = keras.layers.Dense(self.image_size-1,activation='softmax',name='vertical_split_preprobs')(self.vertical_split_presf)
+		self.fc7_layer = keras.layers.Dense(512,activation='relu',name='fc7_layer')(self.fc6_features)
+		self.horizontal_split_preprobs = keras.layers.Dense(self.image_size-1,activation='softmax',name='horizontal_split_preprobs')(self.fc7_layer)
+		self.vertical_split_preprobs = keras.layers.Dense(self.image_size-1,activation='softmax',name='vertical_split_preprobs')(self.fc7_layer)
 
 		self.masked_unnorm_horizontal_probs = keras.layers.Multiply()([self.horizontal_split_preprobs,self.split_mask])
 		self.masked_unnorm_vertical_probs = keras.layers.Multiply()([self.vertical_split_preprobs,self.split_mask])

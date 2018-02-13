@@ -77,8 +77,9 @@ class ModularNet():
 		self.split_loss_weight = [keras.backend.variable(0.,name='split_loss_weight{0}'.format(j)) for j in range(2)]
 		self.split_mask = keras.layers.Input(batch_shape=(1,self.image_size-1),name='split_mask')
 
-		self.horizontal_split_preprobs = keras.layers.Dense(self.image_size-1,activation='softmax',name='horizontal_split_preprobs')(self.horizontal_split_presf)
-		self.vertical_split_preprobs = keras.layers.Dense(self.image_size-1,activation='softmax',name='vertical_split_preprobs')(self.vertical_split_presf)
+		self.size_space = 25
+		self.horizontal_split_preprobs = keras.layers.Dense(self.size_space,activation='softmax',name='horizontal_split_preprobs')(self.horizontal_split_presf)
+		self.vertical_split_preprobs = keras.layers.Dense(self.size_space,activation='softmax',name='vertical_split_preprobs')(self.vertical_split_presf)
 
 		self.masked_unnorm_horizontal_probs = keras.layers.Multiply()([self.horizontal_split_preprobs,self.split_mask])
 		self.masked_unnorm_vertical_probs = keras.layers.Multiply()([self.vertical_split_preprobs,self.split_mask])
@@ -166,7 +167,11 @@ class ModularNet():
 
 	def set_rule_indicator(self):
 
-		if self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
+		if self.current_parsing_index==0:
+			# Allow only splits. 
+			self.state.rule_indicator = 4
+
+		elif self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
 			# Allowing only assignment.
 			self.state.rule_indicator = 3
 
@@ -193,6 +198,9 @@ class ModularNet():
 		# 4 (Shape) -> (Region with primitive #) 
 		# 5 (Shape) -> (Region not to be painted)
 		############################
+		if self.state.rule_indicator==4:
+			self.rule_mask_vect = npy.ones((self.target_rule_shapes))
+			self.rule_mask_vect[[4,5]] = 0.
 
 		if self.state.rule_indicator==3:		
 			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
@@ -219,6 +227,7 @@ class ModularNet():
 			self.set_rule_mask()
 		else:
 			# Four branches of the rule policiesly.
+
 			self.set_rule_indicator()
 			self.set_rule_mask()
 		
@@ -229,15 +238,13 @@ class ModularNet():
 												 self.split_mask_vect.reshape((1,self.image_size-1)),
 												 self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[0]
 
-		epsgreedy_rule_probs = copy.deepcopy(self.rule_mask_vect)*self.annealed_epsilon/npy.count_nonzero(self.rule_mask_vect)
-		epsgreedy_rule_probs[rule_probabilities.argmax()] += 1.-self.annealed_epsilon
-		epsgreedy_rule_probs /= epsgreedy_rule_probs.sum()
+		rule_probabilities = rule_probabilities[0]
 
 		# epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
 		# epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
 
 		if self.to_train:
-			selected_rule = npy.random.choice(range(self.target_rule_shapes),p=epsgreedy_rule_probs)
+			selected_rule = npy.random.choice(range(self.target_rule_shapes),p=rule_probabilities)
 		elif not(self.to_train):
 			selected_rule = npy.argmax(rule_probabilities)
 
@@ -264,21 +271,17 @@ class ModularNet():
 												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
 												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[2]
 					
-					epsgreedy_split_probs = npy.zeros((self.image_size-1))
-					epsgreedy_split_probs[self.state.y:self.state.y+self.state.h]= self.annealed_epsilon/self.state.h		
-					epsgreedy_split_probs[(split_probs).argmax()] += 1.-self.annealed_epsilon
-					epsgreedy_split_probs/=epsgreedy_split_probs.sum()
-
-					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
-					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
+					split_probs = split_probs[0]
 
 					# embed()
 					counter+=1
 
-					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
+					split_location = npy.random.choice(range(self.image_size-1),p=split_probs)
 					inter_split = copy.deepcopy(split_location)
 
 					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
+
+					split_location = float(split_location)/25*255
 					split_location -= self.state.y
 
 					if counter>25:
@@ -302,18 +305,14 @@ class ModularNet():
 												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
 												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[1]
 
-					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
-					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-					epsgreedy_split_probs = npy.zeros((self.image_size-1))
-					epsgreedy_split_probs[self.state.x:self.state.x+self.state.w]= self.annealed_epsilon/self.state.w
-					epsgreedy_split_probs[(split_probs).argmax()] += 1.-self.annealed_epsilon
-					epsgreedy_split_probs/=epsgreedy_split_probs.sum()
+					split_probs = split_probs[0]
 
 					counter+=1
-					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
+					split_location = npy.random.choice(range(self.image_size-1),p=split_probs)
 					inter_split = copy.deepcopy(split_location)
 
 					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
+					split_location = float(split_location)/25*255
 					split_location -= self.state.x
 
 					if counter>25:
@@ -388,11 +387,11 @@ class ModularNet():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
-		self.alpha = 1.1
+		# self.alpha = 1.1
 		
-		# Non-linearizing rewards.
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# # Non-linearizing rewards.
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 		# 	# # Additional term for continuity. 
 		# for j in range(len(self.parse_tree)):

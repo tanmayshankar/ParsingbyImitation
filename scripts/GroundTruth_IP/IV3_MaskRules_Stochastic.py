@@ -21,8 +21,8 @@ class ModularNet():
 		self.intermittent_lambda = 0.
 		self.suffix = []
 
-		# For Epsilon Greedy Policy: 
-		self.initial_epsilon = 0.3
+		# # For Epsilon Greedy Policy: 
+		self.initial_epsilon = 0.2
 		self.final_epsilon = 0.05
 		self.decay_epochs = 15
 		self.annealing_rate = (self.initial_epsilon-self.final_epsilon)/(self.decay_epochs*self.num_images)
@@ -215,7 +215,10 @@ class ModularNet():
 	def parse_nonterminal(self, image_index, max_parse=False):
 
 		if max_parse:
-			self.state.rule_indicator = 3
+			if self.current_parsing_index==0:
+				self.state.rule_indicator = 4
+			else:
+				self.state.rule_indicator = 3
 			self.set_rule_mask()
 		else:
 			# Four branches of the rule policiesly.
@@ -228,21 +231,14 @@ class ModularNet():
 		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
 												 self.split_mask_vect.reshape((1,self.image_size-1)),
 												 self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[0]
-
-		epsgreedy_rule_probs = copy.deepcopy(self.rule_mask_vect)*self.annealed_epsilon/npy.count_nonzero(self.rule_mask_vect)
-		epsgreedy_rule_probs[rule_probabilities.argmax()] += 1.-self.annealed_epsilon
-		epsgreedy_rule_probs /= epsgreedy_rule_probs.sum()
-
-		# epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
-		# epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
-
+		
+		rule_probabilities = rule_probabilities[0]
 		if self.to_train:
-			selected_rule = npy.random.choice(range(self.target_rule_shapes),p=epsgreedy_rule_probs)
+			selected_rule = npy.random.choice(range(self.target_rule_shapes),p=rule_probabilities)
 		elif not(self.to_train):
 			selected_rule = npy.argmax(rule_probabilities)
 
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
-		# selected_rule = self.remap_rule_indices(selected_rule)
 		indices = self.map_rules_to_state_labels(selected_rule)
 		split_location = -1
 
@@ -263,19 +259,11 @@ class ModularNet():
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
 												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
 												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[2]
-					
-					epsgreedy_split_probs = npy.zeros((self.image_size-1))
-					epsgreedy_split_probs[self.state.y:self.state.y+self.state.h]= self.annealed_epsilon/self.state.h		
-					epsgreedy_split_probs[(split_probs).argmax()] += 1.-self.annealed_epsilon
-					epsgreedy_split_probs/=epsgreedy_split_probs.sum()
-
-					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
-					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-
+					split_probs = split_probs[0]
 					# embed()
 					counter+=1
 
-					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
+					split_location = npy.random.choice(range(self.image_size-1),p=split_probs)
 					inter_split = copy.deepcopy(split_location)
 
 					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
@@ -301,16 +289,9 @@ class ModularNet():
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
 												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
 												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[1]
-
-					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
-					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
-					epsgreedy_split_probs = npy.zeros((self.image_size-1))
-					epsgreedy_split_probs[self.state.x:self.state.x+self.state.w]= self.annealed_epsilon/self.state.w
-					epsgreedy_split_probs[(split_probs).argmax()] += 1.-self.annealed_epsilon
-					epsgreedy_split_probs/=epsgreedy_split_probs.sum()
-
+					split_probs = split_probs[0]
 					counter+=1
-					split_location = npy.random.choice(range(self.image_size-1),p=epsgreedy_split_probs)
+					split_location = npy.random.choice(range(self.image_size-1),p=split_probs)
 					inter_split = copy.deepcopy(split_location)
 
 					# The only rescaling now is to transform it to local patch coordinates because of how the splits are constructed.
@@ -549,7 +530,7 @@ class ModularNet():
 			self.sc1.set_data(self.alternate_predicted_labels)
 			self.attention_plots()
 			self.sc2.set_data(self.mask)
-			self.sc3.set_data(self.images[image_index])
+			self.sc3.set_data(self.images[image_index,:,:,0])
 			self.sc4.set_data(self.alternate_painted_image)
 
 			# Plotting split line segments from the parse tree.
@@ -635,7 +616,7 @@ class ModularNet():
 			self.ax[1].set_title("Parse Tree")
 			self.ax[1].set_adjustable('box-forced')
 
-			self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc3 = self.ax[2].imshow(self.images[image_index,:,:,0],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
 			self.sc3.set_clim([0,255])
 			self.ax[2].set_title("Actual Image")
