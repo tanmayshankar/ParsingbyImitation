@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from headers import *
 import state_class
-from Model_Class import *
+# from Model_Class import *
 
 class Parser():
 
