@@ -9,8 +9,8 @@ class ModularNet():
 		self.num_epochs = 100
 		self.save_every = 5
 		# self.num_images = 362
-		self.num_images = 223
-		# self.num_images = 92
+		# self.num_images = 223
+		self.num_images = 92
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.paintwidth = -1
@@ -203,8 +203,10 @@ class ModularNet():
 		# 5 (Shape) -> (Region not to be painted)
 		############################
 		if self.state.rule_indicator==4:
-			self.rule_mask_vect = npy.ones((self.target_rule_shapes))
-			self.rule_mask_vect[[4,5]] = 0.
+			# self.rule_mask_vect = npy.ones((self.target_rule_shapes))
+			# self.rule_mask_vect[[0,2,3,4,5]] = 0.
+			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
+			self.rule_mask_vect[1] = 1.
 
 		if self.state.rule_indicator==3:		
 			self.rule_mask_vect = npy.zeros((self.target_rule_shapes))
@@ -226,39 +228,51 @@ class ModularNet():
 	# Checked this - should be good - 11/1/18
 	def parse_nonterminal(self, image_index, max_parse=False):
 
-		if max_parse:
-			self.state.rule_indicator = 3
-			self.set_rule_mask()
-		else:
-			# Four branches of the rule policiesly.
-
-			self.set_rule_indicator()
-			self.set_rule_mask()
+		# if max_parse:
+		# 	self.state.rule_indicator = 3
+		# 	self.set_rule_mask()
+		# else:
+		# 	# Four branches of the rule policiesly.
+		# 	self.set_rule_indicator()
+		# 	self.set_rule_mask()
 		
 		# split_mask_input = npy.zeros((self.image_size-1))
 		self.split_mask_vect = npy.zeros((self.image_size-1))
 
-		rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
-												 self.split_mask_vect.reshape((1,self.image_size-1)),
-												 self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[0]
+		# rule_probabilities = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
+		# 										 self.split_mask_vect.reshape((1,self.image_size-1)),
+		# 										 self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[0]
 
-		epsgreedy_rule_probs = copy.deepcopy(self.rule_mask_vect)*self.annealed_epsilon/npy.count_nonzero(self.rule_mask_vect)
-		epsgreedy_rule_probs[rule_probabilities.argmax()] += 1.-self.annealed_epsilon
-		epsgreedy_rule_probs /= epsgreedy_rule_probs.sum()
+		# epsgreedy_rule_probs = copy.deepcopy(self.rule_mask_vect)*self.annealed_epsilon/npy.count_nonzero(self.rule_mask_vect)
+		# epsgreedy_rule_probs[rule_probabilities.argmax()] += 1.-self.annealed_epsilon
+		# epsgreedy_rule_probs /= epsgreedy_rule_probs.sum()
 
-		# epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
-		# epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
+		# # epsgreedy_rule_probs = npy.ones((rule_probabilities.shape[-1]))*(self.annealed_epsilon/rule_probabilities.shape[-1])
+		# # epsgreedy_rule_probs[rule_probabilities.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/rule_probabilities.shape[-1]
 
-		if self.to_train:
-			selected_rule = npy.random.choice(range(self.target_rule_shapes),p=epsgreedy_rule_probs)
-		elif not(self.to_train):
-			selected_rule = npy.argmax(rule_probabilities)
+		# if self.to_train:
+		# 	selected_rule = npy.random.choice(range(self.target_rule_shapes),p=epsgreedy_rule_probs)
+		# elif not(self.to_train):
+		# 	selected_rule = npy.argmax(rule_probabilities)
+
+
+		#####################################################################################
+		#####################################################################################
+
+		# if max_parse:
+		if self.current_parsing_index == 0: 
+			selected_rule = 1
+		elif self.current_parsing_index == 1:
+			selected_rule = 4
+		elif self.current_parsing_index == 3:
+			selected_rule = 5
 
 		self.parse_tree[self.current_parsing_index].rule_applied = copy.deepcopy(selected_rule)
 		# selected_rule = self.remap_rule_indices(selected_rule)
 		indices = self.map_rules_to_state_labels(selected_rule)
 		split_location = -1
 
+		#####################################################################################
 		#####################################################################################
 		# Split rule selected.
 		if selected_rule<=3:
@@ -274,8 +288,8 @@ class ModularNet():
 					self.split_mask_vect[self.state.y:self.state.y+self.state.h]=1.
 
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
-												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
-												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[2]
+													  self.split_mask_vect.reshape((1,self.image_size-1)),
+													  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[2]
 					
 					epsgreedy_split_probs = npy.zeros((self.image_size-1))
 					epsgreedy_split_probs[self.state.y:self.state.y+self.state.h]= self.annealed_epsilon/self.state.h		
@@ -312,8 +326,8 @@ class ModularNet():
 
 					# split_probs = self.sess.run(self.vertical_split_probs, feed_dict={self.model.input: self.resized_image.reshape(1,self.image_size,self.image_size,3)})
 					split_probs = self.model.predict([self.resized_image.reshape(1,self.image_size,self.image_size,3),
-												 	  self.split_mask_vect.reshape((1,self.image_size-1)),
-												 	  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[1]
+													  self.split_mask_vect.reshape((1,self.image_size-1)),
+													  self.rule_mask_vect.reshape((1,self.target_rule_shapes))])[1]
 
 					# epsgreedy_split_probs = npy.ones((self.image_size))*(self.annealed_epsilon/self.image_size)						
 					# epsgreedy_split_probs[split_probs.argmax()] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.image_size
@@ -448,10 +462,12 @@ class ModularNet():
 			self.split_mask_vect = npy.zeros((self.image_size-1))
 			self.set_rule_mask()
 
+			keras.backend.set_value(self.rule_loss_weight,0.)
+
 			# If it was a non terminal:
 			if self.parse_tree[j].label == 0:
 				target_rule[self.parse_tree[j].rule_applied] = 1.			
-				keras.backend.set_value(self.rule_loss_weight,return_weight)
+				# keras.backend.set_value(self.rule_loss_weight,return_weight)
 
 				if self.parse_tree[j].rule_applied<=3:								
 					keras.backend.set_value(self.split_loss_weight[1-self.parse_tree[j].rule_applied%2],return_weight)
@@ -472,12 +488,12 @@ class ModularNet():
 			
 			# embed()
 
-			self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),
-							  self.split_mask_vect.reshape((1,self.image_size-1)),
-							  self.rule_mask_vect.reshape((1,self.target_rule_shapes))],
-						   y={'masked_norm_rule_probs': target_rule.reshape((1,self.target_rule_shapes)),
-						      'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size-1)),
-						      'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size-1))})	
+				self.model.fit(x=[self.resized_image.reshape((1,self.image_size,self.image_size,3)),
+								  self.split_mask_vect.reshape((1,self.image_size-1)),
+								  self.rule_mask_vect.reshape((1,self.target_rule_shapes))],
+							   y={'masked_norm_rule_probs': target_rule.reshape((1,self.target_rule_shapes)),
+								  'masked_horizontal_probabilities': target_splits[0].reshape((1,self.image_size-1)),
+								  'masked_vertical_probabilities': target_splits[1].reshape((1,self.image_size-1))})	
 
 	# Checked this - should be good - 11/1/18
 	def construct_parse_tree(self,image_index):
@@ -650,7 +666,7 @@ class ModularNet():
 
 			self.sc3 = self.ax[2].imshow(self.images[image_index,:,:,2],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			# self.sc3 = self.ax[2].imshow(self.images[image_index],aspect='equal',cmap='jet')
-			self.sc3.set_clim([0,255])
+			self.sc3.set_clim([self.images.min(),self.images.max()])
 			self.ax[2].set_title("Actual Image")
 			self.ax[2].set_adjustable('box-forced')
 
@@ -730,14 +746,12 @@ class ModularNet():
 			return 2
 
 	def preprocess(self):
-		images_unflat = [2,7,12,15,28,24,25,26,31,32,37,39,42,44,48,50,51,57,60,64,67,72,74,75,77,79,80,82,83,84,86,87,88,90,
-  		92,94,99,105,106,107,108,111,112,113,117,118,120,124,125,127,129,135,138,139,142,144,145,146,148,150,151,152,153,154,
-  		157,158,159,160,161,162,163,165,166,170,172,173,175,176,177,178,179,180,181,182,183,184,185,186,187,188,189,190,191,
-  		193,194,195,196,197,198,199,200,201,202,203,204,205,206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,
-  		222,223,224,225,226,227,228,229,230,232,233,234,235,236,237,238,239,240,241,242,243,244,246,247,248,249,250,251,252,
-  		253,254,255,256,257,258,259,261,262,263,264,267,269,275,276,281,282,285,286,287,288,289,290,291,292,293,294,295,296,
-  		297,299,300,301,302,303,305,307,308,309,311,312,313,314,315,317,320,321,325,326,327,329,331,333,334,335,336,339,340,341,342,344,346,347,348,350,353,355,356,357,359,360,361]
-
+		images_unflat = [  0,   2,   3,   4,   8,   9,  24,  51,  57,  64, 108, 112, 120, 129, 138, 144, 145, 146, 148, 150, 151, 152, 153, 154, 157, 158,
+						   160, 161, 162, 163, 165, 166, 170, 172, 173, 176, 177, 178, 179, 181, 185, 186, 187, 188, 189, 190, 193, 195, 197, 199, 200, 201,
+						   202, 203, 208, 210, 214, 215, 216, 221, 225, 228, 229, 231, 232, 237, 238, 241, 244, 246, 249, 250, 251, 256, 257, 259, 264, 276,
+	   					   281, 285, 292, 299, 319, 321, 325, 326, 340, 344, 347, 357, 360, 361])
+		
+		self.num_images = len(images_unflat)
 
 		self.binary_images = self.binary_images[images_unflat]
 		self.true_labels = self.true_labels[images_unflat]
@@ -810,4 +824,3 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
-	
