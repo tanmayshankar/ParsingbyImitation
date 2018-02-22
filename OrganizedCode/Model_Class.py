@@ -3,8 +3,8 @@ from headers import *
 
 class Model():
 
-	def __init__(self):
-		self.image_size = 256
+	def __init__(self, image_size=256):
+		self.image_size = image_size
 
 	def load_base_model(self, sess, model_file=None):
 
@@ -106,7 +106,7 @@ class Model():
 	def load_model_weights(self,weight_file):
 		self.keras_model.load_weights(weight_file)
 
-	def create_modular_net(self, sess, load_pretrained_mod=False, base_model_file=None, pretrained_weight_file=None):
+	def create_network(self, sess, load_pretrained_mod=False, base_model_file=None, pretrained_weight_file=None):
 
 		print("Training Policy from base model.")
 		self.load_base_model(sess, base_model_file)

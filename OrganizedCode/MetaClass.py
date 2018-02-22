@@ -3,19 +3,26 @@ from headers import *
 import Model_Class
 import Parsing
 import Plotting_Utilities
+import Data_Loader
 
 def MetaClass():
 
-	def __init__(self, arguments=None):
+	def __init__(self, session=None,arguments=None):
 
+		self.sess = session
 		self.args = arguments
 
 		# Instantiate Model Class.
 		self.model = Model_Class.Model()
+
 		if self.args.pretrain:
-			hierarchical_model.create_modular_net(sess,load_pretrained_mod=True,base_model_file=self.args.base_model,pretrained_weight_file=self.args.model)
+			self.model.create_network(self.sess,load_pretrained_mod=True,base_model_file=self.args.base_model,pretrained_weight_file=self.args.model)
 		else:
-			hierarchical_model.create_modular_net(sess,load_pretrained_mod=False,base_model_file=self.args.base_model)
+			self.model.create_network(self.sess,load_pretrained_mod=False,base_model_file=self.args.base_model)
+
+		# Instantiate data loader class to load and preprocess the data.
+		self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
+		self.data_loader.preprocess()
 
 		# Instantiate parser class.
 		self.parser = Parsing.Parser(model_instance=self.model)
@@ -88,18 +95,12 @@ def MetaClass():
 			return 1
 		if (rule_index==5):
 			return 2
-
-	def preprocess(self):
-		for i in range(self.num_images):
-			self.images[i] = cv2.cvtColor(self.images[i],cv2.COLOR_RGB2BGR)
-		
-		self.images = self.images.astype(float)
-		self.images -= self.images.mean(axis=(0,1,2))
 		
 def parse_arguments():
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
 	parser.add_argument('--images',dest='images',type=str)
 	parser.add_argument('--labels',dest='labels',type=str)
+	parser.add_argument('--indices',dest='indices',type=str)
 	parser.add_argument('--size',dest='size',type=int)
 	parser.add_argument('--minwidth',dest='minimum_width',type=int)
 	parser.add_argument('--base_model',dest='base_model',type=str)
@@ -127,7 +128,7 @@ def main(args):
 	keras.backend.set_learning_phase(1)
 
 	# with sess.as_default():
-	hierarchical_model = MetaClass()
+	hierarchical_model = MetaClass(session=sess,arguments=args)
 
 
 	print("Loading Images.")
@@ -149,14 +150,6 @@ def main(args):
 	print("Starting to Train.")
 
 	hierarchical_model.meta_training(train=args.train)
-
-
-
-
-
-
-
-
 
 if __name__ == '__main__':
 	main(sys.argv)
