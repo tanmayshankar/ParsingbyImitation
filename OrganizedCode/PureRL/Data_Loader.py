@@ -8,15 +8,17 @@ class DataLoader():
 		self.images = npy.load(image_path)
 		self.labels = npy.load(label_path)
 
+		if rewards_path:
+			self.horizontal_rewards = npy.load(rewards_path)
+			
 		if indices_path:
-
 			self.selected_indices = npy.load(indices_path)			
 			self.images = self.images[self.selected_indices]
 			self.labels = self.labels[self.selected_indices]
+			self.horizontal_rewards = self.horizontal_rewards[self.selected_indices]
 
-		if rewards_path:
-			self.horizontal_rewards = npy.load(rewards_path)
-
+		self.horizontal_rewards = self.horizontal_rewards.max(axis=(1,2))
+		
 		self.num_images = self.images.shape[0]
 		self.image_size = self.images.shape[1]
 

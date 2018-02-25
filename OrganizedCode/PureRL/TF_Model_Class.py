@@ -6,11 +6,11 @@ class Model():
 	def __init__(self, image_size=256):
 		self.image_size = image_size
 
-	def initialize_base_model(self, sess, model_file=None):
+	def initialize_base_model(self, sess, model_file=None, to_train=True):
 
 		# Initializing the session.
 		self.sess = sess
-
+		self.to_train = to_train
 		# Number of layers. 
 		self.num_layers = 5
 		self.num_fc_layers = 2
@@ -19,17 +19,18 @@ class Model():
 		self.conv_strides = npy.array([1,2,2,2,2])
 
 		# Placeholders
-		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,3],name='input')
+		# Now doing this for single channel images.
+		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,1],name='input')
 
 		# Defining conv layers.
 		self.conv = [[] for i in range(self.num_layers)]
 
 		# Initial layer.
-		self.conv[0] = tf.layers.conv2d(self.input,filters=self.conv_num_filters[0],kernel_sizes=(self.conv_sizes[0]),activation=tf.nn.relu,name='conv0')
+		self.conv[0] = tf.layers.conv2d(self.input,filters=self.conv_num_filters[0],kernel_size=(self.conv_sizes[0]),activation=tf.nn.relu,name='conv0')
 
 		# Defining subsequent conv layers.
 		for i in range(1,self.num_layers):
-			self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_sizes=(self.conv_sizes[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
+			self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_size=(self.conv_sizes[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
 
 		# Now going to flatten this and move to a fully connected layer. 		
 		self.flat_conv = tf.layers.flatten(self.conv[-1])
@@ -47,11 +48,15 @@ class Model():
 			self.split_cov = 0.001
 
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
+
+		# Creating a function that samples from this distribution.
+		self.sample_split = self.split_dist.sample()
+
 		# Also maintaining placeholders for scaling, converting to integer, and back to float.
-		self.sampled_split = tf.placeholder(tf.float32,shape=(None),name='sampled_split')
+		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
 
 	def training_ops(self):
-		self.split_return_weight = tf.placeholder(tf.float32,shape=(None),name='split_return_weight')
+		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
 		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
 
 		# Creating a training operation to minimize the total loss.
@@ -63,7 +68,7 @@ class Model():
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
 	
-	def model_load(self, model_file)
+	def model_load(self, model_file):
 		# DEFINING CUSTOM LOADER:
 		print("RESTORING MODEL FROM:", model_file)
 		reader = tf.train.NewCheckpointReader(model_file)
@@ -92,12 +97,12 @@ class Model():
 		else:
 			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}.ckpt'.format(model_index))
 
-	def create_network(self, sess, load_pretrained_mod=False, pretrained_weight_file=None):
+	def create_network(self, sess, pretrained_weight_file=None, to_train=False):
 
 		print("Training Policy from base model.")
-		self.initialize_base_model(sess)
+		self.initialize_base_model(sess,to_train)
 		self.define_split_stream()
 		self.training_ops()
 
-		if load_pretrained_mod:
+		if pretrained_weight_file:
 			self.model_load(pretrained_weight_file)
