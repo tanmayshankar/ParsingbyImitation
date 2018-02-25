@@ -26,11 +26,11 @@ class Model():
 		self.conv = [[] for i in range(self.num_layers)]
 
 		# Initial layer.
-		self.conv[0] = tf.layers.conv2d(self.input,filters=self.conv_num_filters[0],kernel_size=(self.conv_sizes[0]),activation=tf.nn.relu,name='conv0')
+		self.conv[0] = tf.layers.conv2d(self.input,filters=self.conv_num_filters[0],kernel_size=(self.conv_sizes[0]),strides=(self.conv_strides[0]),activation=tf.nn.relu,name='conv0')
 
 		# Defining subsequent conv layers.
 		for i in range(1,self.num_layers):
-			self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_size=(self.conv_sizes[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
+			self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_size=(self.conv_sizes[i]),strides=(self.conv_strides[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
 
 		# Now going to flatten this and move to a fully connected layer. 		
 		self.flat_conv = tf.layers.flatten(self.conv[-1])
