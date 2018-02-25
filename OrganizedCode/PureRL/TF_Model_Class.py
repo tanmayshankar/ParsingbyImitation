@@ -19,7 +19,7 @@ class Model():
 		self.conv_strides = npy.array([1,2,2,2,2])
 
 		# Placeholders
-		self.input = tf.placeholder(tf.float32,shape=[1,self.image_size,self.image_size,3],name='input')
+		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,3],name='input')
 
 		# Defining conv layers.
 		self.conv = [[] for i in range(self.num_layers)]
@@ -64,25 +64,33 @@ class Model():
 		self.sess.run(init)
 	
 	def model_load(self, model_file)
-		#################################
-		if model_file:
-			# DEFINING CUSTOM LOADER:
-			print("RESTORING MODEL FROM:", model_file)
-			reader = tf.train.NewCheckpointReader(model_file)
-			saved_shapes = reader.get_variable_to_shape_map()
-			var_names = sorted([(var.name, var.name.split(':')[0]) for var in tf.global_variables()
-				if var.name.split(':')[0] in saved_shapes])
-			restore_vars = []
-			name2var = dict(zip(map(lambda x:x.name.split(':')[0], tf.global_variables()), tf.global_variables()))
-			with tf.variable_scope('', reuse=True):
-				for var_name, saved_var_name in var_names:
-					curr_var = name2var[saved_var_name]
-					var_shape = curr_var.get_shape().as_list()
-					if var_shape == saved_shapes[saved_var_name]:
-						restore_vars.append(curr_var)
-			saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
-			saver.restore(self.sess, model_file)
-		#################################
+		# DEFINING CUSTOM LOADER:
+		print("RESTORING MODEL FROM:", model_file)
+		reader = tf.train.NewCheckpointReader(model_file)
+		saved_shapes = reader.get_variable_to_shape_map()
+		var_names = sorted([(var.name, var.name.split(':')[0]) for var in tf.global_variables()
+			if var.name.split(':')[0] in saved_shapes])
+		restore_vars = []
+		name2var = dict(zip(map(lambda x:x.name.split(':')[0], tf.global_variables()), tf.global_variables()))
+		with tf.variable_scope('', reuse=True):
+			for var_name, saved_var_name in var_names:
+				curr_var = name2var[saved_var_name]
+				var_shape = curr_var.get_shape().as_list()
+				if var_shape == saved_shapes[saved_var_name]:
+					restore_vars.append(curr_var)
+		saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
+		saver.restore(self.sess, model_file)
+
+	def save_model(self, model_index, iteration_number=-1):
+		if not(os.path.isdir("saved_models")):
+			os.mkdir("saved_models")
+
+		self.saver = tf.train.Saver(max_to_keep=None)           
+
+		if not(iteration_number==-1):
+			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}_iter{1}.ckpt'.format(model_index,iteration_number))
+		else:
+			save_path = self.saver.save(self.sess,'saved_models/model_epoch{0}.ckpt'.format(model_index))
 
 	def create_network(self, sess, load_pretrained_mod=False, pretrained_weight_file=None):
 
