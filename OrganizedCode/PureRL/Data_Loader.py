@@ -16,8 +16,9 @@ class DataLoader():
 			self.images = self.images[self.selected_indices]
 			self.labels = self.labels[self.selected_indices]
 			self.horizontal_rewards = self.horizontal_rewards[self.selected_indices]
-
-		self.horizontal_rewards = self.horizontal_rewards.max(axis=(1,2))
+		
+		if rewards_path:
+			self.horizontal_rewards = self.horizontal_rewards.max(axis=(1,2))
 		
 		self.num_images = self.images.shape[0]
 		self.image_size = self.images.shape[1]

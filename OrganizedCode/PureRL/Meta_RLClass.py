@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from headers import *
 import TF_Model_Class
+import TF_Model_LearntCov
 import Data_Loader
 
 class Meta_RLClass():
@@ -9,11 +10,15 @@ class Meta_RLClass():
 
 		self.sess = session
 		self.args = arguments
-		self.batch_size = 5
-		self.num_epochs = 250
+		self.batch_size = 25
+		self.num_epochs = 100
 		self.save_every = 1
 		# Instantiate Model Class.
-		self.model = TF_Model_Class.Model()
+
+		if self.args.learn_cov:
+			self.model = TF_Model_LearntCov.Model()
+		else:
+			self.model = TF_Model_Class.Model()
 
 		if self.args.model:
 			self.model.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)
@@ -21,7 +26,10 @@ class Meta_RLClass():
 			self.model.create_network(self.sess,to_train=self.args.train)
 
 		# Instantiate data loader class to load and preprocess the data.
-		self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
+		if self.args.horrew and self.args.indices:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
+		else:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
 		self.data_loader.preprocess()
 
 		# self.plot_manager = Plotting_Utilities.PlotManager(to_plot=self.args.plot,parser=self.parser)
@@ -51,9 +59,11 @@ class Meta_RLClass():
 	def compute_reward(self, indices):
 		# Normalizing the rewards.
 		reward_values = (self.painted_images[indices]*self.data_loader.labels[indices]).mean(axis=(1,2))		
-		self.split_return_weight_vect = reward_values / self.data_loader.horizontal_rewards[indices]
-
-		self.rewards[indices] = self.split_return_weight_vect
+		self.rewards[indices] = reward_values
+		
+		# if self.data_loader.horizontal_rewards:
+		if self.args.horrew:
+			self.split_return_weight_vect = reward_values / self.data_loader.horizontal_rewards[indices]
 
 	def backprop(self, indices):		
 		# Updating the network.
@@ -115,6 +125,7 @@ def parse_arguments():
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--indices',dest='indices',type=str)
 	parser.add_argument('--horrew',dest='horrew',type=str)
+	parser.add_argument('--learncov',dest='learn_cov',type=int,default=0)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
