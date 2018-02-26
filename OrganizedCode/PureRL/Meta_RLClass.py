@@ -64,6 +64,8 @@ class Meta_RLClass():
 		# if self.data_loader.horizontal_rewards:
 		if self.args.horrew:
 			self.split_return_weight_vect = reward_values / self.data_loader.horizontal_rewards[indices]
+		else:
+			self.split_return_weight_vect = reward_values
 
 	def backprop(self, indices):		
 		# Updating the network.
