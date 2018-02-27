@@ -35,7 +35,7 @@ class Meta_RLClass():
 			self.model = TF_Model_AnnealedCov.Model(num_channels=self.data_loader.num_channels)
 		elif self.args.learn_cov:
 			self.model = TF_Model_LearntCov.Model(num_channels=self.data_loader.num_channels)
-		else
+		else:
 			self.model = TF_Model_Class.Model(num_channels=self.data_loader.num_channels)
 
 		if self.args.model:
