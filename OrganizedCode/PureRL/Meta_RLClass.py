@@ -21,6 +21,15 @@ class Meta_RLClass():
 		self.anneal_epochs = 40
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
+        # Instantiate data loader class to load and preprocess the data.
+        if self.args.horrew and self.args.indices:
+            self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
+        elif self.args.indices:
+            self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
+        else:
+            self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
+        self.data_loader.preprocess()
+        
 		# Instantiate Model Class.
 		if self.args.anneal_cov:			
 			self.model = TF_Model_AnnealedCov.Model()
@@ -34,14 +43,6 @@ class Meta_RLClass():
 		else:
 			self.model.create_network(self.sess,to_train=self.args.train)
 
-		# Instantiate data loader class to load and preprocess the data.
-		if self.args.horrew and self.args.indices:
-			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
-		elif self.args.indices:
-			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
-		else:
-			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
-		self.data_loader.preprocess()
 
 		# self.plot_manager = Plotting_Utilities.PlotManager(to_plot=self.args.plot,parser=self.parser)
 
@@ -59,11 +60,11 @@ class Meta_RLClass():
 
 			if self.args.anneal_cov:
 				self.batch_samples[redo_indices] = self.sess.run(self.model.sample_split,
-					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape( npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size, 1),
+					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape( npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size,self.model.num_channels],
 							   self.model.split_cov: self.covariance_value })[:,0]			
 			else:
 				self.batch_samples[redo_indices] = self.sess.run(self.model.sample_split,
-					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape( npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size, 1) })[:,0]
+					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape( npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size,self.model.num_channels] })[:,0]
 
 			redo_indices = (self.batch_samples<0.)+(self.batch_samples>1.)
 
@@ -94,12 +95,12 @@ class Meta_RLClass():
 
 		num_images_batch = len(indices)
 		if self.args.anneal_cov:
-			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,1)) ,
+			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,self.model.num_channels]) ,
 													   self.model.sampled_split: self.batch_samples.reshape((num_images_batch,1)),
 													   self.model.split_return_weight: self.split_return_weight_vect.reshape((num_images_batch,1)),
 													   self.model.split_cov: self.covariance_value})		
 		else:
-			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,1)) ,
+			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,self.model.num_channels]) ,
 													   self.model.sampled_split: self.batch_samples.reshape((num_images_batch,1)),
 													   self.model.split_return_weight: self.split_return_weight_vect.reshape((num_images_batch,1))})
 

@@ -3,8 +3,9 @@ from headers import *
 
 class Model():
 
-	def __init__(self, image_size=256):
+	def __init__(self, image_size=256, num_channels=1):
 		self.image_size = image_size
+		self.num_channels = num_channels
 
 	def initialize_base_model(self, sess, model_file=None, to_train=True):
 
@@ -20,7 +21,8 @@ class Model():
 
 		# Placeholders
 		# Now doing this for single channel images.
-		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,1],name='input')
+
+		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,self.num_channels],name='input')
 
 		# Defining conv layers.
 		self.conv = [[] for i in range(self.num_layers)]
