@@ -21,13 +21,10 @@ def MetaClass():
 			self.model.create_network(self.sess,load_pretrained_mod=False,base_model_file=self.args.base_model)
 
 		# Instantiate data loader class to load and preprocess the data.
-		self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
+		self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
 		self.data_loader.preprocess()
 
-		# Instantiate parser class.
-		self.parser = Parsing.Parser(model_instance=self.model)
-
-		self.plot_manager = Plotting_Utilities.PlotManager(to_plot=self.args.plot,parser=self.parser)
+		# self.plot_manager = Plotting_Utilities.PlotManager(to_plot=self.args.plot,parser=self.parser)
 
 	def meta_training(self,train=True):
 		
@@ -36,36 +33,29 @@ def MetaClass():
 		self.predicted_labels = npy.zeros((self.num_images,self.image_size, self.image_size))
 		self.painted_images = -npy.ones((self.num_images, self.image_size,self.image_size))
 
-		if self.plot:			
+		if self.args.plot:		
 			self.define_plots()
 
-		self.to_train = train		
-		if not(train):
+		if not(self.args.train):
 			self.num_epochs=1
-			self.annealed_epsilon=self.final_epsilon
 
 		print("Entering Training Loops.")
-		# For all epochs
 		for e in range(self.num_epochs):
 
-			self.save_model_weights(e)				
+			self.model.save_model(e)
+			
 			for i in range(self.num_images):
+
+				# Forward pass over the image.
 
 				print("#___________________________________________________________________________")
 				print("Epoch:",e,"Training Image:",i)
-	
-				if train:
+		
+				# Backward pass if we are training.
+ 				if self.args.train:
 					self.backprop(i)
-					if e<self.decay_epochs:
-						epsilon_index = e*self.num_images+i
-						self.annealed_epsilon = self.initial_epsilon-epsilon_index*self.annealing_rate
-					else: 
-						self.annealed_epsilon = self.final_epsilon
-				# embed()
-				self.start_list = []
-				self.goal_list = []
-							
-			if train:
+					
+			if self.args.train:
 				npy.save("parsed_{0}.npy".format(e),self.predicted_labels)
 				npy.save("painted_images_{0}.npy".format(e),self.painted_images)
 
@@ -106,9 +96,6 @@ def main(args):
 	print("Loading Images.")
 	hierarchical_model.images = npy.load(args.images)	
 	hierarchical_model.true_labels = npy.load(args.labels) 
-
-	print("Preprocessing Images.")
-	hierarchical_model.preprocess()
 
 	hierarchical_model.plot = args.plot
 	hierarchical_model.to_train = args.train

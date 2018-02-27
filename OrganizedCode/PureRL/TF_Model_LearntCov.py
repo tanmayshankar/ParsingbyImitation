@@ -42,11 +42,15 @@ class Model():
 
 		# Split output.
 		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
+		# if self.to_train:
+		# 	self.split_cov = 0.1
+		# else:
+		# 	self.split_cov = 0.001
 
-		if self.to_train:
-			self.split_cov = 0.02
-		else:
-			self.split_cov = 0.001
+		self.min_cov = 0.001
+		# self.split_cov = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus)+self.min_cov
+		self.pre_split_cov = tf.layers.dense(self.fc6,1)
+		self.split_cov = tf.exp(self.pre_split_cov)+self.min_cov
 
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 

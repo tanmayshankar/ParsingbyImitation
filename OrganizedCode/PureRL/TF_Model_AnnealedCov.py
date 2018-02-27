@@ -43,10 +43,8 @@ class Model():
 		# Split output.
 		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
 
-		if self.to_train:
-			self.split_cov = 0.02
-		else:
-			self.split_cov = 0.001
+		# Now taking split covariance as an input.
+		self.split_cov = tf.placeholder(tf.float32,shape=(None),name='split_cov')
 
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 

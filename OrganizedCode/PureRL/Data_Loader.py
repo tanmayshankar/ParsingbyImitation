@@ -15,7 +15,8 @@ class DataLoader():
 			self.selected_indices = npy.load(indices_path)			
 			self.images = self.images[self.selected_indices]
 			self.labels = self.labels[self.selected_indices]
-			self.horizontal_rewards = self.horizontal_rewards[self.selected_indices]
+			if rewards_path:
+				self.horizontal_rewards = self.horizontal_rewards[self.selected_indices]
 		
 		if rewards_path:
 			self.horizontal_rewards = self.horizontal_rewards.max(axis=(1,2))
