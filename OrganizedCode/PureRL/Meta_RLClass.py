@@ -21,15 +21,15 @@ class Meta_RLClass():
 		self.anneal_epochs = 40
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-        # Instantiate data loader class to load and preprocess the data.
-        if self.args.horrew and self.args.indices:
-            self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
-        elif self.args.indices:
-            self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
-        else:
-            self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
-        self.data_loader.preprocess()
-        
+		# Instantiate data loader class to load and preprocess the data.
+		if self.args.horrew and self.args.indices:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
+		elif self.args.indices:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
+		else:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
+		self.data_loader.preprocess()
+		
 		# Instantiate Model Class.
 		if self.args.anneal_cov:			
 			self.model = TF_Model_AnnealedCov.Model()
@@ -148,7 +148,7 @@ class Meta_RLClass():
 				print("Epoch:",e,"Training Batch:",i)				
 
 				# Backward pass if we are training.				
- 				if self.args.train:
+				if self.args.train:
 					self.backprop(indices)
 			
 			print("AFTER EPOCH:",e,"AVERAGE REWARD:",self.rewards.mean())		
