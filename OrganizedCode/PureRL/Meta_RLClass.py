@@ -32,11 +32,11 @@ class Meta_RLClass():
 		
 		# Instantiate Model Class.
 		if self.args.anneal_cov:			
-			self.model = TF_Model_AnnealedCov.Model()
+			self.model = TF_Model_AnnealedCov.Model(num_channels=self.data_loader.num_channels)
 		elif self.args.learn_cov:
-			self.model = TF_Model_LearntCov.Model()
-		else:
-			self.model = TF_Model_Class.Model()
+			self.model = TF_Model_LearntCov.Model(num_channels=self.data_loader.num_channels)
+		else
+			self.model = TF_Model_Class.Model(num_channels=self.data_loader.num_channels)
 
 		if self.args.model:
 			self.model.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)

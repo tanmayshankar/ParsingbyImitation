@@ -23,11 +23,16 @@ class DataLoader():
 		
 		self.num_images = self.images.shape[0]
 		self.image_size = self.images.shape[1]
+		
+		if len(self.images.shape)==4:
+			self.num_channels = 3
+		else:
+			self.num_channels = 1
 
 	def preprocess(self):
 
 		# For RGB Images:
-		if len(self.images.shape)==4:
+		if self.num_channels==3:
 
 			for i in range(self.num_images):
 				self.images[i] = cv2.cvtColor(self.images[i],cv2.COLOR_RGB2BGR)
