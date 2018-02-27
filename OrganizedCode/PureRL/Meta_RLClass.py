@@ -60,11 +60,11 @@ class Meta_RLClass():
 
 			if self.args.anneal_cov:
 				self.batch_samples[redo_indices] = self.sess.run(self.model.sample_split,
-					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape( npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size,self.model.num_channels],
+					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape((npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size,self.model.num_channels])),
 							   self.model.split_cov: self.covariance_value })[:,0]			
 			else:
 				self.batch_samples[redo_indices] = self.sess.run(self.model.sample_split,
-					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape( npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size,self.model.num_channels] })[:,0]
+					feed_dict={self.model.input: self.data_loader.images[indices[redo_indices]].reshape((npy.count_nonzero(redo_indices), self.model.image_size, self.model.image_size,self.model.num_channels])) })[:,0]
 
 			redo_indices = (self.batch_samples<0.)+(self.batch_samples>1.)
 
@@ -95,12 +95,12 @@ class Meta_RLClass():
 
 		num_images_batch = len(indices)
 		if self.args.anneal_cov:
-			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,self.model.num_channels]) ,
+			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,self.model.num_channels])) ,
 													   self.model.sampled_split: self.batch_samples.reshape((num_images_batch,1)),
 													   self.model.split_return_weight: self.split_return_weight_vect.reshape((num_images_batch,1)),
 													   self.model.split_cov: self.covariance_value})		
 		else:
-			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,self.model.num_channels]) ,
+			self.sess.run(self.model.train, feed_dict={self.model.input: self.data_loader.images[indices].reshape((num_images_batch, self.model.image_size, self.model.image_size,self.model.num_channels])) ,
 													   self.model.sampled_split: self.batch_samples.reshape((num_images_batch,1)),
 													   self.model.split_return_weight: self.split_return_weight_vect.reshape((num_images_batch,1))})
 
