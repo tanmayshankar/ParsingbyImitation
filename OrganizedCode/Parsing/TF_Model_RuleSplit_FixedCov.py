@@ -41,22 +41,22 @@ class Model():
 		self.rule_fc6_shape = 200
 		self.rule_fc6 = tf.layers.dense(self.flat_conv,self.rule_fc6_shape,activation=tf.nn.relu)
 
-		# Only 2 rules --> paint or not paint.
 		self.num_rules = 6
 		self.rule_presoftmax = tf.layers.dense(self.rule_fc6,self.num_rules)
-		self.rule_probabilities = tf.nn.softmax(self.rule_presoftmax,name='rule_probabilities')
+		self.premask_probabilities = tf.nn.softmax(self.rule_presoftmax,name='premask_probabilities')
+
+		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
+		self.prenorm_masked_probabilities = tf.multiply(self.premask_probabilities,self.rule_mask)
+		self.prenorm_mask_sum = tf.reduce_sum(self.prenorm_masked_probabilities,axis=-1,keep_dims=True)
+		self.rule_probabilities = tf.divide(self.prenorm_masked_probabilities,self.prenorm_mask_sum)
+
 		self.rule_dist = tf.contrib.distributions.Categorical(probs=self.rule_probabilities)
 		self.sampled_rule = self.rule_dist.sample()
-
-
-
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 
-		# self.target_rule = tf.placeholder(tf.float32,shape=(None,1),name='target_rule')
-		# self.rule_loss = tf.multiply(self.rule_return_weight,tf.nn.softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rule_presoftmax))
-
 		self.target_rule = tf.placeholder(tf.int32,shape=(None),name='target_rule')
-		self.rule_loss = tf.multiply(self.rule_return_weight,tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.target_rule,logits=self.rule_presoftmax))
+		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
+		self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
 
 	def define_split_stream(self):
 
