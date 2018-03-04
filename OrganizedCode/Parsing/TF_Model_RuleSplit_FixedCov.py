@@ -54,7 +54,7 @@ class Model():
 		self.sampled_rule = self.rule_dist.sample()
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 
-		self.target_rule = tf.placeholder(tf.int32,shape=(None),name='target_rule')
+		self.target_rule = tf.placeholder(tf.int32,shape=(None,self.num_rules),name='target_rule')
 		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
 		self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
 

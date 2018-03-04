@@ -16,15 +16,17 @@ class Replay_Memory():
 		# Split weight (return).
 		# Rule weight.
 
-	def append_to_memory(self, transition):
+	def append_to_memory(self, state):
+		# The neat thing is now the "State" class is sufficient - no need to explicitly provide
+		# transitions as is typical of a memory. State class members have rule / split / masks. 
 
 		memory_len = len(self.memory)
 
 		if memory_len<self.memory_size:
-			self.memory.append(transition)
+			self.memory.append(state)
 		else:
 			self.memory.pop(0)
-			self.memory.append(transition)
+			self.memory.append(state)
 
 	def sample_batch(self, batch_size=32):
 		
@@ -35,4 +37,5 @@ class Replay_Memory():
 		# Instead of creating a batch of data (such as image inputs etc.) here,
 		# pass indices back to parsing code. 
 		# Do the actual batching there, so that we don't have to pass data_loader here. 
+		# (Because transitions, i.e. state etc. only have indices / coordinates, not the actual image values.)
 		return indices
