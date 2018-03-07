@@ -65,17 +65,20 @@ class Parser():
 			self.append_parse_tree()
 
 	def set_parameters(self,e):
-		if e<self.anneal_epochs:
-			self.covariance_value = self.initial_cov - self.anneal_rate*e
+		if self.args.train:
+			if e<self.anneal_epochs:
+				self.covariance_value = self.initial_cov - self.anneal_rate*e
+			else:
+				self.covariance_value = self.final_cov
+			print("Setting covariance as:",self.covariance_value)
+
+			if e<self.anneal_epochs:
+				self.annealed_epsilon = self.initial_epsilon-e*self.anneal_epsilon_rate
+			else:
+				self.annealed_epsilon = self.final_epsilon
 		else:
 			self.covariance_value = self.final_cov
-		print("Setting covariance as:",self.covariance_value)
-
-		if e<self.anneal_epochs:
-			self.annealed_epsilon = self.initial_epsilon-e*self.anneal_epsilon_rate
-		else:
 			self.annealed_epsilon = self.final_epsilon
-
 	# def set_rule_mask_6(self):
 	# 	if len(self.parse_tree)>=self.max_parse_steps:
 	# 		self.state.rule_mask[[4,5]] = 1.
@@ -260,11 +263,16 @@ class Parser():
 
 		# Burn in memory. 
 		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
-		self.burn_in()
+		
+		if self.args.train:
+			self.burn_in()
+			self.model.save_model(0)
+		else:
+			self.num_epochs=1	
 
 		# For all epochs. 
 		for e in range(self.num_epochs):
-			
+			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
 			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 
 			image_index_list = range(self.data_loader.num_images)
@@ -272,7 +280,7 @@ class Parser():
 
 			# For all images in the dataset.
 			for i in range(self.data_loader.num_images):
-				print ("Training Epoch:",e,"Image:",i)
+				
 				# Initialize the tree for the current image.
 				self.initialize_tree(image_index_list[i])
 
@@ -290,6 +298,19 @@ class Parser():
 
 				# Backprop --> over a batch sampled from memory. 
 				self.backprop()
+				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
+				
+				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward
 
+			if self.args.train:
+				npy.save("predicted_labels_{0}.npy".format(e),self.predicted_labels)
+				npy.save("rewards_{0}.npy".format(e),self.average_episode_rewards)
+				if ((e%self.save_every)==0):
+					self.model.save_model(e)				
+			else: 
+				npy.save("validation_{0}.npy".format(self.suffix),self.predicted_labels)
+				npy.save("val_rewards.npy".format(e),self.average_episode_rewards)
+			
+			print("Cummulative Reward for Episode:",self.average_episode_rewards.mean())
 
 
