@@ -16,9 +16,7 @@ class Meta_RLClass():
 		self.save_every = 1
 
 		# Instantiate data loader class to load and preprocess the data.
-		if self.args.horrew and self.args.indices:
-			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices,rewards_path=self.args.horrew)
-		elif self.args.indices:
+		if self.args.indices:
 			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
 		else:
 			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)

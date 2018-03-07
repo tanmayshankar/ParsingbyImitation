@@ -11,14 +11,14 @@ class parse_tree_node():
 		self.y = y
 		self.w = w
 		self.h = h
-		self.image_index = 0.
+		self.image_index = 0
 		self.backward_index = backward_index
 		self.rule_applied = rule_applied
 		self.split = split
 		# Cummulative reward from children.
 		self.reward = 0.
 
-		self.rule_mask = npy.zeros((6))
+		self.rule_mask = npy.zeros((3))
 
 		self.boundaryscaled_split = 0
 
