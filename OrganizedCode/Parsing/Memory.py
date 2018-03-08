@@ -3,7 +3,7 @@ from headers import *
 
 class Replay_Memory():
 
-	def __init__(self, memory_size=10000):
+	def __init__(self, memory_size=2000):
 
 		self.memory = []
 		
@@ -32,6 +32,10 @@ class Replay_Memory():
 		
 		memory_len = len(self.memory)	
 		indices = npy.random.randint(0,high=memory_len,size=(batch_size))
+		# indices = range(0,batch_size)
+
+		# for k in range(batch_size):
+		# 	self.memory.pop(k)
 
 		# The data loader is really what is storing the images. 
 		# Instead of creating a batch of data (such as image inputs etc.) here,

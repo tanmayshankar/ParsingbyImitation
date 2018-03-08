@@ -21,10 +21,10 @@ class Parser():
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
 		self.final_cov = 0.01
-		self.anneal_epochs = 10
+		self.anneal_epochs = 40
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-		self.initial_epsilon = 0.5
+		self.initial_epsilon = 0.8
 		self.final_epsilon = 0.05
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -101,6 +101,9 @@ class Parser():
 		# Split horizontally
 		# Assign to paint.
 		# Assign to non-terminal.
+
+		# if self.current_parsing_index==0:
+		# 	self.state.rule_mask[0] = 1.
 
 		if len(self.parse_tree)>=self.max_parse_steps:
 			# Allow only assignment.
@@ -192,7 +195,7 @@ class Parser():
 		# embed()
 
 
-		self.state.reward = (-1**(self.state.label-1))*(self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum())
+		self.state.reward = ((-1)**(self.state.label-1))*(self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum())
 		self.predicted_labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = self.state.label
 
 	def construct_parse_tree(self, image_index):

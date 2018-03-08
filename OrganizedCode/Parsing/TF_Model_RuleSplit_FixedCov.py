@@ -12,7 +12,7 @@ class Model():
 		# Initializing the session.
 		self.sess = sess
 		self.to_train = to_train
-
+		print("TO TRAIN:",self.to_train)
 		# Number of layers. 
 		self.num_layers = 5
 		self.num_fc_layers = 2
@@ -132,7 +132,7 @@ class Model():
 
 		print("Training Policy from base model.")
 		print(to_train)
-		self.initialize_base_model(sess,to_train)
+		self.initialize_base_model(sess,to_train=to_train)
 		self.define_rule_stream()
 		self.define_split_stream()
 		self.training_ops()
