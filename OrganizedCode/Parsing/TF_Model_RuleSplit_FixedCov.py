@@ -7,11 +7,12 @@ class Model():
 		self.image_size = image_size
 		self.num_channels = num_channels
 
-	def initialize_base_model(self, sess, model_file=None, to_train=True):
+	def initialize_base_model(self, sess, model_file=None, to_train=None):
 
 		# Initializing the session.
 		self.sess = sess
 		self.to_train = to_train
+
 		# Number of layers. 
 		self.num_layers = 5
 		self.num_fc_layers = 2
@@ -67,8 +68,10 @@ class Model():
 		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
 
 		if self.to_train:
+			print("To train was true")
 			self.split_cov = 0.05
 		else:
+			print("To train was not true")
 			self.split_cov = 0.001
 
 		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
@@ -128,6 +131,7 @@ class Model():
 	def create_network(self, sess, pretrained_weight_file=None, to_train=False):
 
 		print("Training Policy from base model.")
+		print(to_train)
 		self.initialize_base_model(sess,to_train)
 		self.define_rule_stream()
 		self.define_split_stream()

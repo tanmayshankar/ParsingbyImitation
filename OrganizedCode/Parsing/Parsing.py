@@ -21,18 +21,18 @@ class Parser():
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
 		self.final_cov = 0.01
-		self.anneal_epochs = 40
+		self.anneal_epochs = 10
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		self.initial_epsilon = 0.5
-		self.final_epsilon = 0.1
+		self.final_epsilon = 0.05
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
 
 	def initialize_tree(self,i):
 		# Intialize the parse tree for this image.=
 		self.state = parse_tree_node(label=0,x=0,y=0,w=self.data_loader.image_size,h=self.data_loader.image_size)
-		self.state.image_index = i		
+		self.state.image_index = copy.deepcopy(i)
 		self.current_parsing_index = 0
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
@@ -53,6 +53,8 @@ class Parser():
 			print("Burning in image:",i)
 			# Initialize tree.
 			self.initialize_tree(image_index_list[i])
+
+			self.set_parameters(0)
 
 			# Parse Image.
 			self.construct_parse_tree(image_index_list[i])
@@ -79,6 +81,7 @@ class Parser():
 		else:
 			self.covariance_value = self.final_cov
 			self.annealed_epsilon = self.final_epsilon
+
 	# def set_rule_mask_6(self):
 	# 	if len(self.parse_tree)>=self.max_parse_steps:
 	# 		self.state.rule_mask[[4,5]] = 1.
@@ -116,11 +119,7 @@ class Parser():
 		else:
 			# Constructing attended image.
 			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-			# print "RULE SEL"
 			
-			if not(npy.isscalar(self.state.w)):
-				embed()
-
 			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 			
@@ -148,24 +147,24 @@ class Parser():
 		# Split between 0 and 1 as s. 
 		# Map to l from x+1 to x+w-1. 
 		self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
-		if not( npy.isscalar(self.state.boundaryscaled_split)):
-			embed()
+		
 		# Transform to local patch coordinates.
 		self.state.boundaryscaled_split -= self.state.x
 
 		# Must add resultant states to parse tree.
 		state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 		state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-
+		state1.image_index = self.state.image_index		
+		state2.image_index = self.state.image_index
 		# Always inserting the lower indexed split first.
 		self.insert_node(state1,self.current_parsing_index+1)
 		self.insert_node(state2,self.current_parsing_index+2)
 
 	def process_assignment(self):
-		
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
 		state1.label = self.state.rule_applied
 		state1.backward_index = self.current_parsing_index
+		state1.image_index = self.state.image_index
 		self.insert_node(state1,self.current_parsing_index+1)
 
 	def parse_nonterminal(self):
@@ -177,6 +176,7 @@ class Parser():
 		if self.state.rule_applied==0:
 			# Function to process splits.	
 			self.process_splits()
+
 		elif self.state.rule_applied==1 or self.state.rule_applied==2:
 			# Function to process assignments.
 			self.process_assignment()	
@@ -189,13 +189,17 @@ class Parser():
 
 		# elif self.state.label==2:
 		# 	self.state.reward = -self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum()	
+		# embed()
+
+
 		self.state.reward = (-1**(self.state.label-1))*(self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum())
 		self.predicted_labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = self.state.label
 
 	def construct_parse_tree(self, image_index):
 
-		while ((self.predicted_labels[self.state.image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
+		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):
 			# embed()
+			
 			self.state = self.parse_tree[self.current_parsing_index]
 			if self.state.label==0:
 				self.parse_nonterminal()
@@ -214,11 +218,11 @@ class Parser():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
-		self.alpha = 1.1
+		# self.alpha = 1.1
 		
-		# Non-linearizing rewards.
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# # Non-linearizing rewards.
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 	def backprop(self):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
@@ -230,13 +234,10 @@ class Parser():
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
-
 		
 		# Accumulate above variables into batches. 
 		for k in range(len(indices)):
 			state = copy.deepcopy(self.memory.memory[indices[k]])
-
-			
 
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,0] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
@@ -264,6 +265,7 @@ class Parser():
 		# Burn in memory. 
 		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 		
+		# embed()
 		if self.args.train:
 			self.burn_in()
 			self.model.save_model(0)
@@ -299,7 +301,7 @@ class Parser():
 				# Backprop --> over a batch sampled from memory. 
 				self.backprop()
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
-				
+
 				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward
 
 			if self.args.train:
@@ -308,9 +310,7 @@ class Parser():
 				if ((e%self.save_every)==0):
 					self.model.save_model(e)				
 			else: 
-				npy.save("validation_{0}.npy".format(self.suffix),self.predicted_labels)
+				npy.save("validation.npy",self.predicted_labels)
 				npy.save("val_rewards.npy".format(e),self.average_episode_rewards)
 			
 			print("Cummulative Reward for Episode:",self.average_episode_rewards.mean())
-
-
