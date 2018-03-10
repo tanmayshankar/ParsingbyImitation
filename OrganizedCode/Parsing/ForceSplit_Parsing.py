@@ -20,8 +20,8 @@ class Parser():
 
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
-		self.final_cov = 0.01
-		self.anneal_epochs = 25
+		self.final_cov = 0.001
+		self.anneal_epochs = 10
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		self.initial_epsilon = 0.5
@@ -102,34 +102,46 @@ class Parser():
 		# Assign to paint.
 		# Assign to non-terminal.
 
-		# if self.current_parsing_index==0:
-		# 	self.state.rule_mask[0] = 1.
+		if self.current_parsing_index == 0: 
+			self.state.rule_applied = 0
+		elif self.current_parsing_index == 1:
+			self.state.rule_applied = 1
+		elif self.current_parsing_index == 3:
+			self.state.rule_applied = 2
 
-		if len(self.parse_tree)>=self.max_parse_steps:
-			# Allow only assignment.
-			self.state.rule_mask[[1,2]] = 1.
+		# elif len(self.parse_tree)>=self.max_parse_steps:
+		# 	# Allow only assignment.
+		# 	self.state.rule_mask[[1,2]] = 1.
 
-		elif self.state.w<=self.minimum_width:
-			self.state.rule_mask[[1,2]] = 1.
+		# elif self.state.w<=self.minimum_width:
+		# 	self.state.rule_mask[[1,2]] = 1.
 
-		else:
-			self.state.rule_mask[:] = 1.
+		# else:
+		# 	self.state.rule_mask[:] = 1.
 
 	def select_rule(self):
 		# Only forward pass network IF we are running greedy sampling.
-		if npy.random.random()<self.annealed_epsilon:
-			self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
-		else:
-			# Constructing attended image.
-			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+		# if npy.random.random()<self.annealed_epsilon:
+		# 	self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
+		# else:
+		# 	# Constructing attended image.
+		# 	input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 			
-			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+		# 	input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+		# 		copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 			
-			rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
-					self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
+		# 	rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
+		# 			self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
 
-			self.state.rule_applied = npy.argmax(rule_probabilities)
+		# 	self.state.rule_applied = npy.argmax(rule_probabilities)
+
+		# print("ForceSplit")
+		if self.current_parsing_index == 0: 
+			self.state.rule_applied = 0
+		elif self.current_parsing_index == 1:
+			self.state.rule_applied = 1
+		elif self.current_parsing_index == 3:
+			self.state.rule_applied = 2
 
 	def insert_node(self, state, index):
 		self.parse_tree.insert(index,state)
@@ -171,7 +183,7 @@ class Parser():
 		self.insert_node(state1,self.current_parsing_index+1)
 
 	def parse_nonterminal(self):
-		self.set_rule_mask()
+		# self.set_rule_mask()
 
 		# Predict rule probabilities and select a rule from it IF epsilon.
 		self.select_rule()
@@ -193,7 +205,7 @@ class Parser():
 		# elif self.state.label==2:
 		# 	self.state.reward = -self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum()	
 		# embed()
-
+		# embed()
 
 		self.state.reward = ((-1)**(self.state.label-1))*(self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum())
 		self.predicted_labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = self.state.label
@@ -221,11 +233,11 @@ class Parser():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
-		self.alpha = 1.0
+		# self.alpha = 1.1
 		
-		# Non-linearizing rewards.
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# # Non-linearizing rewards.
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 	def backprop(self):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
@@ -245,16 +257,18 @@ class Parser():
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,0] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
 			self.batch_rule_masks[k] = state.rule_mask
-			if state.rule_applied==-1:
-				self.batch_target_rules[k, state.rule_applied] = 0.
-				self.batch_rule_weights[k] = 0.				
-			else:
-				self.batch_target_rules[k, state.rule_applied] = 1.
-				self.batch_rule_weights[k] = state.reward
+			# if state.rule_applied==-1:
+			# 	self.batch_target_rules[k, state.rule_applied] = 0.
+			# 	self.batch_rule_weights[k] = 0.				
+			# else:
+				# self.batch_target_rules[k, state.rule_applied] = 1.
+				# self.batch_rule_weights[k] = state.reward
 			if state.rule_applied==0:
 				self.batch_sampled_splits[k] = state.split
 				self.batch_split_weights[k] = state.reward
+
 		# embed()
+
 		# Call sess train.
 		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
@@ -308,7 +322,7 @@ class Parser():
 				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward
 
 			if self.args.train:
-				# npy.save("predicted_labels_{0}.npy".format(e),self.predicted_labels)
+				npy.save("predicted_labels_{0}.npy".format(e),self.predicted_labels)
 				npy.save("rewards_{0}.npy".format(e),self.average_episode_rewards)
 				if ((e%self.save_every)==0):
 					self.model.save_model(e)				

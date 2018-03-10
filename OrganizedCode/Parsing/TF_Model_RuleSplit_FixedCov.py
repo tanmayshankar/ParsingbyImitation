@@ -89,6 +89,7 @@ class Model():
 	def training_ops(self):
 
 		self.total_loss = self.rule_loss+self.split_loss
+		# self.total_loss = self.split_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
