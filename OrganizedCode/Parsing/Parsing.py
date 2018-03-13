@@ -15,16 +15,16 @@ class Parser():
 		self.batch_size = 25
 		self.num_epochs = 250
 		self.save_every = 1
-		self.max_parse_steps = 2
+		self.max_parse_steps = 5
 		self.minimum_width = 25
 
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
 		self.final_cov = 0.01
-		self.anneal_epochs = 25
+		self.anneal_epochs = 80
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-		self.initial_epsilon = 0.5
+		self.initial_epsilon = 0.7
 		self.final_epsilon = 0.05
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -72,7 +72,7 @@ class Parser():
 				self.covariance_value = self.initial_cov - self.anneal_rate*e
 			else:
 				self.covariance_value = self.final_cov
-			print("Setting covariance as:",self.covariance_value)
+			# print("Setting covariance as:",self.covariance_value)
 
 			if e<self.anneal_epochs:
 				self.annealed_epsilon = self.initial_epsilon-e*self.anneal_epsilon_rate
@@ -221,11 +221,12 @@ class Parser():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
-		self.alpha = 1.0
-		
-		# Non-linearizing rewards.
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		if self.args.tanrewards:
+			self.alpha = 1.0
+			
+			# Non-linearizing rewards.
+			for j in range(len(self.parse_tree)):
+				self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 	def backprop(self):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
