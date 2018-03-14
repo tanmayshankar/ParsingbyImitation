@@ -10,7 +10,7 @@ class PlotManager():
 		self.plot = to_plot
 		image_index = 0
 		
-		self.fig, self.ax = plt.subplots(1,4,sharey=True)
+		self.fig, self.ax = plt.subplots(1,3,sharey=True)
 		if self.plot:			
 			self.fig.show()
 			

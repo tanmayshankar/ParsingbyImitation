@@ -7,11 +7,12 @@ class Model():
 		self.image_size = image_size
 		self.num_channels = num_channels
 
-	def initialize_base_model(self, sess, model_file=None, to_train=True):
+	def initialize_base_model(self, sess, model_file=None, to_train=None):
 
 		# Initializing the session.
 		self.sess = sess
 		self.to_train = to_train
+
 		# Number of layers. 
 		self.num_layers = 5
 		self.num_fc_layers = 2
@@ -41,7 +42,7 @@ class Model():
 		self.rule_fc6_shape = 200
 		self.rule_fc6 = tf.layers.dense(self.flat_conv,self.rule_fc6_shape,activation=tf.nn.relu)
 
-		self.num_rules = 6
+		self.num_rules = 3
 		self.rule_presoftmax = tf.layers.dense(self.rule_fc6,self.num_rules)
 		self.premask_probabilities = tf.nn.softmax(self.rule_presoftmax,name='premask_probabilities')
 
@@ -54,7 +55,7 @@ class Model():
 		self.sampled_rule = self.rule_dist.sample()
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 
-		self.target_rule = tf.placeholder(tf.int32,shape=(None),name='target_rule')
+		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
 		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
 		self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
 
@@ -86,6 +87,7 @@ class Model():
 	def training_ops(self):
 
 		self.total_loss = self.rule_loss+self.split_loss
+		# self.total_loss = self.split_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
@@ -127,8 +129,7 @@ class Model():
 
 	def create_network(self, sess, pretrained_weight_file=None, to_train=False):
 
-		print("Training Policy from base model.")
-		self.initialize_base_model(sess,to_train)
+		self.initialize_base_model(sess,to_train=to_train)
 		self.define_rule_stream()
 		self.define_split_stream()
 		self.training_ops()
