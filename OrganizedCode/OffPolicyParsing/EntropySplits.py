@@ -77,7 +77,8 @@ def bestsplit(image_segment):
 			chosen_l=l_val
 	if maxval==0:
 		print("No entropy reducing splits.")
-		return 1
+		return -1
+	return chosen_l
 
 # No need of this now.
 # def return_splits(x,a,l):
