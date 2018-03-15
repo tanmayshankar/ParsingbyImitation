@@ -17,7 +17,7 @@ class parse_tree_node():
 		self.split = split
 		# Cummulative reward from children.
 		self.reward = 0.
-        self.likelihood_ratio = 1.
+		self.likelihood_ratio = 1.
 
 		self.rule_mask = npy.zeros((3))
 
