@@ -58,7 +58,7 @@ def parse_arguments():
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	# parser.add_argument('--forcesplit',dest='forcesplit',type=int,default=0)
-	# parser.add_argument('--tanrewards',dest='tanrewards',type=int,default=0)
+	parser.add_argument('--tanrewards',dest='tanrewards',type=int,default=0)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
 

@@ -127,11 +127,13 @@ class Parser():
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
 		rule_probabilities = npy.ones((self.model.num_rules))*self.annealed_epsilon/self.model.num_rules
-		self.greedy_split = EntropySplits.bestsplit(input_image[0,:,:,0])
 
+		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
+
+		self.greedy_split = EntropySplits.bestsplit(entropy_image_input)
 		if self.greedy_split==-1:
 
-			ip_img_sum = entropy_input_image.sum()
+			ip_img_sum = entropy_image_input.sum()
 			# Assignment will be +1 for paint, -1 for non-paint.
 			assignment = ip_img_sum/abs(ip_img_sum)
 			if assignment==1:
@@ -150,10 +152,14 @@ class Parser():
 			# self.state.rule_applied = 0
 
 		masked_rule_probs = npy.multiply(self.state.rule_mask,rule_probabilities)
+
+		masked_rule_probs/=masked_rule_probs.sum()
+		# embed()
+
 		self.state.rule_applied = npy.random.choice(range(3),p=masked_rule_probs)
 
 		target_policy_rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
-			self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
+			self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})[0]
 
 		self.state.likelihood_ratio *= (target_policy_rule_probabilities[self.state.rule_applied]/masked_rule_probs[self.state.rule_applied])
 
@@ -169,6 +175,9 @@ class Parser():
 
 			if self.greedy_split>self.state.x and self.greedy_split<(self.state.x+self.state.w):
 				split_probs[self.greedy_split] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.state.w
+
+			split_probs/=split_probs.sum()
+		# embed()
 
 		self.state.boundaryscaled_split = npy.random.choice(range(self.data_loader.image_size-1),p=split_probs)
 		self.state.split = float(self.greedy_split-self.state.x)/self.state.w		
@@ -330,10 +339,10 @@ class Parser():
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				self.batch_rule_weights[k] = state.reward
+				self.batch_rule_weights[k] = state.reward*state.likelihood_ratio
 			if state.rule_applied==0:
 				self.batch_sampled_splits[k] = state.split
-				self.batch_split_weights[k] = state.reward
+				self.batch_split_weights[k] = state.reward*state.likelihood_ratio
 		# embed()
 		# Call sess train.
 		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,

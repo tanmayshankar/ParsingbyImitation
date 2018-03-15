@@ -22,7 +22,7 @@ def infogain(image_segment,location):
 	probability_segment1 = float(segment1.shape[0]*segment1.shape[1])/segment_size
 	probability_segment2 = float(segment2.shape[0]*segment2.shape[1])/segment_size
 
-	return entropy(y)-(probability_segment1*entropy(segment1)+probability_segment2*entropy(segment2))
+	return entropy(image_segment)-(probability_segment1*entropy(segment1)+probability_segment2*entropy(segment2))
 
 def entropy(image_segment):
 	# Calculate the emperical entropy for an image segment. 
@@ -40,7 +40,7 @@ def entropy(image_segment):
 
 	return -(p_zeros*npy.log2(p_zeros)+p_ones*npy.log2(p_ones))  
 
-def bestsplit(image_segment):
+def bestsplit(image_segment_input):
 
 	# maxval = -1
 	# chosen_a = -1
@@ -65,6 +65,9 @@ def bestsplit(image_segment):
 	# return chosen_a,chosen_l
 
 	# For now, we can assume horizontal axis. 
+	image_segment = copy.deepcopy(image_segment_input)
+	image_segment[image_segment==-1] = 0
+
 	maxval = -1
 	chosen_l = -1
 
@@ -76,8 +79,11 @@ def bestsplit(image_segment):
 			maxval=ig
 			chosen_l=l_val
 	if maxval==0:
-		print("No entropy reducing splits.")
+		# embed()
+		
+		# print("No entropy reducing splits.")
 		return -1
+
 	return chosen_l
 
 # No need of this now.
