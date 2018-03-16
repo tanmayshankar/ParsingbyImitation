@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from headers import *
 from state_class import parse_tree_node
+import EntropySplits
 
 class Parser():
 
@@ -24,7 +25,7 @@ class Parser():
 		self.anneal_epochs = 80
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-		self.initial_epsilon = 0.7
+		self.initial_epsilon = 0.5
 		self.final_epsilon = 0.05
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -61,7 +62,7 @@ class Parser():
 
 			# Compute rewards.
 			# self.compute_rewards()
-			self.propagate_rewards()
+			self.backward_tree_propagation()
 
 			# For every state in the parse tree, push to memory.
 			self.append_parse_tree()
@@ -72,29 +73,17 @@ class Parser():
 				self.covariance_value = self.initial_cov - self.anneal_rate*e
 			else:
 				self.covariance_value = self.final_cov
-			# print("Setting covariance as:",self.covariance_value)
+		# 	# print("Setting covariance as:",self.covariance_value)
 
-			if e<self.anneal_epochs:
-				self.annealed_epsilon = self.initial_epsilon-e*self.anneal_epsilon_rate
-			else:
-				self.annealed_epsilon = self.final_epsilon
+		# 	if e<self.anneal_epochs:
+		# 		self.annealed_epsilon = self.initial_epsilon-e*self.anneal_epsilon_rate
+		# 	else:
+		# 		self.annealed_epsilon = self.final_epsilon
 		else:
 			self.covariance_value = self.final_cov
-			self.annealed_epsilon = self.final_epsilon
-
-	# def set_rule_mask_6(self):
-	# 	if len(self.parse_tree)>=self.max_parse_steps:
-	# 		self.state.rule_mask[[4,5]] = 1.
-
-	# 	if self.state.h<=self.minimum_width and self.state.w<=self.minimum_width:
-	# 		self.state.rule_mask[[4,5]] = 1.
-
-	# 	elif self.state.h<=self.minimum_width:
-	# 		# If height of the 
-	# 		self.state.rule_mask[[1,3,4,5]] = 1.
-
-	# 	# elif self.state.w<=self.minimum_width:
-	# 	# 	self.state.rule_mask[[]]
+		# 	self.annealed_epsilon = self.final_epsilon
+		
+		self.annealed_epsilon = self.final_epsilon
 
 	def set_rule_mask(self):
 		# We are going to allow 3 rules:
@@ -115,45 +104,94 @@ class Parser():
 		else:
 			self.state.rule_mask[:] = 1.
 
-	def select_rule(self):
-		# Only forward pass network IF we are running greedy sampling.
-		if npy.random.random()<self.annealed_epsilon:
-			self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
-		else:
-			# Constructing attended image.
-			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+	# def select_rule(self):
+	# 	# Only forward pass network IF we are running greedy sampling.
+	# 	if npy.random.random()<self.annealed_epsilon:
+	# 		self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
+	# 	else:
+	# 		# Constructing attended image.
+	# 		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 			
-			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+			# input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+			# 	copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 			
-			rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
-					self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
+			# rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
+			# 		self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
 
-			self.state.rule_applied = npy.argmax(rule_probabilities)
+	# 		self.state.rule_applied = npy.argmax(rule_probabilities)
+
+	def select_rule_behavioural_policy(self):
+
+		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+
+		rule_probabilities = npy.ones((self.model.num_rules))*self.annealed_epsilon/self.model.num_rules
+
+		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
+
+		self.greedy_split = EntropySplits.bestsplit(entropy_image_input)
+		if self.greedy_split==-1:
+
+			ip_img_sum = entropy_image_input.sum()
+			# Assignment will be +1 for paint, -1 for non-paint.
+			assignment = ip_img_sum/abs(ip_img_sum)
+			if assignment==1:
+				rule_probabilities[1] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.model.num_rules
+				# self.state.rule_applied = 1
+			elif assignment==-1:
+				rule_probabilities[2] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.model.num_rules
+				# self.state.rule_applied = 2
+			else:
+				print("I DON'T KNOW WHAT'S HAPPENING!")
+				embed()
+
+		else: 
+			# Otherwise choose a split rule (eps greedy)
+			rule_probabilities[0] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.model.num_rules
+			# self.state.rule_applied = 0
+
+		masked_rule_probs = npy.multiply(self.state.rule_mask,rule_probabilities)
+
+		masked_rule_probs/=masked_rule_probs.sum()
+		# embed()
+
+		self.state.rule_applied = npy.random.choice(range(3),p=masked_rule_probs)
+
+		target_policy_rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
+			self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})[0]
+
+		self.state.likelihood_ratio *= (target_policy_rule_probabilities[self.state.rule_applied]/masked_rule_probs[self.state.rule_applied])
 
 	def insert_node(self, state, index):
 		self.parse_tree.insert(index,state)
 
-	def process_splits(self):
-		# For a single image, resample unless the sample is valid. 
-		redo = True
-		while redo: 
-			# Constructing attended image.
-			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+	def process_splits_behavioural_policy(self):
 
-			self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
+		if not(self.greedy_split==-1):
 
-			redo = (self.state.split<0.) or (self.state.split>1.)
+			split_probs = npy.zeros((self.data_loader.image_size-1))
+			split_probs[self.state.x:self.state.x+self.state.w] = self.annealed_epsilon/(self.state.w)
 
-		# Split between 0 and 1 as s. 
-		# Map to l from x+1 to x+w-1. 
-		self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
+			if self.greedy_split>self.state.x and self.greedy_split<(self.state.x+self.state.w):
+				split_probs[self.greedy_split] = 1.-self.annealed_epsilon+self.annealed_epsilon/self.state.w
+
+			split_probs/=split_probs.sum()
+		# embed()
+
+		self.state.boundaryscaled_split = npy.random.choice(range(self.data_loader.image_size-1),p=split_probs)
+		self.state.split = float(self.greedy_split-self.state.x)/self.state.w		
 		
+		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+
+		target_policy_split_prob = self.sess.run(self.model.sample_prob, feed_dict={self.model.input: input_image})[0,0]
+
+		self.state.likelihood_ratio *= (target_policy_split_prob/split_probs[self.state.boundaryscaled_split])
+
 		# Transform to local patch coordinates.
 		self.state.boundaryscaled_split -= self.state.x
-
 		# Must add resultant states to parse tree.
 		state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 		state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
@@ -163,6 +201,35 @@ class Parser():
 		self.insert_node(state1,self.current_parsing_index+1)
 		self.insert_node(state2,self.current_parsing_index+2)
 
+	# def process_splits(self):
+	# 	# For a single image, resample unless the sample is valid. 
+	# 	redo = True
+	# 	while redo: 
+	# 		# Constructing attended image.
+			# input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			# input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+			# 	copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+
+			# self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
+
+	# 		redo = (self.state.split<0.) or (self.state.split>1.)
+
+	# 	# Split between 0 and 1 as s. 
+	# 	# Map to l from x+1 to x+w-1. 
+	# 	self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
+		
+	# 	# Transform to local patch coordinates.
+	# 	self.state.boundaryscaled_split -= self.state.x
+
+	# 	# Must add resultant states to parse tree.
+	# 	state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+	# 	state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+	# 	state1.image_index = self.state.image_index		
+	# 	state2.image_index = self.state.image_index
+	# 	# Always inserting the lower indexed split first.
+	# 	self.insert_node(state1,self.current_parsing_index+1)
+	# 	self.insert_node(state2,self.current_parsing_index+2)
+
 	def process_assignment(self):
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
 		state1.label = self.state.rule_applied
@@ -170,15 +237,29 @@ class Parser():
 		state1.image_index = self.state.image_index
 		self.insert_node(state1,self.current_parsing_index+1)
 
-	def parse_nonterminal(self):
+	# def parse_nonterminal(self):
+	# 	self.set_rule_mask()
+
+	# 	# Predict rule probabilities and select a rule from it IF epsilon.
+	# 	self.select_rule()
+		
+	# 	if self.state.rule_applied==0:
+	# 		# Function to process splits.	
+	# 		self.process_splits()
+
+	# 	elif self.state.rule_applied==1 or self.state.rule_applied==2:
+	# 		# Function to process assignments.
+	# 		self.process_assignment()	
+
+	def parse_nonterminal_offpolicy(self):
 		self.set_rule_mask()
 
 		# Predict rule probabilities and select a rule from it IF epsilon.
-		self.select_rule()
+		self.select_rule_behavioural_policy()
 		
 		if self.state.rule_applied==0:
 			# Function to process splits.	
-			self.process_splits()
+			self.process_splits_behavioural_policy()
 
 		elif self.state.rule_applied==1 or self.state.rule_applied==2:
 			# Function to process assignments.
@@ -205,13 +286,15 @@ class Parser():
 			
 			self.state = self.parse_tree[self.current_parsing_index]
 			if self.state.label==0:
-				self.parse_nonterminal()
+				self.parse_nonterminal_offpolicy()
 			else:
 				self.parse_terminal()
 
 			self.current_parsing_index+=1
 
-	def propagate_rewards(self):
+	def backward_tree_propagation(self):
+
+		# Propagate rewards and likelihood ratios back up the tree.
 		self.gamma = 1.
 
 		for j in reversed(range(len(self.parse_tree))):	
@@ -222,15 +305,16 @@ class Parser():
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
 		if self.args.tanrewards:
-<<<<<<< HEAD
-			self.alpha = 1.1
-=======
 			self.alpha = 1.0
->>>>>>> a845c1f5ed0f54a0cfe661579b11b3b02d19406f
 			
 			# Non-linearizing rewards.
 			for j in range(len(self.parse_tree)):
 				self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+
+		# Now propagating likelihood ratios.
+		for j in reversed(range(len(self.parse_tree))):
+			if (self.parse_tree[j].backward_index>=0):
+				self.parse_tree[self.parse_tree[j].backward_index].likelihood_ratio *= self.parse_tree[j].likelihood_ratio
 
 	def backprop(self):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
@@ -255,10 +339,10 @@ class Parser():
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				self.batch_rule_weights[k] = state.reward
+				self.batch_rule_weights[k] = state.reward*state.likelihood_ratio
 			if state.rule_applied==0:
 				self.batch_sampled_splits[k] = state.split
-				self.batch_split_weights[k] = state.reward
+				self.batch_split_weights[k] = state.reward*state.likelihood_ratio
 		# embed()
 		# Call sess train.
 		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
@@ -301,7 +385,7 @@ class Parser():
 				self.construct_parse_tree(image_index_list[i])
 
 				# Propagate rewards. 
-				self.propagate_rewards()
+				self.backward_tree_propagation()
 
 				# Add to memory. 
 				self.append_parse_tree()

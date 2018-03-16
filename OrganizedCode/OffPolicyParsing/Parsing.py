@@ -21,10 +21,10 @@ class Parser():
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
 		self.final_cov = 0.01
-		self.anneal_epochs = 80
+		self.anneal_epochs = 0
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-		self.initial_epsilon = 0.7
+		self.initial_epsilon = 0.5
 		self.final_epsilon = 0.05
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -222,11 +222,7 @@ class Parser():
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
 		if self.args.tanrewards:
-<<<<<<< HEAD
-			self.alpha = 1.1
-=======
 			self.alpha = 1.0
->>>>>>> a845c1f5ed0f54a0cfe661579b11b3b02d19406f
 			
 			# Non-linearizing rewards.
 			for j in range(len(self.parse_tree)):
