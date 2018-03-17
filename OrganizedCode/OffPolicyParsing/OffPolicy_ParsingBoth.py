@@ -16,7 +16,7 @@ class Parser():
 		self.batch_size = 25
 		self.num_epochs = 250
 		self.save_every = 1
-		self.max_parse_steps = 2
+		self.max_parse_steps = 7
 		self.minimum_width = 25
 
 		# Parameters for annealing covariance. 
@@ -104,21 +104,21 @@ class Parser():
 		else:
 			self.state.rule_mask[:] = 1.
 
-	# def select_rule(self):
-	# 	# Only forward pass network IF we are running greedy sampling.
-	# 	if npy.random.random()<self.annealed_epsilon:
-	# 		self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
-	# 	else:
-	# 		# Constructing attended image.
-	# 		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+	def select_rule(self):
+		# Only forward pass network IF we are running greedy sampling.
+		if npy.random.random()<self.annealed_epsilon:
+			self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
+		else:
+			# Constructing attended image.
+			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 			
-			# input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-			# 	copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 			
-			# rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
-			# 		self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
+			rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
+					self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
 
-	# 		self.state.rule_applied = npy.argmax(rule_probabilities)
+			self.state.rule_applied = npy.argmax(rule_probabilities)
 
 	def select_rule_behavioural_policy(self):
 
@@ -203,34 +203,34 @@ class Parser():
 		self.insert_node(state1,self.current_parsing_index+1)
 		self.insert_node(state2,self.current_parsing_index+2)
 
-	# def process_splits(self):
-	# 	# For a single image, resample unless the sample is valid. 
-	# 	redo = True
-	# 	while redo: 
-	# 		# Constructing attended image.
-			# input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-			# input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-			# 	copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+	def process_splits(self):
+		# For a single image, resample unless the sample is valid. 
+		redo = True
+		while redo: 
+			# Constructing attended image.
+			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
-			# self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
+			self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
 
-	# 		redo = (self.state.split<0.) or (self.state.split>1.)
+			redo = (self.state.split<0.) or (self.state.split>1.)
 
-	# 	# Split between 0 and 1 as s. 
-	# 	# Map to l from x+1 to x+w-1. 
-	# 	self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
+		# Split between 0 and 1 as s. 
+		# Map to l from x+1 to x+w-1. 
+		self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
 		
-	# 	# Transform to local patch coordinates.
-	# 	self.state.boundaryscaled_split -= self.state.x
+		# Transform to local patch coordinates.
+		self.state.boundaryscaled_split -= self.state.x
 
-	# 	# Must add resultant states to parse tree.
-	# 	state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-	# 	state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-	# 	state1.image_index = self.state.image_index		
-	# 	state2.image_index = self.state.image_index
-	# 	# Always inserting the lower indexed split first.
-	# 	self.insert_node(state1,self.current_parsing_index+1)
-	# 	self.insert_node(state2,self.current_parsing_index+2)
+		# Must add resultant states to parse tree.
+		state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+		state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+		state1.image_index = self.state.image_index		
+		state2.image_index = self.state.image_index
+		# Always inserting the lower indexed split first.
+		self.insert_node(state1,self.current_parsing_index+1)
+		self.insert_node(state2,self.current_parsing_index+2)
 
 	def process_assignment(self):
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
@@ -239,19 +239,19 @@ class Parser():
 		state1.image_index = self.state.image_index
 		self.insert_node(state1,self.current_parsing_index+1)
 
-	# def parse_nonterminal(self):
-	# 	self.set_rule_mask()
+	def parse_nonterminal(self):
+		self.set_rule_mask()
 
-	# 	# Predict rule probabilities and select a rule from it IF epsilon.
-	# 	self.select_rule()
+		# Predict rule probabilities and select a rule from it IF epsilon.
+		self.select_rule()
 		
-	# 	if self.state.rule_applied==0:
-	# 		# Function to process splits.	
-	# 		self.process_splits()
+		if self.state.rule_applied==0:
+			# Function to process splits.	
+			self.process_splits()
 
-	# 	elif self.state.rule_applied==1 or self.state.rule_applied==2:
-	# 		# Function to process assignments.
-	# 		self.process_assignment()	
+		elif self.state.rule_applied==1 or self.state.rule_applied==2:
+			# Function to process assignments.
+			self.process_assignment()	
 
 	def parse_nonterminal_offpolicy(self):
 		self.set_rule_mask()
@@ -288,7 +288,10 @@ class Parser():
 			
 			self.state = self.parse_tree[self.current_parsing_index]
 			if self.state.label==0:
-				self.parse_nonterminal_offpolicy()
+				if self.args.train:
+					self.parse_nonterminal_offpolicy()
+				else:
+					self.parse_nonterminal()
 			else:
 				self.parse_terminal()
 

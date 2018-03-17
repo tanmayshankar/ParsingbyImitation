@@ -4,6 +4,7 @@ import TF_Model_RuleSplit_FixedCov
 import Data_Loader
 # import Parsing
 import OffPolicyParsing
+import OffPolicy_ParsingBoth
 import Memory
 
 class Meta_RLClass():
@@ -44,7 +45,10 @@ class Meta_RLClass():
 		# if self.args.forcesplit:
 		# 	self.parser = ForceSplit_Parsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 		# else:
-		self.parser = OffPolicyParsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+		if self.args.train:
+			self.parser = OffPolicyParsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+		else:
+			self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -78,4 +82,5 @@ def main(args):
 
 if __name__ == '__main__':
 	main(sys.argv)
+
 
