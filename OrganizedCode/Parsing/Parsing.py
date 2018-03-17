@@ -222,7 +222,11 @@ class Parser():
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
 		if self.args.tanrewards:
+<<<<<<< HEAD
+			self.alpha = 1.1
+=======
 			self.alpha = 1.0
+>>>>>>> a845c1f5ed0f54a0cfe661579b11b3b02d19406f
 			
 			# Non-linearizing rewards.
 			for j in range(len(self.parse_tree)):
