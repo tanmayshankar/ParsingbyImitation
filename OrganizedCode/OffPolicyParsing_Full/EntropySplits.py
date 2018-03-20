@@ -84,3 +84,28 @@ def bestsplit(image_segment_input):
 	# 	return -1
 
 	# return chosen_l
+
+def best_valid_split(image_segment_input, rule_mask):
+	# In general, iterate over both axes.
+	maxval = -1
+	chosen_a = -1
+	chosen_l = -1
+
+	image_segment = copy.deepcopy(image_segment_input)
+	image_segment[image_segment==-1] = 0
+
+	for a_val in npy.where(rule_mask[:2])[0]:
+		if a_val==0:
+			limval = image_segment.shape[0]-1
+		if a_val==1:
+			limval = image_segment.shape[1]-1
+		for l_val in range(1,limval):	
+			ig = infogain(image_segment,a_val,l_val)
+			if ig>maxval:
+				maxval=ig
+				chosen_a = a_val
+				chosen_l = l_val
+	if maxval==0 or maxval==-1:
+		print("No entropy reducing splits.")
+		return -1,-1		
+	return chosen_a, chosen_l
