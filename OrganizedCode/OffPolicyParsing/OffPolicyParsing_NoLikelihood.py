@@ -16,7 +16,7 @@ class Parser():
 		self.batch_size = 25
 		self.num_epochs = 250
 		self.save_every = 1
-		self.max_parse_steps = 2
+		self.max_parse_steps = 5
 		self.minimum_width = 25
 
 		# Parameters for annealing covariance. 
@@ -25,7 +25,7 @@ class Parser():
 		self.anneal_epochs = 80
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-		self.initial_epsilon = 0.5
+		self.initial_epsilon = 0.3
 		self.final_epsilon = 0.05
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -131,7 +131,9 @@ class Parser():
 		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
 
 		self.greedy_split = EntropySplits.bestsplit(entropy_image_input)
-		if self.greedy_split==-1:
+
+		# If the split rule is banned.
+		if (self.greedy_split==-1) or (self.state.rule_mask[0]==0):
 
 			ip_img_sum = entropy_image_input.sum()
 			# Assignment will be +1 for paint, -1 for non-paint.
@@ -155,20 +157,23 @@ class Parser():
 		masked_rule_probs = npy.multiply(self.state.rule_mask,rule_probabilities)
 
 		masked_rule_probs/=masked_rule_probs.sum()
-		# embed()
+		# if self.state.rule_mask[0]==0:
+		# 	embed()
 
 		self.state.rule_applied = npy.random.choice(range(3),p=masked_rule_probs)
 
-		target_policy_rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
-			self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})[0]
+		# target_policy_rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
+		# 	self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})[0]
 
-		self.state.likelihood_ratio *= (target_policy_rule_probabilities[self.state.rule_applied]/masked_rule_probs[self.state.rule_applied])
+		# self.state.likelihood_ratio *= (target_policy_rule_probabilities[self.state.rule_applied]/masked_rule_probs[self.state.rule_applied])
 
 	def insert_node(self, state, index):
 		self.parse_tree.insert(index,state)
 
 	def process_splits_behavioural_policy(self):
-
+		# if self.state.w<=1:
+		# 	# self.state.disp()
+		# 	embed()
 		split_probs = npy.zeros((self.data_loader.image_size-1))
 		split_probs[self.state.x+1:self.state.x+self.state.w] = self.annealed_epsilon/(self.state.w-1)
 
@@ -188,9 +193,9 @@ class Parser():
 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
-		target_policy_split_prob = self.sess.run(self.model.sample_prob, feed_dict={self.model.input: input_image})[0,0]
+		# target_policy_split_prob = self.sess.run(self.model.sample_prob, feed_dict={self.model.input: input_image})[0,0]
 
-		self.state.likelihood_ratio *= (target_policy_split_prob/split_probs[self.state.boundaryscaled_split])
+		# self.state.likelihood_ratio *= (target_policy_split_prob/split_probs[self.state.boundaryscaled_split])
 
 		# Transform to local patch coordinates.
 		self.state.boundaryscaled_split -= self.state.x

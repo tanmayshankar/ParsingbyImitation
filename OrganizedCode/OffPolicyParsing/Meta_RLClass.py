@@ -4,7 +4,9 @@ import TF_Model_RuleSplit_FixedCov
 import Data_Loader
 # import Parsing
 import OffPolicyParsing
+import OffPolicyParsing_NoLikelihood
 import OffPolicy_ParsingBoth
+import InformationGainMaximization_Parsing
 import Memory
 
 class Meta_RLClass():
@@ -51,7 +53,10 @@ class Meta_RLClass():
 			else: 
 				self.parser = OffPolicyParsing_NoLikelihood.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 		else:
-			self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+			if self.args.igm:
+				self.parser = InformationGainMaximization_Parsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+			else:
+				self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -67,6 +72,7 @@ def parse_arguments():
 	parser.add_argument('--likelihoodratio',dest='likelihoodratio',type=int,default=0)
 	# parser.add_argument('--forcesplit',dest='forcesplit',type=int,default=0)
 	parser.add_argument('--tanrewards',dest='tanrewards',type=int,default=0)
+	parser.add_argument('--infogain',dest='igm',type=int,default=0)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
 
