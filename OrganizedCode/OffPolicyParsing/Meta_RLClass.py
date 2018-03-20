@@ -1,9 +1,7 @@
 #!/usr/bin/env python
 from headers import *
-import TF_Model_RuleSplit_FixedCov
+import TF_Model_RuleSplit_7layer
 import Data_Loader
-# import Parsing
-import OffPolicyParsing
 import OffPolicyParsing_NoLikelihood
 import OffPolicy_ParsingBoth
 import InformationGainMaximization_Parsing
@@ -27,7 +25,7 @@ class Meta_RLClass():
 		self.data_loader.preprocess()
 		
 		# # Instantiate Model Class.		
-		self.model = TF_Model_RuleSplit_FixedCov.Model(num_channels=self.data_loader.num_channels)
+		self.model = TF_Model_RuleSplit_7layer.Model(num_channels=self.data_loader.num_channels,num_layers=self.args.layers)
 		
 		if self.args.train==0:
 			self.args.train==False
@@ -48,10 +46,7 @@ class Meta_RLClass():
 		# 	self.parser = ForceSplit_Parsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 		# else:
 		if self.args.train:
-			if self.args.likelihoodratio:
-				self.parser = OffPolicyParsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
-			else: 
-				self.parser = OffPolicyParsing_NoLikelihood.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+			self.parser = OffPolicyParsing_NoLikelihood.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 		else:
 			if self.args.igm:
 				self.parser = InformationGainMaximization_Parsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
@@ -73,6 +68,7 @@ def parse_arguments():
 	# parser.add_argument('--forcesplit',dest='forcesplit',type=int,default=0)
 	parser.add_argument('--tanrewards',dest='tanrewards',type=int,default=0)
 	parser.add_argument('--infogain',dest='igm',type=int,default=0)
+	parser.add_argument('--layers',dest='layers',type=int,default=5)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
 
