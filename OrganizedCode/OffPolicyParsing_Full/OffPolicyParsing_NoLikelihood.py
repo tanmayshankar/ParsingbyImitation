@@ -125,8 +125,8 @@ class Parser():
 
 		# Now returning both greedy axes and greedy splits. 
 		self.greedy_axis,self.greedy_split = EntropySplits.best_valid_split(entropy_image_input, self.state.rule_mask)
-		if self.greedy_split==255:
-			embed()
+		# if self.greedy_split==255:
+		# 	embed()
 		# If there was no information gain maximizing (or entropy reducing) split, 
 		# or if either of the split rules were banned. 
 		if (self.greedy_axis==-1) or (self.greedy_split==-1) or ((self.state.rule_mask[:2]==0).all()):				
