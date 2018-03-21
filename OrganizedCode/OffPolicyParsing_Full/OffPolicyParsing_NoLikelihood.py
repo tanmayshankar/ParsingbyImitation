@@ -16,7 +16,7 @@ class Parser():
 		self.batch_size = 25
 		self.num_epochs = 250
 		self.save_every = 1
-		self.max_parse_steps = 5
+		self.max_parse_steps = 20
 		self.minimum_width = 25
 
 		# Parameters for annealing covariance. 
@@ -96,17 +96,26 @@ class Parser():
 		# Split horizontally
 		# Assign to paint.
 		# Assign to not paint.
-		self.state.rule_mask = npy.zeros((self.model.num_rules))
-
+		# self.state.rule_mask = npy.zeros((self.model.num_rules))
+		self.state.rule_mask = npy.ones((self.model.num_rules))
 		if len(self.parse_tree)>=self.max_parse_steps:
+		# if self.state.depth>=self.max_depth:
 			# Allow only assignment.
-			self.state.rule_mask[[2,3]] = 1.
-		elif self.state.w<=self.minimum_width:
-			self.state.rule_mask[[1,2,3]] = 1.
-		elif self.state.h<=self.minimum_width:
-			self.state.rule_mask[[0,2,3]] = 1.
-		else:
-			self.state.rule_mask[:] = 1.
+			# self.state.rule_mask[[2,3]] = 1.			
+			self.state.rule_mask[[0,1]] = 0.		
+
+		if self.state.w<=self.minimum_width:
+			
+			# self.state.rule_mask[[1,2,3]] = 1.
+			self.state.rule_mask[0] = 0.
+
+		if self.state.h<=self.minimum_width:
+			
+			# self.state.rule_mask[[0,2,3]] = 1.
+			self.state.rule_mask[1] = 0.
+
+		# else:			
+			# self.state.rule_mask[:] = 1.
 
 	def select_rule_behavioural_policy(self):
 
@@ -115,8 +124,9 @@ class Parser():
 		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
 
 		# Now returning both greedy axes and greedy splits. 
-		self.greedy_axis,self.greedy_split = EntropySplits.bestsplit(entropy_image_input)
-		
+		self.greedy_axis,self.greedy_split = EntropySplits.best_valid_split(entropy_image_input, self.state.rule_mask)
+		if self.greedy_split==255:
+			embed()
 		# If there was no information gain maximizing (or entropy reducing) split, 
 		# or if either of the split rules were banned. 
 		if (self.greedy_axis==-1) or (self.greedy_split==-1) or ((self.state.rule_mask[:2]==0).all()):				
@@ -132,8 +142,8 @@ class Parser():
 				# The only reason this should have happened was because the 
 				# vertical splits were banned, and the sum of ip_img_sum was 0. 
 
-				print("I DON'T KNOW WHAT'S HAPPENING!")
-				embed()
+				# print("I DON'T KNOW WHAT'S HAPPENING!")
+				# embed()
 				rule_probabilities[[2,3]] = self.annealed_epsilon/self.model.num_rules
 
 		else: 
@@ -144,7 +154,7 @@ class Parser():
 		masked_rule_probs = npy.multiply(self.state.rule_mask,rule_probabilities)
 		masked_rule_probs/=masked_rule_probs.sum()
 
-		self.state.rule_applied = npy.random.choice(range(3),p=masked_rule_probs)
+		self.state.rule_applied = npy.random.choice(range(self.model.num_rules),p=masked_rule_probs)
 
 	def insert_node(self, state, index):
 		self.parse_tree.insert(index,state)
@@ -186,7 +196,7 @@ class Parser():
 			split_probs/=split_probs.sum()
 
 			self.state.boundaryscaled_split = npy.random.choice(range(self.data_loader.image_size-1),p=split_probs)
-			self.state.split = float(self.state.boundaryscaled_split-self.state.y)/self.state.y
+			self.state.split = float(self.state.boundaryscaled_split-self.state.y)/self.state.h
 
 			# Transform to local co-ordinates. 
 			self.state.boundaryscaled_split-=self.state.y
@@ -202,7 +212,7 @@ class Parser():
 
 	def process_assignment(self):
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
-		state1.label = self.state.rule_applied
+		state1.label = self.state.rule_applied-1
 		state1.backward_index = self.current_parsing_index
 		state1.image_index = self.state.image_index
 		self.insert_node(state1,self.current_parsing_index+1)

@@ -20,6 +20,7 @@ class parse_tree_node():
 		self.likelihood_ratio = 1.
 
 		self.rule_mask = npy.zeros((4))
+		self.depth = 0
 
 		self.boundaryscaled_split = 0
 
