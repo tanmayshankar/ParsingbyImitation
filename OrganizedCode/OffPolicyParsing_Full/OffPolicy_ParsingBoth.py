@@ -26,7 +26,7 @@ class Parser():
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		self.initial_epsilon = 0.5
-		self.final_epsilon = 0.001
+		self.final_epsilon = 0.0001
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
 
@@ -285,6 +285,7 @@ class Parser():
 
 			redo = (self.state.split<0.) or (self.state.split>1.)
 
+
 		if self.state.rule_applied==0:
 			# Split between 0 and 1 as s. 
 			# Map to l from x+1 to x+w-1. 
@@ -292,16 +293,21 @@ class Parser():
 			
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.x
+			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:
 			self.state.boundaryscaled_split = ((self.state.h-2)*self.state.split+self.state.y+1).astype(int)
 			
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.y
+			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
+			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
+
 
 		# Must add resultant states to parse tree.
-		state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-		state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+		# state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
+		# state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 		state1.image_index = self.state.image_index		
 		state2.image_index = self.state.image_index
 		# Always inserting the lower indexed split first.
@@ -353,7 +359,6 @@ class Parser():
 		# 	self.state.reward = -self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum()	
 		# embed()
 
-
 		self.state.reward = ((-1)**(self.state.label-1))*(self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h].sum())
 		self.predicted_labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = self.state.label
 
@@ -387,12 +392,12 @@ class Parser():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 		
-		if self.args.tanrewards:
-			self.alpha = 1.0
+		# if self.args.tanrewards:
+		# 	self.alpha = 1.0
 			
-			# Non-linearizing rewards.
-			for j in range(len(self.parse_tree)):
-				self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# 	# Non-linearizing rewards.
+		# 	for j in range(len(self.parse_tree)):
+		# 		self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 		# # Now propagating likelihood ratios.
 		# for j in reversed(range(len(self.parse_tree))):
@@ -470,7 +475,7 @@ class Parser():
 
 				# Propagate rewards. 
 				self.backward_tree_propagation()
-
+				# embed()
 				# Add to memory. 
 				self.append_parse_tree()
 

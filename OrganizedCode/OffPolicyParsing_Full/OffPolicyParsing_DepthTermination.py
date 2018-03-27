@@ -18,6 +18,7 @@ class Parser():
 		self.save_every = 1
 		self.max_parse_steps = 20
 		self.minimum_width = 25
+		self.max_depth = 7
 
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
@@ -98,8 +99,8 @@ class Parser():
 		# Assign to not paint.
 		# self.state.rule_mask = npy.zeros((self.model.num_rules))
 		self.state.rule_mask = npy.ones((self.model.num_rules))
-		if len(self.parse_tree)>=self.max_parse_steps:
-		# if self.state.depth>=self.max_depth:
+		# if len(self.parse_tree)>=self.max_parse_steps:
+		if self.state.depth>=self.max_depth:
 			# Allow only assignment.
 			# self.state.rule_mask[[2,3]] = 1.			
 			self.state.rule_mask[[0,1]] = 0.		
@@ -206,12 +207,15 @@ class Parser():
 		# This again is common to both states.
 		state1.image_index = self.state.image_index		
 		state2.image_index = self.state.image_index
+		state1.depth = self.state.depth+1
+		state2.depth = self.state.depth+1
 		# Always inserting the lower indexed split first.
 		self.insert_node(state1,self.current_parsing_index+1)
 		self.insert_node(state2,self.current_parsing_index+2)
 
 	def process_assignment(self):
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
+		state1.depth = self.state.depth+1
 		state1.label = self.state.rule_applied-1
 		state1.backward_index = self.current_parsing_index
 		state1.image_index = self.state.image_index
