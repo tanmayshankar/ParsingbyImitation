@@ -3,6 +3,7 @@ from headers import *
 import TF_Model_RuleSplit_7layer
 import Data_Loader
 import OffPolicyParsing_NoLikelihood
+import OffPolicyParsing_DepthTermination
 import OffPolicy_ParsingBoth
 import InformationGainMaximization_Parsing
 import Memory
@@ -41,12 +42,16 @@ class Meta_RLClass():
 		self.memory = Memory.Replay_Memory()
 
 		if self.args.train:
-			self.parser = OffPolicyParsing_NoLikelihood.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+			if self.args.depth_terminate:
+				self.parser = OffPolicyParsing_DepthTermination.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+			else:
+				self.parser = OffPolicyParsing_NoLikelihood.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 		else:
 			if self.args.igm:
 				self.parser = InformationGainMaximization_Parsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 			else:
-				self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+				# self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+				
 
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -61,8 +66,9 @@ def parse_arguments():
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--likelihoodratio',dest='likelihoodratio',type=int,default=0)
 	parser.add_argument('--tanrewards',dest='tanrewards',type=int,default=0)
+	parser.add_argument('--depth_terminate',dest='depth_terminate',type=int,default=0)
 	parser.add_argument('--infogain',dest='igm',type=int,default=0)
-	parser.add_argument('--layers',dest='layers',type=int,default=5)
+	parser.add_argument('--layers',dest='layers',type=int,default=7)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
 

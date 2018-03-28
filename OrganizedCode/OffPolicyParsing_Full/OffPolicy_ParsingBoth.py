@@ -17,6 +17,7 @@ class Parser():
 		self.num_epochs = 250
 		self.save_every = 1
 		self.max_parse_steps = 20
+		self.max_depth = 4
 		self.minimum_width = 25
 
 		# Parameters for annealing covariance. 
@@ -98,14 +99,16 @@ class Parser():
 		# Assign to not paint.
 		# self.state.rule_mask = npy.zeros((self.model.num_rules))
 		self.state.rule_mask = npy.ones((self.model.num_rules))
-		if len(self.parse_tree)>=self.max_parse_steps:
-		# if self.state.depth>=self.max_depth:
-			# Allow only assignment.
-			# self.state.rule_mask[[2,3]] = 1.			
-			self.state.rule_mask[[0,1]] = 0.		
+		if self.args.depth_terminate:
+			if self.state.depth>=self.max_depth:
+				# Allow only assignment.
+				self.state.rule_mask[[0,1]] = 0.		
+		else:
+			if len(self.parse_tree)>=self.max_parse_steps:		
+				# Allow only assignment.
+				self.state.rule_mask[[0,1]] = 0.		
 
-		if self.state.w<=self.minimum_width:
-			
+		if self.state.w<=self.minimum_width:			
 			# self.state.rule_mask[[1,2,3]] = 1.
 			self.state.rule_mask[0] = 0.
 
@@ -123,6 +126,7 @@ class Parser():
 			self.state.rule_applied = npy.random.choice(npy.where(self.state.rule_mask)[0])
 		else:
 			# Constructing attended image.
+
 			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 			
 			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
@@ -268,6 +272,8 @@ class Parser():
 		# This again is common to both states.
 		state1.image_index = self.state.image_index		
 		state2.image_index = self.state.image_index
+		state1.depth = self.state.depth+1
+		state2.depth = self.state.depth+1
 		# Always inserting the lower indexed split first.
 		self.insert_node(state1,self.current_parsing_index+1)
 		self.insert_node(state2,self.current_parsing_index+2)
@@ -284,7 +290,6 @@ class Parser():
 			self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
 
 			redo = (self.state.split<0.) or (self.state.split>1.)
-
 
 		if self.state.rule_applied==0:
 			# Split between 0 and 1 as s. 
@@ -317,6 +322,7 @@ class Parser():
 	def process_assignment(self):
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
 		state1.label = self.state.rule_applied-1
+		state1.depth = self.state.depth+1
 		state1.backward_index = self.current_parsing_index
 		state1.image_index = self.state.image_index
 		self.insert_node(state1,self.current_parsing_index+1)

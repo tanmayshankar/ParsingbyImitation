@@ -18,16 +18,16 @@ class Parser():
 		self.save_every = 1
 		self.max_parse_steps = 20
 		self.minimum_width = 25
-		self.max_depth = 7
+		self.max_depth = 4
 
 		# Parameters for annealing covariance. 
 		self.initial_cov = 0.1
 		self.final_cov = 0.01
-		self.anneal_epochs = 80
+		self.anneal_epochs = 50
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
-		self.initial_epsilon = 0.3
-		self.final_epsilon = 0.05
+		self.initial_epsilon = 0.1
+		self.final_epsilon = 0.01
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
 
@@ -142,9 +142,6 @@ class Parser():
 			else:
 				# The only reason this should have happened was because the 
 				# vertical splits were banned, and the sum of ip_img_sum was 0. 
-
-				# print("I DON'T KNOW WHAT'S HAPPENING!")
-				# embed()
 				rule_probabilities[[2,3]] = self.annealed_epsilon/self.model.num_rules
 
 		else: 

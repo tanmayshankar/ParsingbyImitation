@@ -17,7 +17,7 @@ class Parser():
 		self.num_epochs = 1
 		self.save_every = 1
 		self.max_parse_steps = 10
-		self.max_depth = 10
+		self.max_depth = 4
 		self.minimum_width = 25
 
 		# Parameters for annealing covariance. 
@@ -99,8 +99,8 @@ class Parser():
 		# Assign to not paint.
 		# self.state.rule_mask = npy.zeros((self.model.num_rules))
 		self.state.rule_mask = npy.ones((self.model.num_rules))
-		if len(self.parse_tree)>=self.max_parse_steps:
-		# if self.state.depth>=self.max_depth:
+		# if len(self.parse_tree)>=self.max_parse_steps:
+		if self.state.depth>=self.max_depth:
 			# Allow only assignment.
 			# self.state.rule_mask[[2,3]] = 1.			
 			self.state.rule_mask[[0,1]] = 0.		
