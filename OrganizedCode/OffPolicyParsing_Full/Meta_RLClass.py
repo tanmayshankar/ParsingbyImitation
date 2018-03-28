@@ -50,9 +50,8 @@ class Meta_RLClass():
 			if self.args.igm:
 				self.parser = InformationGainMaximization_Parsing.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 			else:
-				# self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+				self.parser = OffPolicy_ParsingBoth.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
 				
-
 	def train(self):
 		self.parser.meta_training(self.args.train)
 
