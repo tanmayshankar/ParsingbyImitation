@@ -31,8 +31,12 @@ class Meta_RLClass():
 		# Instantiate memory. 
 		self.memory = Memory.Replay_Memory()
 
+		# Instantiate the plotting manager. 
+		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
+
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		self.parser = OffPolicyParser.Parser(self.model,self.data_loader,self.memory,self.args,self.sess)
+		self.parser = OffPolicyParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader, \
+			memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess): 
 		
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -42,6 +46,7 @@ def parse_arguments():
 	parser.add_argument('--images',dest='images',type=str)
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
+	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--depth_terminate',dest='depth_terminate',type=int,default=0)

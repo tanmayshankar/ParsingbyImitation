@@ -6,11 +6,12 @@ import EntropySplits
 class Parser():
 
 	# In this class, we are going to learn assignments and splits.
-	def __init__(self, model_instance=None, data_loader_instance=None, memory_instance=None, args=None, session=None):
+    def __init__(self, model_instance=None, data_loader_instance=None, memory_instance=None, plot_manager=None, args=None, session=None): 
 
-		self.model = model_instance
-		self.data_loader = data_loader_instance
-		self.memory = memory_instance
+        self.model = model_instance
+        self.data_loader = data_loader_instance
+        self.memory = memory_instance
+        self.plot_manager = plot_manager
 		self.args = args
 		self.sess = session
 		self.batch_size = 25
@@ -330,6 +331,7 @@ class Parser():
 			else:
 				self.parse_terminal()
 
+            self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
 			self.current_parsing_index+=1
 
 	def backward_tree_propagation(self):
