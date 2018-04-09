@@ -5,9 +5,10 @@ class PlotManager():
 
 	def __init__(self, to_plot=False,data_loader=None):
 		
-		self.parser = parser
+		# self.parser = parser
 		self.data_loader = data_loader
 		self.plot = to_plot
+		self.image_size = self.data_loader.image_size
 		image_index = 0
 		
 		self.fig, self.ax = plt.subplots(1,3,sharey=True)
@@ -26,7 +27,8 @@ class PlotManager():
 		self.ax[1].set_adjustable('box-forced')
 
 		self.sc3 = self.ax[2].imshow(self.data_loader.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		self.sc3.set_clim([self.data_loader.images.max(),self.data_loader.images.min()])
+		# self.sc3.set_clim([self.data_loader.images.max(),self.data_loader.images.min()])
+		self.sc3.set_clim([self.data_loader.images.min(),self.data_loader.images.max()])
 		self.ax[2].set_title("Actual Image")
 		self.ax[2].set_adjustable('box-forced')
 
@@ -39,7 +41,7 @@ class PlotManager():
 		self.fig.canvas.draw()
 
 		if self.plot:
-			plt.pause(0.1)	
+			plt.pause(1)	
 
 	def parse_tree_plotting(self):
 		self.mask = -npy.ones((self.data_loader.image_size,self.data_loader.image_size))
@@ -58,8 +60,8 @@ class PlotManager():
 	
 		self.current_parse_tree = copy.deepcopy(parse_tree)
 		self.current_parsing_index = copy.deepcopy(parsing_index)
-		self.parse_tree = pred_labels
-
+		self.pred_labels = pred_labels
+		self.alternate_predicted_labels = npy.zeros((self.data_loader.image_size,self.data_loader.image_size))
 		self.alternate_predicted_labels[npy.where(self.pred_labels==1)]=1.
 		self.alternate_predicted_labels[npy.where(self.pred_labels==2)]=-1.
 
@@ -121,7 +123,7 @@ class PlotManager():
 		self.fig.canvas.draw()
 		# raw_input("Press any key to continue.")
 		# self.fig.savefig
-		self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
+		# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
 		plt.pause(0.1)	
 		# plt.pause(0.5)	
 

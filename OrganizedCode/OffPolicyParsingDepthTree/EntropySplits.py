@@ -72,6 +72,6 @@ def best_valid_split(image_segment_input, rule_mask):
 	if maxval==-1:
 		# print("No valid splits.")
 		return -1,-1		
-	if chosel_l == 255:
+	if chosen_l == 255:
 		embed()		
 	return chosen_a, chosen_l
