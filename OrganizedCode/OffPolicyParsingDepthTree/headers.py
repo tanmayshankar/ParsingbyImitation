@@ -20,3 +20,4 @@ import random
 import cv2
 import h5py
 from IPython import embed
+from scipy.stats import multivariate_normal
