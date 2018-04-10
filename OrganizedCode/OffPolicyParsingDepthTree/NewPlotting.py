@@ -26,9 +26,13 @@ class PlotManager():
 		self.ax[1].set_title("Parse Tree")
 		self.ax[1].set_adjustable('box-forced')
 
-		self.sc3 = self.ax[2].imshow(self.data_loader.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		# self.sc3.set_clim([self.data_loader.images.max(),self.data_loader.images.min()])
-		self.sc3.set_clim([self.data_loader.images.min(),self.data_loader.images.max()])
+		if self.data_loader.num_channels==3:
+			print("HELLO")
+			img = cv2.cvtColor(self.data_loader.images[image_index],cv2.COLOR_RGB2BGR)
+			self.sc3 = self.ax[2].imshow(img,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+		else:
+			self.sc3 = self.ax[2].imshow(self.data_loader.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+		# self.sc3.set_clim([self.data_loader.images.min(),self.data_loader.images.max()])
 		self.ax[2].set_title("Actual Image")
 		self.ax[2].set_adjustable('box-forced')
 
