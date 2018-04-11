@@ -29,8 +29,8 @@ class Parser():
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		# Increasing epsilon for painting now (from IGM). 
-		self.initial_epsilon = 0.3
-		self.final_epsilon = 0.05
+		self.initial_epsilon = 0.0001
+		self.final_epsilon = 0.0001
 		self.test_epsilon = 0.0001
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -310,7 +310,7 @@ class Parser():
 		if self.state.label==1:
 
 			# If the segment is taller than it is wide, use a vertical stroke. 
-			if self.state.h>self.state.w:
+			if self.state.h<self.state.w: #This is opposite because of vertical horizontal switch in viz.
 				lower = max(self.state.y,self.state.y+(self.state.h-self.paintwidth)/2)
 				upper = min(self.state.y+(self.state.h+self.paintwidth)/2,self.state.y+self.state.h)
 
@@ -323,9 +323,11 @@ class Parser():
 
 				self.predicted_labels[self.state.image_index, lower:upper, self.state.y:(self.state.y+self.state.h)] = 1.
 
+		copy_labels = copy.deepcopy(self.predicted_labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+		copy_labels[copy_labels==2]=-1
+
 		self.state.reward = \
-			(self.data_loader.labels[self.state.image_index, self.state.x:(self.state.x+self.state.w), self.state.y:(self.state.y+self.state.h)] \
-				*self.predicted_labels[self.state.image_index,self.state.x:(self.state.x+self.state.w), self.state.y:(self.state.y+self.state.h)]).sum()
+			(self.data_loader.labels[self.state.image_index, self.state.x:(self.state.x+self.state.w), self.state.y:(self.state.y+self.state.h)]*copy_labels).sum()
 
 	def parse_terminal(self):
 		# Here, change value of predicted_labels.
@@ -439,7 +441,8 @@ class Parser():
 		# For all epochs. 
 		for e in range(self.num_epochs):
 			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
-			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			# self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 
 			image_index_list = range(self.data_loader.num_images)
 			npy.random.shuffle(image_index_list)

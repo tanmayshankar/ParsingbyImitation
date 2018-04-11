@@ -65,6 +65,7 @@ class PlotManager():
 		self.current_parse_tree = copy.deepcopy(parse_tree)
 		self.current_parsing_index = copy.deepcopy(parsing_index)
 		self.pred_labels = pred_labels
+		# embed()
 		self.alternate_predicted_labels = npy.zeros((self.data_loader.image_size,self.data_loader.image_size))
 		self.alternate_predicted_labels[npy.where(self.pred_labels==1)]=1.
 		self.alternate_predicted_labels[npy.where(self.pred_labels==2)]=-1.
