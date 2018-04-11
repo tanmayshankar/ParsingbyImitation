@@ -29,8 +29,8 @@ class Parser():
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		# Increasing epsilon for painting now (from IGM). 
-		self.initial_epsilon = 0.0001
-		self.final_epsilon = 0.0001
+		self.initial_epsilon = 0.3
+		self.final_epsilon = 0.05
 		self.test_epsilon = 0.0001
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
