@@ -15,37 +15,37 @@ class PlotManager():
 		if self.plot:			
 			self.fig.show()
 
-		self.pred_labels = npy.zeros((self.data_loader.image_size,self.data_loader.image_size))			
-		self.sc1 = self.ax[0].imshow(self.pred_labels,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		self.sc1.set_clim([-1,1])
-		self.ax[0].set_title("Predicted Labels")
-		self.ax[0].set_adjustable('box-forced')
- 
-		self.sc2 = self.ax[1].imshow(self.data_loader.labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		self.sc2.set_clim([-1,1])
-		self.ax[1].set_title("Parse Tree")
-		self.ax[1].set_adjustable('box-forced')
+			self.pred_labels = npy.zeros((self.data_loader.image_size,self.data_loader.image_size))			
+			self.sc1 = self.ax[0].imshow(self.pred_labels,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc1.set_clim([-1,1])
+			self.ax[0].set_title("Predicted Labels")
+			self.ax[0].set_adjustable('box-forced')
+	 
+			self.sc2 = self.ax[1].imshow(self.data_loader.labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			self.sc2.set_clim([-1,1])
+			self.ax[1].set_title("Parse Tree")
+			self.ax[1].set_adjustable('box-forced')
 
-		if self.data_loader.num_channels==3:
-			print("HELLO")
-			img = cv2.cvtColor(self.data_loader.images[image_index],cv2.COLOR_RGB2BGR)
-			self.sc3 = self.ax[2].imshow(img,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		else:
-			self.sc3 = self.ax[2].imshow(self.data_loader.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		# self.sc3.set_clim([self.data_loader.images.min(),self.data_loader.images.max()])
-		self.ax[2].set_title("Actual Image")
-		self.ax[2].set_adjustable('box-forced')
+			if self.data_loader.num_channels==3:
+				print("HELLO")
+				img = cv2.cvtColor(self.data_loader.images[image_index],cv2.COLOR_RGB2BGR)
+				self.sc3 = self.ax[2].imshow(img,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			else:
+				self.sc3 = self.ax[2].imshow(self.data_loader.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc3.set_clim([self.data_loader.images.min(),self.data_loader.images.max()])
+			self.ax[2].set_title("Actual Image")
+			self.ax[2].set_adjustable('box-forced')
 
-		# self.sc4 = self.ax[3].imshow(self.data_loader.labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
-		# # self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet') #, extent=[0,self.image_size,0,self.image_size],origin='lower')
-		# self.sc4.set_clim([-1,1])
-		# self.ax[3].set_title("Segmented Painted Image")
-		# self.ax[3].set_adjustable('box-forced')			
+			# self.sc4 = self.ax[3].imshow(self.data_loader.labels[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# # self.sc4 = self.ax[3].imshow(self.true_labels[image_index],aspect='equal',cmap='jet') #, extent=[0,self.image_size,0,self.image_size],origin='lower')
+			# self.sc4.set_clim([-1,1])
+			# self.ax[3].set_title("Segmented Painted Image")
+			# self.ax[3].set_adjustable('box-forced')			
 
-		self.fig.canvas.draw()
+			self.fig.canvas.draw()
 
-		if self.plot:
-			plt.pause(1)	
+			if self.plot:
+				plt.pause(1)	
 
 	def parse_tree_plotting(self):
 		self.mask = -npy.ones((self.data_loader.image_size,self.data_loader.image_size))

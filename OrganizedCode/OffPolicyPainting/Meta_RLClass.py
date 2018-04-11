@@ -3,7 +3,7 @@ from headers import *
 import TF_Model
 import Data_Loader
 import OffPolicyParser
-import OffPolicyPainting
+import OffPolicyPainter
 import NewPlotting
 import Memory
 
@@ -38,7 +38,7 @@ class Meta_RLClass():
 
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
 		if self.args.paint:
-			self.parser = OffPolicyPainting.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
+			self.parser = OffPolicyPainter.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
 				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)		
 		else:
 			self.parser = OffPolicyParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 

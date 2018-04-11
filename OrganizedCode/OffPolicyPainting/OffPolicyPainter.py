@@ -101,14 +101,9 @@ class Parser():
 
 		self.state.rule_mask = npy.ones((self.model.num_rules))
 
-		if self.args.depth_terminate:
-			if self.state.depth>=self.max_depth:
-				# Allow only assignment.
-				self.state.rule_mask[[0,1]] = 0.		
-		else:
-			if len(self.parse_tree)>=self.max_parse_steps:		
-				# Allow only assignment.
-				self.state.rule_mask[[0,1]] = 0.		
+		if self.state.depth>=self.max_depth:
+			# Allow only assignment.
+			self.state.rule_mask[[0,1]] = 0.		
 
 		if self.state.w<=self.minimum_width:
 			self.state.rule_mask[0] = 0.
@@ -329,7 +324,7 @@ class Parser():
 				self.predicted_labels[self.state.image_index, lower:upper, self.state.y:(self.state.y+self.state.h)] = 1.
 
 		self.state.reward = \
-			(self.data_loader.labels[self.state.image_index, self.state.x:(self.state.x+self.state.w), self.state.y:(self.state.y+self.state.h)] \ 
+			(self.data_loader.labels[self.state.image_index, self.state.x:(self.state.x+self.state.w), self.state.y:(self.state.y+self.state.h)] \
 				*self.predicted_labels[self.state.image_index,self.state.x:(self.state.x+self.state.w), self.state.y:(self.state.y+self.state.h)]).sum()
 
 	def parse_terminal(self):
@@ -361,7 +356,8 @@ class Parser():
 				# self.parse_terminal()
 				self.paint_terminal()
 
-			self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
+			if self.args.plot:
+				self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
 			self.current_parsing_index+=1
 
 	def backward_tree_propagation(self):
