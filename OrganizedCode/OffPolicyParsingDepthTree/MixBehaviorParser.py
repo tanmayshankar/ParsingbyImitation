@@ -32,8 +32,8 @@ class Parser():
 		self.final_beta = 0.
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
-		self.initial_epsilon = 0.1
-		self.final_epsilon = 0.01
+		self.initial_epsilon = 0.0001
+		self.final_epsilon = 0.0001
 		self.test_epsilon = 0.0001
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
@@ -332,7 +332,7 @@ class Parser():
 					# Using DT Policy with probability beta.
 					random_probability = npy.random.random()
 
-					if random_probability<beta:
+					if random_probability<self.annealed_beta:
 						self.parse_nonterminal_offpolicy()
 					else:
 						self.parse_nonterminal()

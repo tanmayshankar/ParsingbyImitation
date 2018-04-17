@@ -18,7 +18,10 @@ class Meta_RLClass():
 		self.save_every = 1
 
 		# Instantiate data loader class to load and preprocess the data.
-		self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
+		if self.args.indices:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels,indices_path=self.args.indices)
+		else:
+			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
 		self.data_loader.preprocess()
 		
 		# # Instantiate Model Class.		
@@ -51,6 +54,7 @@ def parse_arguments():
 	parser = argparse.ArgumentParser(description='Primitive-Aware Segmentation Argument Parsing')
 	parser.add_argument('--images',dest='images',type=str)
 	parser.add_argument('--labels',dest='labels',type=str)
+	parser.add_argument('--indices',dest='indices',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
