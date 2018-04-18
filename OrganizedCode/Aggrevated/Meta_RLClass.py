@@ -3,6 +3,7 @@ from headers import *
 import TF_Model
 import Data_Loader
 import AggrevatedParser
+import AggrevatedParser_AllDepths
 import MixBehaviorParser
 import NewPlotting
 import Memory
@@ -41,8 +42,12 @@ class Meta_RLClass():
 
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
 		if self.args.aggrevated:
-			self.parser = AggrevatedParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
-				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+			if self.args.alldepths:
+				self.parser = AggrevatedParser_AllDepths.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
+					memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)			
+			else:
+				self.parser = AggrevatedParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
+					memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 		else:
 			self.parser = MixBehaviorParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
 				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
