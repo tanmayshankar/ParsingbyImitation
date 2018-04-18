@@ -71,20 +71,25 @@ class Parser():
 
 		for i in range(self.data_loader.num_images):
 			print("Burning in image:",i)
-			# Initialize tree.
-			self.initialize_tree(image_index_list[i])
 
-			self.set_parameters(0)
+			for switch_depth_value in range(1,self.iterate_times+1):
+		
+				self.switch_depth = switch_depth_value
+				
+				# Initialize tree.
+				self.initialize_tree(image_index_list[i])
 
-			# Parse Image.
-			self.construct_parse_tree(image_index_list[i])
+				self.set_parameters(0)
 
-			# Compute rewards.
-			# self.compute_rewards()
-			self.backward_tree_propagation()
+				# Parse Image.
+				self.construct_parse_tree(image_index_list[i])
 
-			# For every state in the parse tree, push to memory.
-			self.append_parse_tree()
+				# Compute rewards.
+				# self.compute_rewards()
+				self.backward_tree_propagation()
+
+				# For every state in the parse tree, push to memory.
+				self.append_parse_tree()
 
 	def set_parameters(self,e):
 
@@ -335,7 +340,9 @@ class Parser():
 
 		# Sample a depth beyond which we follow the expert policy deterministically. 
 		# This switch depth is true for the entire parse - i.e. all branches of the parse tree. 
-		self.switch_depth = npy.random.randint(1,high=self.max_depth+1)
+		# self.switch_depth = npy.random.randint(1,high=self.max_depth+1)
+
+		# Here we're taking care of setting switch_depth in meta_training.
 
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):					
 
@@ -437,13 +444,19 @@ class Parser():
 		# Burn in memory. 
 		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 		
-		# embed()
-		if self.args.train:
-			self.burn_in()
-			self.model.save_model(0)
-		else:
-			self.num_epochs=1	
+		# Iterating multiple times for switching depth (1 to MAX_DEPTH+1):
+		self.iterate_times = self.max_depth
 
+		if self.args.train:
+			self.model.save_model(0)			
+			self.burn_in()
+		else:
+			self.num_epochs = 1	
+			self.iterate_times = 1
+
+
+
+		iterate_for			
 		# For all epochs. 
 		for e in range(self.num_epochs):
 			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
@@ -456,26 +469,30 @@ class Parser():
 			# For all images in the dataset.
 			for i in range(self.data_loader.num_images):
 				
-				# Initialize the tree for the current image.
-				self.initialize_tree(image_index_list[i])
+				for switch_depth_value in range(1,self.iterate_times+1):
 
-				# Set training parameters (Update epsilon).
-				self.set_parameters(e)
+					self.switch_depth = switch_depth_value
+					# Initialize the tree for the current image.
+					self.initialize_tree(image_index_list[i])
 
-				# Parse this image.
-				self.construct_parse_tree(image_index_list[i])
+					# Set training parameters (Update epsilon).
+					self.set_parameters(e)
 
-				# Propagate rewards. 
-				self.backward_tree_propagation()
+					# Parse this image.
+					self.construct_parse_tree(image_index_list[i])
 
-				# Add to memory. 
-				self.append_parse_tree()
+					# Propagate rewards. 
+					self.backward_tree_propagation()
 
-				# Backprop --> over a batch sampled from memory. 
-				self.backprop()
+					# Add to memory. 
+					self.append_parse_tree()
+
+					# Backprop --> over a batch sampled from memory. 
+					self.backprop()
+
+					self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward
+
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
-
-				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward
 
 			if self.args.train:
 				# npy.save("predicted_labels_{0}.npy".format(e),self.predicted_labels)
