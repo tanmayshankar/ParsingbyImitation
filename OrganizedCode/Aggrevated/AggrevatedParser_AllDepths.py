@@ -75,7 +75,7 @@ class Parser():
 			for switch_depth_value in range(1,self.iterate_times+1):
 		
 				self.switch_depth = switch_depth_value
-				
+
 				# Initialize tree.
 				self.initialize_tree(image_index_list[i])
 
@@ -454,9 +454,7 @@ class Parser():
 			self.num_epochs = 1	
 			self.iterate_times = 1
 
-
-
-		iterate_for			
+		# iterate_for			
 		# For all epochs. 
 		for e in range(self.num_epochs):
 			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
