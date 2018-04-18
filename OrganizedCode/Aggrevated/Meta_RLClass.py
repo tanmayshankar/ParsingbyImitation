@@ -66,6 +66,7 @@ def parse_arguments():
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--depth_terminate',dest='depth_terminate',type=int,default=0)
 	parser.add_argument('--aggrevated',dest='aggrevated',type=int,default=0)
+	parser.add_argument('--alldepths',dest='alldepths',type=int,default=0)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
 
