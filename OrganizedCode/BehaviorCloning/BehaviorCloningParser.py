@@ -399,10 +399,14 @@ class Parser():
 				self.batch_split_weights[k] = state.reward
 		# embed()
 		# Call sess train.
+		# self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
+		# 										   self.model.sampled_split: self.batch_sampled_splits,
+		# 										   self.model.target_rule: self.batch_target_rules,
+		# 										   self.model.rule_mask: self.batch_rule_masks})
 		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
 												   self.model.target_rule: self.batch_target_rules,
-												   self.model.rule_mask: self.batch_rule_masks})
+												   self.model.rule_mask: npy.ones((self.batch_size,self.model.num_rules))})
 
 	def meta_training(self,train=True):
 
