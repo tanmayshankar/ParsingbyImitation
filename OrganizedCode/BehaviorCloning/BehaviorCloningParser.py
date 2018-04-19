@@ -385,28 +385,27 @@ class Parser():
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,0] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
 			self.batch_rule_masks[k] = state.rule_mask
+
 			if state.rule_applied==-1:
 				self.batch_target_rules[k, state.rule_applied] = 0.
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				# self.batch_rule_weights[k] = state.reward*state.likelihood_ratio
-				self.batch_rule_weights[k] = state.reward
+				# self.batch_rule_weights[k] = state.reward
+				self.batch_rule_weights[k] = 1.
 			if state.rule_applied==0:
 
 				self.batch_sampled_splits[k] = state.split
-				# self.batch_split_weights[k] = state.reward*state.likelihood_ratio
-				self.batch_split_weights[k] = state.reward
+				# self.batch_split_weights[k] = state.reward
+				self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
-		# self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
-		# 										   self.model.sampled_split: self.batch_sampled_splits,
-		# 										   self.model.target_rule: self.batch_target_rules,
-		# 										   self.model.rule_mask: self.batch_rule_masks})
 		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
+												   self.model.split_return_weight: self.batch_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
-												   self.model.rule_mask: npy.ones((self.batch_size,self.model.num_rules))})
+												   self.model.rule_mask: self.batch_rule_masks,
+												   self.model.rule_return_weight: self.batch_rule_weights})
 
 	def meta_training(self,train=True):
 

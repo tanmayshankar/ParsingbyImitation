@@ -59,9 +59,9 @@ class Model():
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 
 		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
-		# self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
-		self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
-		# self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
+		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
+		# self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
+		self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
 
 	def define_split_stream(self):
 
@@ -89,8 +89,8 @@ class Model():
 
 		# Defining return weight and loss.
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		# self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
-		self.split_loss = -self.split_dist.log_prob(self.sampled_split)
+		self.split_loss = -tf.multiply(self.split_dist.log_prob(self.sampled_split),self.split_return_weight)
+		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
 
 	def training_ops(self):
 
