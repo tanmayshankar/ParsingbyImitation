@@ -68,20 +68,15 @@ class Model():
 		self.fc6_shape = 200
 		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
 
-		# Beta distribution parameters (no activation here).	
-		self.beta_dist_conc0 = tf.layers.dense(self.fc6,1)
-		self.beta_dist_conc1 = tf.layers.dense(self.fc6,1)
-		self.split_dist = tf.contrib.distributions.BetaWithSoftplusConcentration(self.beta_dist_conc1,self.beta_dist_conc0,allow_nan_stats=False)
+		# Split output.
+		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
 
-		# # Split output.
-		# self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
-
-		# if self.to_train:
-		# 	self.split_cov = 0.05
-		# else:
-		# 	self.split_cov = 0.001
+		if self.to_train:
+			self.split_cov = 0.05
+		else:
+			self.split_cov = 0.001
 		
-		# self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
+		self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
 
 		# Creating a function that samples from this distribution.
 		self.sample_split = self.split_dist.sample()
