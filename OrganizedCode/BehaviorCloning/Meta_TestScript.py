@@ -2,7 +2,7 @@
 from headers import *
 
 # for i in range(0,260,10):
-for i in range(10,260,5):
+for i in range(0,260,5):
 	print("###############################################")
 	print("STARTING WITH:",i)
 	# FOR FULL PARSING:

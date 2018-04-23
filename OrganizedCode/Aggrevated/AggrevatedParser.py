@@ -471,8 +471,10 @@ class Parser():
 				# Add to memory. 
 				self.append_parse_tree()
 
-				# Backprop --> over a batch sampled from memory. 
-				self.backprop()
+				if self.args.train:
+					# Backprop --> over a batch sampled from memory. 
+					self.backprop()
+					
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
 				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward

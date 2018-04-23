@@ -32,9 +32,9 @@ class Parser():
 		self.final_beta = 1.
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
-		self.initial_epsilon = 1e-7
-		self.final_epsilon = 1e-7
-		self.test_epsilon = 1e-7
+		self.initial_epsilon = 1e-3
+		self.final_epsilon = 1e-3
+		self.test_epsilon = 1e-3
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
 
@@ -421,6 +421,7 @@ class Parser():
 
 		# For all epochs. 
 		for e in range(self.num_epochs):
+
 			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
 			# self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))

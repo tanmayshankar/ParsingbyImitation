@@ -31,7 +31,6 @@ class Meta_RLClass():
 			self.model.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)
 		else:
 			self.model.create_network(self.sess,to_train=self.args.train)
-
 		# Instantiate memory. 
 		self.memory = Memory.Replay_Memory()
 
