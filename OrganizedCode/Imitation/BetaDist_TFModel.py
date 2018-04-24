@@ -69,9 +69,10 @@ class Model():
 		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
 
 		# Beta distribution parameters (no activation here).	
-		self.beta_dist_conc0 = tf.layers.dense(self.fc6,1)
-		self.beta_dist_conc1 = tf.layers.dense(self.fc6,1)
-		self.split_dist = tf.contrib.distributions.BetaWithSoftplusConcentration(self.beta_dist_conc1,self.beta_dist_conc0,allow_nan_stats=False)
+		self.beta_dist_conc0 = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus) + tf.constant(1.)
+		self.beta_dist_conc1 = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus) + tf.constant(1.)
+		# self.split_dist = tf.contrib.distributions.BetaWithSoftplusConcentration(self.beta_dist_conc1,self.beta_dist_conc0,allow_nan_stats=False)
+		self.split_dist = tf.contrib.distributions.Beta(self.beta_dist_conc1,self.beta_dist_conc0,allow_nan_stats=False)
 
 		# # Split output.
 		# self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
