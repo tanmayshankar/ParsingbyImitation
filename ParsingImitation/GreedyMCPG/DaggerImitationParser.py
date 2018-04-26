@@ -366,13 +366,13 @@ class Parser():
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				# self.batch_rule_weights[k] = state.reward
-				self.batch_rule_weights[k] = 1.
+				self.batch_rule_weights[k] = state.reward
+				# self.batch_rule_weights[k] = 1.
 
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
-				# self.batch_split_weights[k] = state.reward
-				self.batch_split_weights[k] = 1.
+				self.batch_split_weights[k] = state.reward
+				# self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
 		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
