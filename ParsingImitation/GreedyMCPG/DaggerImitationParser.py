@@ -197,7 +197,12 @@ class Parser():
 	def select_split_learner_sample(self):
 		# For a single image, resample unless the sample is valid. 
 		redo = True
+		counter = 0
+
 		while redo: 
+			counter+=1
+			if counter>25:
+				embed()
 			# Constructing attended image.
 			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
@@ -207,12 +212,13 @@ class Parser():
 			self.state.split = self.state.split[0,0]
 			log_split = log_split[0,0]			
 
-			redo = (self.state.split<0.) or (self.state.split>1.)
+			# redo = (self.state.split<0.) or (self.state.split>1.)
+			redo = (log_split<0.) or (log_split>1.)
 
 		if self.state.rule_applied==0:
 			# Split between 0 and 1 as s. 
 			# Map to l from x+1 to x+w-1. 
-			self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
+			self.state.boundaryscaled_split = ((self.state.w-2)*log_split+self.state.x+1).astype(int)
 			
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.x
@@ -220,7 +226,7 @@ class Parser():
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:
-			self.state.boundaryscaled_split = ((self.state.h-2)*self.state.split+self.state.y+1).astype(int)
+			self.state.boundaryscaled_split = ((self.state.h-2)*log_split+self.state.y+1).astype(int)
 			
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.y
