@@ -353,7 +353,7 @@ class Parser():
 		# 	if (self.parse_tree[j].backward_index>=0):
 		# 		self.parse_tree[self.parse_tree[j].backward_index].likelihood_ratio *= self.parse_tree[j].likelihood_ratio
 
-	def backprop(self):
+	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_sampled_splits = npy.zeros((self.batch_size,1))
@@ -386,12 +386,14 @@ class Parser():
 				# self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
-		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
+		merged, _ = self.sess.run([self.merged, self.model.train], feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
 												   self.model.split_return_weight: self.batch_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
 												   self.model.rule_mask: self.batch_rule_masks,
 												   self.model.rule_return_weight: self.batch_rule_weights})
+
+		self.model.tf_writer.add_summary(merged, iter_num)		
 
 	def meta_training(self,train=True):
 
@@ -435,7 +437,7 @@ class Parser():
 
 				if self.args.train:
 					# Backprop --> over a batch sampled from memory. 
-					self.backprop()
+					self.backprop(self.data_loader.num_images*e+i)
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
 				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward

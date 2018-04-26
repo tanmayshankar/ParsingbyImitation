@@ -84,8 +84,22 @@ class Model():
 
 		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		self.split_loss = -tf.multiply(self.normal_dist.log_prob(self.sampled_split),self.split_return_weight)
+		self.split_loglikelihood = self.normal_dist.log_prob(self.sampled_split)		
+		self.split_loss = -tf.multiply(self.split_loglikelihood,self.split_return_weight)
 		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
+
+	def logging_ops(self):
+		# Create file writer to write summaries. 		
+		self.tf_writer = tf.summary.FileWriter('train_'+'/',self.sess.graph)
+
+		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
+		self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_sum(self.split_loglikelihood))
+		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_sum(self.rule_cross_entropy))
+		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_sum(self.rule_return_weight))
+		# self.full_reward_summary = tf.summary.scalar('Full_Reward',tf.reduce_sum(self.rule_re))
+		
+		# Merge summaries. 
+		self.merged_summaries = tf.summary.merge_all()		
 
 	def training_ops(self):
 
@@ -135,6 +149,7 @@ class Model():
 		self.initialize_base_model(sess,to_train=to_train)
 		self.define_rule_stream()
 		self.define_split_stream()
+		self.logging_ops()
 		self.training_ops()
 
 		if pretrained_weight_file:
