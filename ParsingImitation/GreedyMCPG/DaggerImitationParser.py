@@ -21,13 +21,8 @@ class Parser():
 		self.minimum_width = 25
 		self.max_depth = 4
 
-		# Parameters for annealing covariance. 
-		self.initial_cov = 0.1
-		self.final_cov = 0.01
-		self.anneal_epochs = 50
-		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
-
 		# Beta is probability of using expert.
+		self.anneal_epochs = 50
 		self.initial_beta = 0.5
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
@@ -35,6 +30,7 @@ class Parser():
 		self.initial_epsilon = 1e-3
 		self.final_epsilon = 1e-3
 		self.test_epsilon = 1e-4
+
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
 		self.annealed_epsilon = copy.deepcopy(self.initial_epsilon)
 
@@ -81,17 +77,13 @@ class Parser():
 		# Setting parameters.
 		if self.args.train:
 			if e<self.anneal_epochs:
-				self.covariance_value = self.initial_cov - self.anneal_rate*e
 				self.annealed_epsilon = self.initial_epsilon-e*self.anneal_epsilon_rate
 				self.annealed_beta = self.initial_beta-e*self.beta_anneal_rate			
 			else:
-				self.covariance_value = self.final_cov
 				self.annealed_epsilon = self.final_epsilon
 				self.annealed_beta = self.final_beta
-			# print("Setting covariance as:",self.covariance_value)
 				
 		else:
-			self.covariance_value = self.final_cov
 			self.annealed_epsilon = self.test_epsilon	
 			self.annealed_beta = self.final_beta
 
@@ -182,16 +174,14 @@ class Parser():
 			# self.state.boundaryscaled_split = self.greedy_split + self.state.x
 			# self.state.split = float(self.state.boundaryscaled_split-self.state.x)/self.state.w
 			# self.state.boundaryscaled_split -= self.state.x
-
 			self.state.split = float(self.state.boundaryscaled_split)/self.state.w
-
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
-		if self.state.rule_applied==1:
-			
+		if self.state.rule_applied==1:	
 			self.state.split = float(self.state.boundaryscaled_split)/self.state.h
+			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
 
@@ -213,7 +203,9 @@ class Parser():
 			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
-			self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
+			log_split, self.state.split = self.sess.run([self.model.logitnormal_sample,self.model.sample_split], feed_dict={self.model.input: input_image})
+			self.state.split = self.state.split[0,0]
+			log_split = log_split[0,0]			
 
 			redo = (self.state.split<0.) or (self.state.split>1.)
 
@@ -376,8 +368,8 @@ class Parser():
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				# self.batch_rule_weights[k] = state.reward
 				self.batch_rule_weights[k] = 1.
-			if state.rule_applied==0 or state.rule_applied==1:
 
+			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
 				# self.batch_split_weights[k] = state.reward
 				self.batch_split_weights[k] = 1.

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from headers import *
-import TF_Model
+import LogitNormal_TFModel
 import Data_Loader
 import DaggerImitationParser
 import NewPlotting
@@ -24,7 +24,7 @@ class Meta_RLClass():
 		self.data_loader.preprocess()
 		
 		# # Instantiate Model Class.		
-		self.model = TF_Model.Model(num_channels=self.data_loader.num_channels)		
+		self.model = LogitNormal_TFModel.Model(num_channels=self.data_loader.num_channels)		
 		self.args.train = bool(self.args.train)
 
 		if self.args.model:
