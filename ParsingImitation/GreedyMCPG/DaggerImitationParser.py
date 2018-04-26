@@ -24,7 +24,7 @@ class Parser():
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
 		self.initial_beta = 0.5
-		self.final_beta = 0.5
+		self.final_beta = 0.2
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
 		self.initial_epsilon = 1e-3
@@ -313,6 +313,7 @@ class Parser():
 						self.parse_nonterminal_learner()
 				else:
 					# Using Learnt Policy
+					# self.parse_nonterminal_expert()
 					self.parse_nonterminal_learner()	
 
 			else:
@@ -335,13 +336,17 @@ class Parser():
 		for j in range(len(self.parse_tree)):
 			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
+		# # Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward /= (self.data_loader.image_size**2)
+
 		# Not using tan rewards.
 		# if self.args.tanrewards:
-		# 	self.alpha = 1.0
+		# self.alpha = 1.1
 			
-		# 	# Non-linearizing rewards.
-		# 	for j in range(len(self.parse_tree)):
-		# 		self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+		# # Non-linearizing rewards.
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
 
 		# # Now propagating likelihood ratios.
 		# for j in reversed(range(len(self.parse_tree))):
