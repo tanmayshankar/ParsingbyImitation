@@ -28,7 +28,7 @@ class Parser():
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		# Beta is probability of using expert.
-		self.initial_beta = 0.7
+		self.initial_beta = 0.5
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -145,7 +145,7 @@ class Parser():
 		# Now returning both greedy axes and greedy splits. 
 		self.greedy_axis,self.greedy_split = EntropySplits.best_valid_split(entropy_image_input, self.state.rule_mask)
 		
-		if self.greedy_split==255:
+		if self.greedy_split==255 or self.greedy_split==-23:
 			embed()
 
 		# If there was no information gain maximizing (or entropy reducing) split, 
@@ -238,35 +238,48 @@ class Parser():
 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
-		split_mean, split_cov = self.sess.run([self.model.split_mean,self.model.split_cov], feed_dict={self.model.input: input_image})
+		# split_mean, split_cov = self.sess.run([self.model.split_mean,self.model.split_cov], feed_dict={self.model.input: input_image})
+		split_mean = self.sess.run(self.model.split_mean, feed_dict={self.model.input: input_image})
 		split_mean = split_mean[0,0]
-		split_cov = split_cov[0,0]
-	
+		# split_cov = split_cov[0,0]
+		split_cov = 0.05
+		
 		if self.state.rule_applied==0:
-			a_val = self.state.x+1
-			b_val = self.state.x+self.state.w-1
+			a_val = float(self.state.x+1)/(self.data_loader.image_size-1)
+			b_val = float(self.state.x+self.state.w-1)/(self.data_loader.image_size-1)
 
 		if self.state.rule_applied==1:
-			a_val = self.state.y+1
-			b_val = self.state.y+self.state.h-1
+			a_val = float(self.state.y+1)/(self.data_loader.image_size-1)
+			b_val = float(self.state.y+self.state.h-1)/(self.data_loader.image_size-1)
 
 		scaled_a_val = (a_val - split_mean)/split_cov
 		scaled_b_val = (b_val - split_mean)/split_cov
 		
 		# truncnorm.rvs(a1,b1,loc=,scale=)
-		embed()
-		self.state.split = int(truncnorm.rvs(scaled_a_val,scaled_b_val,loc=split_mean,scale=split_cov))
-		# self.state.split = npy.floor(truncnorm.rvs(scaled_a_val,scaled_b_val,loc=split_mean,scale=split_cov))
+		redo = True
+		counter=0
+		dist = truncnorm(scaled_a_val,scaled_b_val,loc=split_mean,scale=split_cov)
+		# embed()
+		while redo:
+			counter +=1
+			if counter>25:
+				embed()
+			self.state.split = dist.rvs()
+			redo = (self.state.split<0.) or (self.state.split>1.)
 
 		if self.state.rule_applied==0:
 			# Transform to local patch coordinates.
-			self.state.boundaryscaled_split = self.state.split-self.state.x
+			self.state.boundaryscaled_split = (self.state.split*(self.state.w-2)+self.state.x+1).astype(int)
+			self.state.boundaryscaled_split -= self.state.x
+			# self.state.boundaryscaled_split = self.state.split-self.state.x
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:		
 			# Transform to local patch coordinates.
-			self.state.boundaryscaled_split = self.state.split-self.state.y
+			self.state.boundaryscaled_split = ((self.state.h-2)*self.state.split+self.state.y+1).astype(int)
+			self.state.boundaryscaled_split -= self.state.y
+			# self.state.boundaryscaled_split = self.state.split-self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
 

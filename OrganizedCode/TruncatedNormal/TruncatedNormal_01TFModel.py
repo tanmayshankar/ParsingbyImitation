@@ -68,9 +68,10 @@ class Model():
 		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
 
 		# Split output.
-		self.split_mean = tf.layers.dense(self.fc6,1)+125
-		# self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
-		self.split_cov = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus)+0.5
+		# self.split_mean = tf.layers.dense(self.fc6,1)
+		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
+		# self.split_cov = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus)
+		self.split_cov = 0.05
 	
 		# Infinite support (but we care about 0 to 255).
 		self.untruncated_normal_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)

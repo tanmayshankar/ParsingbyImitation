@@ -19,6 +19,8 @@ def infogain(image_segment,location,axis):
 	# segment2 = image_segment[location:,:]
 
 	segment_size = image_segment.shape[0]*image_segment.shape[1]
+	# if segment_size==0:
+	# 	embed()
 	probability_segment1 = float(segment1.shape[0]*segment1.shape[1])/segment_size
 	probability_segment2 = float(segment2.shape[0]*segment2.shape[1])/segment_size
 
@@ -49,22 +51,26 @@ def best_valid_split(image_segment_input, rule_mask):
 	image_segment = copy.deepcopy(image_segment_input)
 	image_segment[image_segment==-1] = 0
 
-	for a_val in npy.where(rule_mask[:2])[0]:
+	segment_size = image_segment.shape[0]*image_segment.shape[1]
+	if segment_size:
+		for a_val in npy.where(rule_mask[:2])[0]:
 
-		if a_val==0:
-			limval = image_segment.shape[0]-1
-		if a_val==1:
-			limval = image_segment.shape[1]-1
+			if a_val==0:
+				limval = image_segment.shape[0]-1
+			if a_val==1:
+				limval = image_segment.shape[1]-1
 
-		for l_val in range(1,limval):			
-			# print(a_val,l_val,limval)
-			# embed()
+			for l_val in range(1,limval):			
+				# print(a_val,l_val,limval)
+				# embed()
 
-			ig = infogain(image_segment,l_val,a_val)
-			if ig>maxval:
-				maxval=ig
-				chosen_a = a_val
-				chosen_l = l_val
+				ig = infogain(image_segment,l_val,a_val)
+				if ig>maxval:
+					maxval=ig
+					chosen_a = a_val
+					chosen_l = l_val
+	else:
+		return -23,-23
 	
 	if maxval==0:
 		# print("No entropy reducing splits.")

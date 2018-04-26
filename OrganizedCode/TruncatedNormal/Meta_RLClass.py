@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 from headers import *
-import TruncatedNormal_TFModel
 import Data_Loader
+import TruncatedNormal_TFModel
 import TruncatedNormalParser
+import TruncatedNormal_01TFModel
+import TruncatedNormal01Parser
 import NewPlotting
 import Memory
 
@@ -24,7 +26,10 @@ class Meta_RLClass():
 		self.data_loader.preprocess()
 		
 		# # Instantiate Model Class.		
-		self.model = TruncatedNormal_TFModel.Model(num_channels=self.data_loader.num_channels)
+		if self.args.range01:
+			self.model = TruncatedNormal_01TFModel.Model(num_channels=self.data_loader.num_channels)
+		else:
+			self.model = TruncatedNormal_TFModel.Model(num_channels=self.data_loader.num_channels)
 
 		self.args.train = bool(self.args.train)
 
@@ -39,8 +44,13 @@ class Meta_RLClass():
 		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
 	
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		self.parser = CategoricalDaggerParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
-			memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+		if self.args.range01:
+			self.parser = TruncatedNormal01Parser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+
+		else:
+			self.parser = TruncatedNormalParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -52,6 +62,7 @@ def parse_arguments():
 	parser.add_argument('--indices',dest='indices',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
+	parser.add_argument('--range01',dest='range01',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--model',dest='model',type=str)
