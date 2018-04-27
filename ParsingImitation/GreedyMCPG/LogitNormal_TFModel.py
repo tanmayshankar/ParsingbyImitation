@@ -96,8 +96,9 @@ class Model():
 		self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_mean(self.split_loglikelihood))
 		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
 		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
-		# self.full_reward_summary = tf.summary.scalar('Full_Reward',tf.reduce_sum(self.rule_re))
-		
+		self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
+		self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
+
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		
 
