@@ -386,7 +386,7 @@ class Parser():
 				# self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
-		merged, _ = self.sess.run([self.merged, self.model.train], feed_dict={self.model.input: self.batch_states,
+		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
 												   self.model.split_return_weight: self.batch_split_weights,
 												   self.model.target_rule: self.batch_target_rules,

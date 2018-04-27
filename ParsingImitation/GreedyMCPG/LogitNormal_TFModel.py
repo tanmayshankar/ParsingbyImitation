@@ -90,12 +90,12 @@ class Model():
 
 	def logging_ops(self):
 		# Create file writer to write summaries. 		
-		self.tf_writer = tf.summary.FileWriter('train_'+'/',self.sess.graph)
+		self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
 
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
-		self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_sum(self.split_loglikelihood))
-		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_sum(self.rule_cross_entropy))
-		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_sum(self.rule_return_weight))
+		self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_mean(self.split_loglikelihood))
+		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
+		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
 		# self.full_reward_summary = tf.summary.scalar('Full_Reward',tf.reduce_sum(self.rule_re))
 		
 		# Merge summaries. 
