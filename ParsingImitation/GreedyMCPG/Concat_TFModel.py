@@ -116,7 +116,7 @@ class Model():
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
 
 		# Clipping gradients because of NaN values. 
-		self.gradients_vars = self.optimizer.compute_gradient(self.total_loss)
+		self.gradients_vars = self.optimizer.compute_gradients(self.total_loss)
 		self.clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.gradients_vars]
 		self.train = self.optimizer.apply_gradients(self.clipped_gradients)
 		# Instead of directly minimizing the loss, clip gradients and then apply them.
