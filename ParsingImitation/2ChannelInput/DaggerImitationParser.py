@@ -20,6 +20,7 @@ class Parser():
 		self.max_parse_steps = 20
 		self.minimum_width = 25
 		self.max_depth = 4
+		self.num_channels = 2
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
@@ -118,12 +119,14 @@ class Parser():
 	def select_rule_learner_greedy(self):
 		# Remember, epsilon greedy is now outside of this. 
 		# Constructing attended image.
-		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-
-		# Change for 3 channel image.
+		# input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.num_channels))
+		
 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
-		
+		input_image[0,:,:,1] = \
+			copy.deepcopy(self.data_loader.images[self.state.image_index])
+
 		rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
 				self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
 
@@ -204,16 +207,28 @@ class Parser():
 			if counter>25:
 				embed()
 			# Constructing attended image.
-			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.num_channels))
+		
 			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+			input_image[0,:,:,1] = \
+				copy.deepcopy(self.data_loader.images[self.state.image_index])
 
-			log_split, self.state.split = self.sess.run([self.model.logitnormal_sample,self.model.sample_split], feed_dict={self.model.input: input_image})
-			self.state.split = self.state.split[0,0]
-			log_split = log_split[0,0]			
+			if self.state.rule_applied==0:
+				log_split, self.state.split = self.sess.run([self.model.horizontal_logitnormal_sample,self.model.horizontal_sample_split], feed_dict={self.model.input: input_image})
+				self.state.split = self.state.split[0,0]
+				log_split = log_split[0,0]			
 
-			# redo = (self.state.split<0.) or (self.state.split>1.)
-			redo = (log_split<0.) or (log_split>1.)
+				# redo = (self.state.split<0.) or (self.state.split>1.)
+				redo = (log_split<0.) or (log_split>1.)
+
+			if self.state.rule_applied==1:
+				log_split, self.state.split = self.sess.run([self.model.vertical_logitnormal_sample,self.model.vertical_sample_split], feed_dict={self.model.input: input_image})
+				self.state.split = self.state.split[0,0]
+				log_split = log_split[0,0]			
+
+				# redo = (self.state.split<0.) or (self.state.split>1.)
+				redo = (log_split<0.) or (log_split>1.)				
 
 		if self.state.rule_applied==0:
 			# Split between 0 and 1 as s. 
@@ -354,12 +369,13 @@ class Parser():
 		# 		self.parse_tree[self.parse_tree[j].backward_index].likelihood_ratio *= self.parse_tree[j].likelihood_ratio
 
 	def backprop(self, iter_num):
-		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.num_channels))
 		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_sampled_splits = npy.zeros((self.batch_size,1))
 		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
-		self.batch_split_weights = npy.zeros((self.batch_size,1))
+		self.batch_horizontal_split_weights = npy.zeros((self.batch_size,1))
+		self.batch_vertical_split_weights = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
@@ -370,6 +386,8 @@ class Parser():
 
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,0] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
+			self.batch_states[k,:,:,1] = self.data_loader.images[state.image_index]
+
 			self.batch_rule_masks[k] = state.rule_mask
 
 			if state.rule_applied==-1:
@@ -377,18 +395,21 @@ class Parser():
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				self.batch_rule_weights[k] = state.reward
-				# self.batch_rule_weights[k] = 1.
+				self.batch_rule_weights[k] = state.reward	
 
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
-				self.batch_split_weights[k] = state.reward
+				if state.rule_applied==0:	
+					self.batch_horizontal_split_weights[k] = state.reward
+				if state.rule_applied==1:
+					self.batch_vertical_split_weights[k] = state.reward
 				# self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
 		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
-												   self.model.split_return_weight: self.batch_split_weights,
+												   self.model.horizontal_split_return_weight: self.batch_horizontal_split_weights,
+												   self.model.vertical_split_return_weight: self.batch_vertical_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
 												   self.model.rule_mask: self.batch_rule_masks,
 												   self.model.rule_return_weight: self.batch_rule_weights})

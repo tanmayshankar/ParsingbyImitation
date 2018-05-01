@@ -15,7 +15,6 @@ class Model():
 		self.to_train = to_train
 
 		# Number of layers. 
-		
 		self.num_fc_layers = 2
 		self.conv_sizes = 3*npy.ones((self.num_layers),dtype=int)		
 		self.conv_num_filters = 20*npy.ones((self.num_layers),dtype=int)
@@ -67,30 +66,12 @@ class Model():
 
 		self.fc6_shape = 200
 		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
-
-		# # Split output.
-		# self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
-
-		# if self.to_train:
-		# 	self.split_cov = 0.05
-		# else:
-		# 	self.split_cov = 0.001
-		
-		# self.split_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov)
-
-		# # Creating a function that samples from this distribution.
-		# self.sample_split = self.split_dist.sample()
-
-		# # Also maintaining placeholders for scaling, converting to integer, and back to float.
-		# self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
-
-		# # Evaluate the likelihood of a particular sample.
-		# self.sample_prob = self.split_dist.prob(self.sample_split,name='sampled_split_probability')
-
+	
 		self.normal_mean = tf.layers.dense(self.fc6,1)
 		self.normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus)
 
 		self.normal_dist = tf.contrib.distributions.Normal(loc=self.normal_mean,scale=self.normal_var)
+		# # Creating a function that samples from this distribution.
 		self.sample_split = self.normal_dist.sample()
 
 		# # Also maintaining placeholders for scaling, converting to integer, and back to float.
@@ -101,7 +82,7 @@ class Model():
 		# because the inverse logistic function, i.e. the sigmoid, is monotonic. 
 		self.logitnormal_sample = tf.nn.sigmoid(self.sample_split)
 
-		# Defining return weight and loss.
+		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
 		self.split_loss = -tf.multiply(self.normal_dist.log_prob(self.sampled_split),self.split_return_weight)
 		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)

@@ -99,14 +99,9 @@ class Parser():
 
 		self.state.rule_mask = npy.ones((self.model.num_rules))
 
-		if self.args.depth_terminate:
-			if self.state.depth>=self.max_depth:
-				# Allow only assignment.
-				self.state.rule_mask[[0,1]] = 0.		
-		else:
-			if len(self.parse_tree)>=self.max_parse_steps:		
-				# Allow only assignment.
-				self.state.rule_mask[[0,1]] = 0.		
+		if self.state.depth>=self.max_depth:
+			# Allow only assignment.
+			self.state.rule_mask[[0,1]] = 0.		
 
 		if self.state.w<=self.minimum_width:
 			self.state.rule_mask[0] = 0.
@@ -330,8 +325,10 @@ class Parser():
 					self.parse_nonterminal()
 			else:
 				self.parse_terminal()
+			
+			if self.args.plot:
+				self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
 
-			self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
 			self.current_parsing_index+=1
 
 	def backward_tree_propagation(self):
@@ -384,7 +381,7 @@ class Parser():
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				# self.batch_rule_weights[k] = state.reward*state.likelihood_ratio
 				self.batch_rule_weights[k] = state.reward
-			if state.rule_applied==0:
+			if state.rule_applied==0 or state.rule_applied==1:
 
 				self.batch_sampled_splits[k] = state.split
 				# self.batch_split_weights[k] = state.reward*state.likelihood_ratio
@@ -413,7 +410,8 @@ class Parser():
 		# For all epochs. 
 		for e in range(self.num_epochs):
 			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
-			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			# self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 
 			image_index_list = range(self.data_loader.num_images)
 			npy.random.shuffle(image_index_list)
@@ -448,7 +446,7 @@ class Parser():
 				if ((e%self.save_every)==0):
 					self.model.save_model(e)				
 			else: 
-				npy.save("validation.npy",self.predicted_labels)
-				npy.save("val_rewards.npy".format(e),self.average_episode_rewards)
+				npy.save("validation_{0}.npy".format(self.args.suffix),self.predicted_labels)
+				npy.save("val_rewards_{0}.npy".format(self.args.suffix),self.average_episode_rewards)
 			
 			print("Cummulative Reward for Episode:",self.average_episode_rewards.mean())

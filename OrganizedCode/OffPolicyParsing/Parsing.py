@@ -252,7 +252,7 @@ class Parser():
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				self.batch_rule_weights[k] = state.reward
-			if state.rule_applied==0:
+			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
 				self.batch_split_weights[k] = state.reward
 		# embed()

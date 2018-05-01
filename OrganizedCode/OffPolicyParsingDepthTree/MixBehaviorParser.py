@@ -32,7 +32,7 @@ class Parser():
 		self.final_beta = 0.
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
-		self.initial_epsilon = 0.0001
+		self.initial_epsilon = 0.01
 		self.final_epsilon = 0.0001
 		self.test_epsilon = 0.0001
 		self.anneal_epsilon_rate = (self.initial_epsilon-self.final_epsilon)/self.anneal_epochs
@@ -398,7 +398,7 @@ class Parser():
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				# self.batch_rule_weights[k] = state.reward*state.likelihood_ratio
 				self.batch_rule_weights[k] = state.reward
-			if state.rule_applied==0:
+			if state.rule_applied==0 or state.rule_applied==1:
 
 				self.batch_sampled_splits[k] = state.split
 				# self.batch_split_weights[k] = state.reward*state.likelihood_ratio
@@ -451,8 +451,9 @@ class Parser():
 				# Add to memory. 
 				self.append_parse_tree()
 
-				# Backprop --> over a batch sampled from memory. 
-				self.backprop()
+				if self.args.train:
+					# Backprop --> over a batch sampled from memory. 
+					self.backprop()
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
 				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward

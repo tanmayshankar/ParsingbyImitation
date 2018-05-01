@@ -19,7 +19,7 @@ class Parser():
 		self.save_every = 1
 		self.max_parse_steps = 20
 		self.minimum_width = 25
-		self.paintwidth = 25
+		self.paintwidth = 50
 		self.max_depth = 4
 
 		# Parameters for annealing covariance. 
@@ -412,7 +412,7 @@ class Parser():
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				# self.batch_rule_weights[k] = state.reward*state.likelihood_ratio
 				self.batch_rule_weights[k] = state.reward
-			if state.rule_applied==0:
+			if state.rule_applied==0 or state.rule_applied==1:
 
 				self.batch_sampled_splits[k] = state.split
 				# self.batch_split_weights[k] = state.reward*state.likelihood_ratio
@@ -477,7 +477,7 @@ class Parser():
 				if ((e%self.save_every)==0):
 					self.model.save_model(e)				
 			else: 
-				npy.save("validation.npy",self.predicted_labels)
-				npy.save("val_rewards.npy".format(e),self.average_episode_rewards)
-			
+				npy.save("validation_{0}.npy".format(self.args.suffix),self.predicted_labels)
+				npy.save("val_rewards_{0}.npy".format(self.args.suffix),self.average_episode_rewards)
+
 			print("Cummulative Reward for Episode:",self.average_episode_rewards.mean())

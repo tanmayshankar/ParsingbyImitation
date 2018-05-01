@@ -208,12 +208,21 @@ class Parser():
 			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
-			log_split, self.state.split = self.sess.run([self.model.logitnormal_sample,self.model.sample_split], feed_dict={self.model.input: input_image})
-			self.state.split = self.state.split[0,0]
-			log_split = log_split[0,0]			
+			if self.state.rule_applied==0:
+				log_split, self.state.split = self.sess.run([self.model.horizontal_logitnormal_sample,self.model.horizontal_sample_split], feed_dict={self.model.input: input_image})
+				self.state.split = self.state.split[0,0]
+				log_split = log_split[0,0]			
 
-			# redo = (self.state.split<0.) or (self.state.split>1.)
-			redo = (log_split<0.) or (log_split>1.)
+				# redo = (self.state.split<0.) or (self.state.split>1.)
+				redo = (log_split<0.) or (log_split>1.)
+
+			if self.state.rule_applied==1:
+				log_split, self.state.split = self.sess.run([self.model.vertical_logitnormal_sample,self.model.vertical_sample_split], feed_dict={self.model.input: input_image})
+				self.state.split = self.state.split[0,0]
+				log_split = log_split[0,0]			
+
+				# redo = (self.state.split<0.) or (self.state.split>1.)
+				redo = (log_split<0.) or (log_split>1.)				
 
 		if self.state.rule_applied==0:
 			# Split between 0 and 1 as s. 
@@ -359,7 +368,8 @@ class Parser():
 		self.batch_sampled_splits = npy.zeros((self.batch_size,1))
 		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
-		self.batch_split_weights = npy.zeros((self.batch_size,1))
+		self.batch_horizontal_split_weights = npy.zeros((self.batch_size,1))
+		self.batch_vertical_split_weights = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
@@ -377,18 +387,21 @@ class Parser():
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				self.batch_rule_weights[k] = state.reward
-				# self.batch_rule_weights[k] = 1.
+				self.batch_rule_weights[k] = state.reward	
 
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
-				self.batch_split_weights[k] = state.reward
+				if state.rule_applied==0:	
+					self.batch_horizontal_split_weights[k] = state.reward
+				if state.rule_applied==1:
+					self.batch_vertical_split_weights[k] = state.reward
 				# self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
 		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
-												   self.model.split_return_weight: self.batch_split_weights,
+												   self.model.horizontal_split_return_weight: self.batch_horizontal_split_weights,
+												   self.model.vertical_split_return_weight: self.batch_vertical_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
 												   self.model.rule_mask: self.batch_rule_masks,
 												   self.model.rule_return_weight: self.batch_rule_weights})

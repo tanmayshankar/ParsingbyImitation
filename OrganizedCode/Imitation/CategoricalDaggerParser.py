@@ -175,6 +175,7 @@ class Parser():
 		self.state.rule_applied = npy.random.choice(range(self.model.num_rules),p=masked_rule_probs)
 
 	def insert_node(self, state, index):
+		# Inserting node into parse tree.
 		self.parse_tree.insert(index,state)
 
 	def process_splits_behavioural_policy(self):
@@ -232,30 +233,58 @@ class Parser():
 
 	def process_splits(self):
 		# For a single image, resample unless the sample is valid. 
-		redo = True
-		while redo: 
-			# Constructing attended image.
-			input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-			input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
-
-			self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image})[0,0]
-
-			redo = (self.state.split<0.) or (self.state.split>1.)
-
 		if self.state.rule_applied==0:
+			redo = True
+			while redo: 
+				# Constructing attended image.
+				input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+				input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+					copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+				
+				# self.state.split_mask_vect = npy.zeros((self.image_size-1))
+				self.state.split_mask_vect[self.state.x:self.state.x+self.state.w] = 1.
+
+				self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image,
+					self.model.lower_lim: npy.reshape(self.state.x,(1,1)),
+					self.model.upper_lim: npy.reshape(self.state.x+self.state.w,(1,1)),
+					self.model.split_mask: self.state.split_mask_vect.reshape((1,self.data_loader.image_size-1))})[0]
+				# embed()
+
+				redo = (self.state.split<self.state.x) or (self.state.split>(self.state.x+self.state.w))			
+
 			# Split between 0 and 1 as s. 
 			# Map to l from x+1 to x+w-1. 
-			self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
-			
+			# self.state.boundaryscaled_split = ((self.state.w-2)*self.state.split+self.state.x+1).astype(int)
+			self.state.boundaryscaled_split = copy.deepcopy(self.state.split)
+			self.state.boundaryscaled_split +=1
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.x
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:
-			self.state.boundaryscaled_split = ((self.state.h-2)*self.state.split+self.state.y+1).astype(int)
-			
+
+			redo = True
+			while redo: 
+				# Constructing attended image.
+				input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+				input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
+					copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
+				
+				self.state.split_mask_vect[self.state.y:self.state.y+self.state.h] = 1.
+
+				self.state.split = self.sess.run(self.model.sample_split, feed_dict={self.model.input: input_image,
+					self.model.lower_lim: npy.reshape(self.state.y,(1,1)),
+					self.model.upper_lim: npy.reshape(self.state.y+self.state.h,(1,1)),
+					self.model.split_mask: self.state.split_mask_vect.reshape((1,self.data_loader.image_size-1))})[0]
+				
+
+				redo = (self.state.split<self.state.y) or (self.state.split>(self.state.y+self.state.h))			
+
+
+			# self.state.boundaryscaled_split = ((self.state.h-2)*self.state.split+self.state.y+1).astype(int)
+			self.state.boundaryscaled_split = copy.deepcopy(self.state.split)
+			self.state.boundaryscaled_split +=1
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
@@ -376,7 +405,7 @@ class Parser():
 	def backprop(self):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
-		self.batch_sampled_splits = npy.zeros((self.batch_size,1))
+		self.batch_sampled_splits = npy.zeros((self.batch_size,1),dtype=int)
 		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
 		self.batch_split_weights = npy.zeros((self.batch_size,1))
@@ -399,7 +428,7 @@ class Parser():
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				# self.batch_rule_weights[k] = state.reward
 				self.batch_rule_weights[k] = 1.
-			if state.rule_applied==0:
+			if state.rule_applied==0 or state.rule_applied==1:
 
 				self.batch_sampled_splits[k] = state.split
 				# self.batch_split_weights[k] = state.reward

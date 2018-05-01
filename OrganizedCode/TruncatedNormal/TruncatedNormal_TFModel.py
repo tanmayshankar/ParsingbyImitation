@@ -87,8 +87,8 @@ class Model():
 		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
 
 		# Evaluate the likelihood of a particular sample.
-		self.sample_loglikelihood = self.untruncated_normal_dist.log_prob(self.sampled_split)-tf.log(self.upper_cdf-self.lower_cdf)
-
+		# self.sample_loglikelihood = self.untruncated_normal_dist.log_prob(self.sampled_split)-tf.log(self.upper_cdf-self.lower_cdf)
+		self.sample_loglikelihood = self.untruncated_normal_dist.log_prob(self.sampled_split)-tf.log(self.split_cov)-tf.log(self.upper_cdf-self.lower_cdf)
 		# Defining return weight and loss.
 		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
 		self.split_loss = -tf.multiply(self.sample_loglikelihood,self.split_return_weight)

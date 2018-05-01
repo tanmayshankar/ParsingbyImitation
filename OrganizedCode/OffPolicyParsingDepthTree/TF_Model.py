@@ -71,7 +71,7 @@ class Model():
 		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
 
 		if self.to_train:
-			self.split_cov = 0.05
+			self.split_cov = 0.001
 		else:
 			self.split_cov = 0.001
 		

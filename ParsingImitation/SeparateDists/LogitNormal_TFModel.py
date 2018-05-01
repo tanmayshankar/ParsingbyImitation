@@ -66,46 +66,55 @@ class Model():
 
 		self.fc6_shape = 200
 		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
-
-		# Split output.
-		# self.split_mean = tf.layers.dense(self.fc6,1)
-		self.split_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid)
-		self.split_cov = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus)
-		# self.split_cov = 0.05
 	
-		# Infinite support (but we care about 0 to 255).
-		self.untruncated_normal_dist = tf.contrib.distributions.Normal(loc=self.split_mean,scale=self.split_cov, allow_nan_stats=False)
+		self.horizontal_normal_mean = tf.layers.dense(self.fc6,1,name='horizontal_normal_mean')
+		self.horizontal_normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus,name='horizontal_normal_var')
+		
+		self.vertical_normal_mean = tf.layers.dense(self.fc6,1,name='vertical_normal_mean')
+		self.vertical_normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus,name='vertical_normal_var')
 
-		# [a,b] values in pixels indices.  
-		# [a,b] values in NORMALIZED PIXEL COORDINATES. 
-		self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
-		self.upper_lim = tf.placeholder(tf.float32,shape=(None,1),name='upper_lim')
+		self.horizontal_normal_dist = tf.contrib.distributions.Normal(loc=self.horizontal_normal_mean,scale=self.horizontal_normal_var,name='horizontal_normal_dist')
+		self.vertical_normal_dist = tf.contrib.distributions.Normal(loc=self.vertical_normal_mean,scale=self.vertical_normal_var,name='vertical_normal_dist')
 
-		# CDF of a and b. 
-		self.lower_cdf = self.untruncated_normal_dist.cdf(self.lower_lim)
-		self.upper_cdf = self.untruncated_normal_dist.cdf(self.upper_lim)
+		# # Creating a function that samples from this distribution.
+		self.horizontal_sample_split = self.horizontal_normal_dist.sample()
+		self.vertical_sample_split = self.vertical_normal_dist.sample()
+		# self.sample_split = self.normal_dist.sample()
 
-		# Also maintaining placeholders for scaling, converting to integer, and back to float.		
+		# # Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
 
-		# Evaluate the likelihood of a particular sample.
-		# self.sample_loglikelihood = self.untruncated_normal_dist.log_prob(self.sampled_split)-tf.log(self.upper_cdf-self.lower_cdf)
-		self.sample_loglikelihood = self.untruncated_normal_dist.log_prob(self.sampled_split)-tf.log(self.split_cov)-tf.log(self.upper_cdf-self.lower_cdf)
+		# Maximizing the log-likelihood of the logit-normal sample is equivalent 
+		# to maximizing the log-likelihood of the normal dist sample, 
+		# because the inverse logistic function, i.e. the sigmoid, is monotonic. 
+		self.horizontal_logitnormal_sample = tf.nn.sigmoid(self.horizontal_sample_split)
+		self.vertical_logitnormal_sample = tf.nn.sigmoid(self.vertical_sample_split)
 
-		# Defining return weight and loss.
-		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		self.split_loss = -tf.multiply(self.sample_loglikelihood,self.split_return_weight)
+		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
+		self.horizontal_split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='horizontal_split_return_weight')
+		self.vertical_split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='vertical_split_return_weight')
+
+		self.horizontal_split_loglikelihood = self.horizontal_normal_dist.log_prob(self.sampled_split)	
+		self.vertical_split_loglikelihood = self.vertical_normal_dist.log_prob(self.sampled_split)
+
+		self.horizontal_split_loss = -tf.multiply(self.horizontal_split_loglikelihood,self.horizontal_split_return_weight)
+		self.vertical_split_loss = -tf.multiply(self.vertical_split_loglikelihood,self.vertical_split_return_weight)
+
+		# self.split_loss = -tf.multiply(self.split_loglikelihood,self.split_return_weight)
+		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
+		self.split_loss = self.horizontal_split_loss+self.vertical_split_loss
 
 	def logging_ops(self):
 		# Create file writer to write summaries. 		
 		self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
 
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
-		self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_mean(self.sample_loglikelihood))
+		self.horizontal_split_loglikelihood_summary = tf.summary.scalar('Hor_Split_LogLikelihood',tf.reduce_mean(self.horizontal_split_loglikelihood))
+		self.vertical_split_loglikelihood_summary = tf.summary.scalar('Ver_Split_LogLikelihood',tf.reduce_mean(self.vertical_split_loglikelihood))
 		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
 		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
-		self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.split_mean))
-		self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.split_cov))		
+		# self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
+		# self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
 
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		
@@ -117,13 +126,7 @@ class Model():
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
-
-		# Clipping gradients because of NaN values. 
-		self.gradients_vars = self.optimizer.compute_gradients(self.total_loss)
-		self.clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.gradients_vars]
-		self.train = self.optimizer.apply_gradients(self.clipped_gradients)
-		# Instead of directly minimizing the loss, clip gradients and then apply them.
-		# self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
+		self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)

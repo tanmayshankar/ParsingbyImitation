@@ -28,7 +28,7 @@ class Parser():
 		self.anneal_rate = (self.initial_cov-self.final_cov)/self.anneal_epochs
 
 		# Beta is probability of using expert.
-		self.initial_beta = 0.5
+		self.initial_beta = 1.
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -238,12 +238,13 @@ class Parser():
 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
-		# split_mean, split_cov = self.sess.run([self.model.split_mean,self.model.split_cov], feed_dict={self.model.input: input_image})
-		split_mean = self.sess.run(self.model.split_mean, feed_dict={self.model.input: input_image})
+		split_mean, split_cov = self.sess.run([self.model.split_mean,self.model.split_cov], feed_dict={self.model.input: input_image})
+		# split_mean = self.sess.run(self.model.split_mean, feed_dict={self.model.input: input_image})
 		split_mean = split_mean[0,0]
-		# split_cov = split_cov[0,0]
-		split_cov = 0.05
+		split_cov = split_cov[0,0]
+		# split_cov = 0.05
 		
+
 		if self.state.rule_applied==0:
 			a_val = float(self.state.x+1)/(self.data_loader.image_size-1)
 			b_val = float(self.state.x+self.state.w-1)/(self.data_loader.image_size-1)
@@ -264,8 +265,12 @@ class Parser():
 			counter +=1
 			if counter>25:
 				embed()
-			self.state.split = dist.rvs()
-			redo = (self.state.split<0.) or (self.state.split>1.)
+			try:
+				self.state.split = dist.rvs()
+			except:
+				embed()
+			# redo = (self.state.split<0.) or (self.state.split>1.)
+			redo = (self.state.split<a_val) or (self.state.split>b_val)
 
 		if self.state.rule_applied==0:
 			# Transform to local patch coordinates.
@@ -435,7 +440,7 @@ class Parser():
 		# 	if (self.parse_tree[j].backward_index>=0):
 		# 		self.parse_tree[self.parse_tree[j].backward_index].likelihood_ratio *= self.parse_tree[j].likelihood_ratio
 
-	def backprop(self):
+	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_sampled_splits = npy.zeros((self.batch_size,1))
@@ -443,7 +448,7 @@ class Parser():
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
 		self.batch_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_lower_lims = npy.zeros((self.batch_size,1))
-		self.batch_upper_lims = npy.zeros((self.batch_size,1))
+		self.batch_upper_lims = npy.ones((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
@@ -470,15 +475,18 @@ class Parser():
 				self.batch_split_weights[k] = 1.
 
 				if state.rule_applied==0:
-					self.batch_lower_lims[k] = state.x+1
-					self.batch_upper_lims[k] = state.x+state.w-1
+					self.batch_lower_lims[k] = float(state.x+1)/(self.data_loader.image_size-1)
+					self.batch_upper_lims[k] = float(state.x+state.w-1)/(self.data_loader.image_size-1)
 				if state.rule_applied==1:
-					self.batch_lower_lims[k] = state.y+1
-					self.batch_upper_lims[k] = state.y+state.h-1
+					self.batch_lower_lims[k] = float(state.y+1)/(self.data_loader.image_size-1)
+					self.batch_upper_lims[k] = float(state.y+state.h-1)/(self.data_loader.image_size-1)
 
-		# embed()
+				# embed()	
+				if self.batch_sampled_splits[k]<self.batch_lower_lims[k] or self.batch_sampled_splits[k]>self.batch_upper_lims[k]:
+					embed()
+
 		# Call sess train.
-		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
+		merged, _ = self.sess.run([self.model.merged_summaries,self.model.train], feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
 												   self.model.split_return_weight: self.batch_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
@@ -487,14 +495,16 @@ class Parser():
 												   self.model.lower_lim: self.batch_lower_lims,
 												   self.model.upper_lim: self.batch_upper_lims})
 
+		self.model.tf_writer.add_summary(merged, iter_num)		
+
 	def meta_training(self,train=True):
 
 		# Burn in memory. 
 		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
-		
+				
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.model.save_model(0)
 		else:
 			self.num_epochs=1	
@@ -529,7 +539,8 @@ class Parser():
 
 				if self.args.train:
 					# Backprop --> over a batch sampled from memory. 
-					self.backprop()
+					# self.backprop()
+					self.backprop(self.data_loader.num_images*e+i)
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
 				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward

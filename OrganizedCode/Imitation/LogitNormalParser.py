@@ -240,7 +240,8 @@ class Parser():
 				copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
 			log_split, self.state.split = self.sess.run([self.model.logitnormal_sample,self.model.sample_split], feed_dict={self.model.input: input_image})
-			embed()
+			self.state.split = self.state.split[0,0]
+			log_split = log_split[0,0]			
 
 			redo = (self.state.split<0.) or (self.state.split>1.)
 
@@ -400,7 +401,7 @@ class Parser():
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				# self.batch_rule_weights[k] = state.reward
 				self.batch_rule_weights[k] = 1.
-			if state.rule_applied==0:
+			if state.rule_applied==0 or state.rule_applied==1:
 
 				self.batch_sampled_splits[k] = state.split
 				# self.batch_split_weights[k] = state.reward

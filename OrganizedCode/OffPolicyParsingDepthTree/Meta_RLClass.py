@@ -4,6 +4,7 @@ import TF_Model
 import Data_Loader
 import OffPolicyParser
 import MixBehaviorParser
+import BehaviorCloningParser
 import NewPlotting
 import Memory
 
@@ -46,7 +47,9 @@ class Meta_RLClass():
 		else:
 			self.parser = OffPolicyParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader, 
 				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
-		
+		# self.parser = BehaviorCloningParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+		# 		memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+
 	def train(self):
 		self.parser.meta_training(self.args.train)
 

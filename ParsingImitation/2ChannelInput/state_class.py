@@ -19,7 +19,6 @@ class parse_tree_node():
 		self.reward = 0.
 		self.rule_mask = npy.zeros((4))
 		self.depth = 0
-		self.expert = -1
 
 		self.boundaryscaled_split = 0
 
