@@ -54,13 +54,18 @@ class Model():
 		self.rule_probabilities = tf.divide(self.prenorm_masked_probabilities,self.prenorm_mask_sum)
 
 		self.rule_dist = tf.contrib.distributions.Categorical(probs=self.rule_probabilities)
+
 		self.sampled_rule = self.rule_dist.sample()
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
 
 		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
+
 		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
+		# self.rule_log_probs = self.rule_dist.log_prob(self.target_rule)
 		# self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
-		self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
+		# self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
+		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
+		# self.rule_loss = tf.multiply(self.rule_return_weight,self.rule_log_probs)
 
 	def define_split_stream(self):
 
@@ -109,7 +114,12 @@ class Model():
 
 		# self.split_loss = -tf.multiply(self.split_loglikelihood,self.split_return_weight)
 		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
-		self.split_loss = self.horizontal_split_loss+self.vertical_split_loss
+		# self.split_loss = self.horizontal_split_loss+self.vertical_split_loss
+
+		# Create a placeholder to set split indicator.
+		self.split_indicator = tf.placeholder(tf.int32,shape=(None,1),name='split_indicator')
+		# Since TF Case behaves shittily with batches, using tf.where instead.
+		self.split_loss = tf.where(tf.equal(self.split_indicator,0),x=self.horizontal_split_loss,y=self.vertical_split_loss,name='where_split_loss')		
 
 	def logging_ops(self):
 		# Create file writer to write summaries. 		
@@ -119,6 +129,7 @@ class Model():
 		self.horizontal_split_loglikelihood_summary = tf.summary.scalar('Hor_Split_LogLikelihood',tf.reduce_mean(self.horizontal_split_loglikelihood))
 		self.vertical_split_loglikelihood_summary = tf.summary.scalar('Ver_Split_LogLikelihood',tf.reduce_mean(self.vertical_split_loglikelihood))
 		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
+		# self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_log_probs))
 		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
 		# self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
 		# self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
@@ -128,8 +139,10 @@ class Model():
 
 	def training_ops(self):
 
-		self.total_loss = self.rule_loss+self.split_loss
-		# self.total_loss = self.split_loss
+		self.loss_indicator = tf.placeholder(tf.int32,shape=(None,1),name='loss_indicator')
+		# embed()
+		self.total_loss = tf.where(tf.equal(self.loss_indicator,0),x=self.rule_loss,y=self.rule_loss+self.split_loss)
+		# self.total_loss = self.rule_loss+self.split_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)

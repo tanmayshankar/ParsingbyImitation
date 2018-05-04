@@ -23,7 +23,7 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
-		self.initial_beta = 1.
+		self.initial_beta = 0.9
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -135,6 +135,9 @@ class Parser():
 		# Greedily select a rule. 
 		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
 
+		if self.state.w==0 or self.state.h==0:
+			embed()
+
 		# Now returning both greedy axes and greedy splits. 
 		self.greedy_axis,self.greedy_split = EntropySplits.best_valid_split(entropy_image_input, self.state.rule_mask)
 		# EntropySplits takes care of the case where splits along one axis are invalid
@@ -174,13 +177,15 @@ class Parser():
 			# self.state.boundaryscaled_split = self.greedy_split + self.state.x
 			# self.state.split = float(self.state.boundaryscaled_split-self.state.x)/self.state.w
 			# self.state.boundaryscaled_split -= self.state.x
-			self.state.split = float(self.state.boundaryscaled_split)/self.state.w
+			# self.state.split = float(self.state.boundaryscaled_split-1)/self.state.w
+			self.state.split = float(self.state.boundaryscaled_split-1)/(self.state.w-2)
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:	
-			self.state.split = float(self.state.boundaryscaled_split)/self.state.h
+			# self.state.split = float(self.state.boundaryscaled_split)/self.state.h
+			self.state.split = float(self.state.boundaryscaled_split-1)/(self.state.h-2)
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
@@ -205,13 +210,15 @@ class Parser():
 			a_val = float(self.state.x+1)/(self.data_loader.image_size-1)
 			b_val = float(self.state.x+self.state.w-1)/(self.data_loader.image_size-1)
 
-			self.state.split = self.sess.run(self.horizontal_sample_split, feed_dict={self.model.input: input_image,
+			self.state.split = self.sess.run(self.model.horizontal_sample_split, feed_dict={self.model.input: input_image,
 				self.model.lower_lim: npy.reshape((a_val),(1,1)),
-					self.model.upper_lim: npy.reshape((b_val),(1,1))})
+					self.model.upper_lim: npy.reshape((b_val),(1,1))})[0,0]
+			if npy.isnan(self.state.split):
+				embed()			
 
 			# Split between 0 and 1 as s. 
 			# Map to l from x+1 to x+w-1. 
-			self.state.boundaryscaled_split = ((self.state.w-2)*log_split+self.state.x+1).astype(int)
+			self.state.boundaryscaled_split = int((self.state.w-2)*self.state.split+self.state.x+1)
 			
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.x
@@ -222,11 +229,12 @@ class Parser():
 			a_val = float(self.state.y+1)/(self.data_loader.image_size-1)
 			b_val = float(self.state.y+self.state.h-1)/(self.data_loader.image_size-1)
 		
-			self.state.split = self.sess.run(self.vertical_sample_split, feed_dict={self.model.input: input_image,
+			self.state.split = self.sess.run(self.model.vertical_sample_split, feed_dict={self.model.input: input_image,
 				self.model.lower_lim: npy.reshape((a_val),(1,1)),
-					self.model.upper_lim: npy.reshape((b_val),(1,1))})
-
-			self.state.boundaryscaled_split = ((self.state.h-2)*log_split+self.state.y+1).astype(int)
+					self.model.upper_lim: npy.reshape((b_val),(1,1))})[0,0]
+			if npy.isnan(self.state.split):
+				embed()		
+			self.state.boundaryscaled_split = int((self.state.h-2)*self.state.split+self.state.y+1)
 			
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split -= self.state.y
@@ -405,6 +413,11 @@ class Parser():
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
 		self.batch_horizontal_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_vertical_split_weights = npy.zeros((self.batch_size,1))
+		self.batch_lower_lims = npy.zeros((self.batch_size,1))
+		self.batch_upper_lims = npy.ones((self.batch_size,1))
+
+		self.batch_loss_indicators = npy.zeros((self.batch_size,1),dtype=int)
+		self.batch_split_indicators = npy.zeros((self.batch_size,1),dtype=int)
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
@@ -425,11 +438,22 @@ class Parser():
 				self.batch_rule_weights[k] = state.reward	
 
 			if state.rule_applied==0 or state.rule_applied==1:
+				# If a split rule, set the loss indicator to 1.
+				self.batch_loss_indicators[k] = 1
+
 				self.batch_sampled_splits[k] = state.split
 				if state.rule_applied==0:	
+					self.batch_split_indicators[k] = 0
 					self.batch_horizontal_split_weights[k] = state.reward
+					self.batch_lower_lims[k] = float(state.x+1)/(self.data_loader.image_size-1)
+					self.batch_upper_lims[k] = float(state.x+state.w-1)/(self.data_loader.image_size-1)
+
 				if state.rule_applied==1:
+					self.batch_split_indicators[k] = 1
 					self.batch_vertical_split_weights[k] = state.reward
+					self.batch_lower_lims[k] = float(state.y+1)/(self.data_loader.image_size-1)
+					self.batch_upper_lims[k] = float(state.y+state.h-1)/(self.data_loader.image_size-1)
+
 				# self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
@@ -439,7 +463,12 @@ class Parser():
 												   self.model.vertical_split_return_weight: self.batch_vertical_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
 												   self.model.rule_mask: self.batch_rule_masks,
-												   self.model.rule_return_weight: self.batch_rule_weights})
+												   self.model.rule_return_weight: self.batch_rule_weights,
+												   self.model.lower_lim: self.batch_lower_lims,
+												   self.model.upper_lim: self.batch_upper_lims,
+												   self.model.loss_indicator: self.batch_loss_indicators,
+												   self.model.split_indicator: self.batch_split_indicators})
+
 
 		self.model.tf_writer.add_summary(merged, iter_num)		
 
@@ -450,7 +479,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.model.save_model(0)
 		else:
 			self.num_epochs=1	

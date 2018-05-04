@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 from headers import *
 import LogitNormal_TFModel
+import ScaledLogitNormalTFModel
 import Data_Loader
 import DaggerImitationParser
+import ScaledLogitParser
 import NewPlotting
 import Memory
 
@@ -24,7 +26,10 @@ class Meta_RLClass():
 		self.data_loader.preprocess()
 		
 		# # Instantiate Model Class.		
-		self.model = LogitNormal_TFModel.Model(num_channels=self.data_loader.num_channels)		
+		if self.args.scale:
+			self.model = ScaledLogitNormalTFModel.Model(num_channels=self.data_loader.num_channels)
+		else:
+			self.model = LogitNormal_TFModel.Model(num_channels=self.data_loader.num_channels)
 		self.args.train = bool(self.args.train)
 
 		if self.args.model:
@@ -37,8 +42,13 @@ class Meta_RLClass():
 		# Instantiate the plotting manager. 
 		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
 
+
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		self.parser = DaggerImitationParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+		if self.args.scale:
+			self.parser = ScaledLogitParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+		else:
+			self.parser = DaggerImitationParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
 				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 
 	def train(self):
@@ -52,6 +62,7 @@ def parse_arguments():
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
+	parser.add_argument('--scale',dest='scale',type=int,default=0)
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
