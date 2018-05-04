@@ -62,42 +62,65 @@ class Model():
 		# self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
 		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
 
-	def define_split_stream(self):
+	def define_horizontal_split_stream(self):
+		self.horizontal_normal_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid,name='horizontal_normal_mean')
+		self.horizontal_normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus,name='horizontal_normal_var')
+		self.horizontal_normal_dist = tf.contrib.distributions.Normal(loc=self.horizontal_normal_mean,scale=self.horizontal_normal_var,name='horizontal_normal_dist')
+		
+		# CDF of a and b. 
+		self.horizontal_lower_cdf = self.horizontal_normal_dist.cdf(self.lower_lim)
+		self.horizontal_upper_cdf = self.horizontal_normal_dist.cdf(self.upper_lim)
 
+		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
+		self.horizontal_split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='horizontal_split_return_weight')
+		self.horizontal_split_loglikelihood = self.horizontal_normal_dist.log_prob(self.sampled_split) - tf.log(self.horizontal_normal_var) - tf.log(self.horizontal_upper_cdf-self.horizontal_lower_cdf)
+
+		self.horizontal_split_loss = -tf.multiply(self.horizontal_split_loglikelihood,self.horizontal_split_return_weight)
+
+	def define_vertical_split_stream(self):
+		self.vertical_normal_mean = tf.layers.dense(self.fc6,1,activation=tf.nn.sigmoid,name='vertical_normal_mean')
+		self.vertical_normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus,name='vertical_normal_var')
+		self.vertical_normal_dist = tf.contrib.distributions.Normal(loc=self.vertical_normal_mean,scale=self.vertical_normal_var,name='vertical_normal_dist')
+
+		# CDF of a and b. 
+		self.vertical_lower_cdf = self.vertical_normal_dist.cdf(self.lower_lim)
+		self.vertical_upper_cdf = self.vertical_normal_dist.cdf(self.upper_lim)
+
+		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
+		self.vertical_split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='vertical_split_return_weight')
+		self.vertical_split_loglikelihood = self.vertical_normal_dist.log_prob(self.sampled_split) - tf.log(self.vertical_normal_var) - tf.log(self.vertical_upper_cdf-self.vertical_lower_cdf)
+
+		self.vertical_split_loss = -tf.multiply(self.vertical_split_loglikelihood,self.vertical_split_return_weight)
+
+	def define_split_stream(self):
 		self.fc6_shape = 200
 		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
-	
-		self.normal_mean = tf.layers.dense(self.fc6,1)
-		self.normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus)
 
-		self.normal_dist = tf.contrib.distributions.Normal(loc=self.normal_mean,scale=self.normal_var)
-		# # Creating a function that samples from this distribution.
-		self.sample_split = self.normal_dist.sample()
-
+		# Common placeholders
 		# # Also maintaining placeholders for scaling, converting to integer, and back to float.
 		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
 
-		# Maximizing the log-likelihood of the logit-normal sample is equivalent 
-		# to maximizing the log-likelihood of the normal dist sample, 
-		# because the inverse logistic function, i.e. the sigmoid, is monotonic. 
-		self.logitnormal_sample = tf.nn.sigmoid(self.sample_split)
+		# [a,b] values in pixels indices.  
+		# [a,b] values in NORMALIZED PIXEL COORDINATES. 
+		self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
+		self.upper_lim = tf.placeholder(tf.float32,shape=(None,1),name='upper_lim')
 
-		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
-		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		self.split_loglikelihood = self.normal_dist.log_prob(self.sampled_split)		
-		self.split_loss = -tf.multiply(self.split_loglikelihood,self.split_return_weight)
-		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
+		self.define_horizontal_split_stream()
+		self.define_vertical_split_stream()
+
+		self.split_loss = self.horizontal_split_loss+self.vertical_split_loss
 
 	def logging_ops(self):
 		# Create file writer to write summaries. 		
 		self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
 
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
-		self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_mean(self.split_loglikelihood))
+		self.horizontal_split_loglikelihood_summary = tf.summary.scalar('Hor_Split_LogLikelihood',tf.reduce_mean(self.horizontal_split_loglikelihood))
+		self.vertical_split_loglikelihood_summary = tf.summary.scalar('Ver_Split_LogLikelihood',tf.reduce_mean(self.vertical_split_loglikelihood))
 		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
 		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
-		self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
-		self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
+		# self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
+		# self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
 
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		

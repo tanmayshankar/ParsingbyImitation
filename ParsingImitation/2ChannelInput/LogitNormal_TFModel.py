@@ -62,7 +62,7 @@ class Model():
 		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
 		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
 		# self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
-		self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
+		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
 
 	def define_split_stream(self):
 
