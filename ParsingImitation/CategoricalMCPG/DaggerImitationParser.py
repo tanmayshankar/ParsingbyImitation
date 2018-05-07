@@ -198,7 +198,7 @@ class Parser():
 		redo = True
 		counter = 0
 
-		self.split_mask_vect = npy.zeros((1,self.data_loader.image_size))
+		self.split_mask_vect = npy.zeros((1,self.data_loader.image_size-1))
 
 		# Constructing attended image.
 		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
@@ -208,8 +208,7 @@ class Parser():
 		if self.state.rule_applied==0:
 			self.split_mask_vect[0,self.state.x+1:self.state.x+self.state.w-1] = 1.
 			self.state.split = self.sess.run(self.model.sample_hdist, feed_dict={self.model.input: input_image,
-				self.model.split_mask :self.split_mask_vect	})
-
+				self.model.split_mask :self.split_mask_vect	})[0]
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split-self.state.x
 	
@@ -219,8 +218,7 @@ class Parser():
 		if self.state.rule_applied==1:
 			self.split_mask_vect[0,self.state.y+1:self.state.y+self.state.h-1] = 1.
 			self.state.split = self.sess.run(self.model.sample_vdist, feed_dict={self.model.input: input_image,
-				self.model.split_mask :self.split_mask_vect	})
-
+				self.model.split_mask :self.split_mask_vect	})[0]
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split-self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
