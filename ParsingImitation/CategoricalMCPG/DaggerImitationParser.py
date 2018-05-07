@@ -23,7 +23,7 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
-		self.initial_beta = 1.
+		self.initial_beta = 0.5
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -171,14 +171,14 @@ class Parser():
 		self.state.boundaryscaled_split = copy.deepcopy(self.greedy_split)
 
 		if self.state.rule_applied==0:
-			self.state.split = self.greedy_split + self.state.x
+			self.state.split = int(self.greedy_split + self.state.x)
 
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:	
-			self.state.split = self.greedy_split + self.state.y
+			self.state.split = int(self.greedy_split + self.state.y)
 
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
@@ -206,7 +206,7 @@ class Parser():
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
 		if self.state.rule_applied==0:
-			self.split_mask[0,self.state.x+1:self.state.x+self.state.w-1] = 1.
+			self.split_mask_vect[0,self.state.x+1:self.state.x+self.state.w-1] = 1.
 			self.state.split = self.sess.run(self.model.sample_hdist, feed_dict={self.model.input: input_image,
 				self.model.split_mask :self.split_mask_vect	})
 
@@ -217,7 +217,7 @@ class Parser():
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:
-			self.split_mask[0,self.state.y+1:self.state.y+self.state.h-1] = 1.
+			self.split_mask_vect[0,self.state.y+1:self.state.y+self.state.h-1] = 1.
 			self.state.split = self.sess.run(self.model.sample_vdist, feed_dict={self.model.input: input_image,
 				self.model.split_mask :self.split_mask_vect	})
 
@@ -347,11 +347,12 @@ class Parser():
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
-		self.batch_sampled_splits = npy.zeros((self.batch_size,1),dtype=int)
+		self.batch_sampled_splits = npy.zeros((self.batch_size),dtype=int)
 		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
-		self.batch_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_split_masks = npy.zeros((self.batch_size,self.data_loader.image_size-1))
+		self.batch_horizontal_split_weights = npy.zeros((self.batch_size,1))
+		self.batch_vertical_split_weights = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
@@ -370,23 +371,21 @@ class Parser():
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
 				self.batch_rule_weights[k] = state.reward
-				# self.batch_rule_weights[k] = 1.
-
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
-				self.batch_split_weights[k] = state.reward
-				# self.batch_split_weights[k] = 1.
-
 				if state.rule_applied==0:
 					self.batch_split_masks[k,state.x+1:state.x+state.w-1] =1.
+					self.batch_horizontal_split_weights[k] = state.reward
 				if state.rule_applied==1:
 					self.batch_split_masks[k,state.y+1:state.y+state.h-1] =1.
+					self.batch_vertical_split_weights[k] = state.reward
 
 		# embed()
 		# Call sess train.
 		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
 												   self.model.sampled_split: self.batch_sampled_splits,
-												   self.model.split_return_weight: self.batch_split_weights,
+												   self.model.horizontal_split_return_weight: self.batch_horizontal_split_weights,
+												   self.model.vertical_split_return_weight: self.batch_vertical_split_weights,
 												   self.model.target_rule: self.batch_target_rules,
 												   self.model.rule_mask: self.batch_rule_masks,
 												   self.model.rule_return_weight: self.batch_rule_weights,
@@ -401,7 +400,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.model.save_model(0)
 		else:
 			self.num_epochs=1	

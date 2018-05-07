@@ -71,7 +71,7 @@ class Model():
 		self.fc5 = tf.layers.dense(self.flat_conv,self.fc5_shape,activation=tf.nn.relu)
 		self.fc6 = tf.layers.dense(self.fc5,self.fc6_shape,activation=tf.nn.relu)
 	
-		self.split_mask = tf.placeholder(tf.int32,shape=(None,255),name='split_mask')
+		self.split_mask = tf.placeholder(tf.float32,shape=(None,255),name='split_mask')
 
 		self.hor_preprobs = tf.layers.dense(self.fc6,self.image_size-1)
 		self.ver_preprobs = tf.layers.dense(self.fc6,self.image_size-1)
@@ -79,8 +79,8 @@ class Model():
 		self.masked_hor_probs = tf.multiply(self.split_mask,self.hor_preprobs,name='masked_hor_probs')
 		self.masked_ver_probs = tf.multiply(self.split_mask,self.ver_preprobs,name='masked_ver_probs')
 
-		self.masked_hsum = tf.reduce_sum(self.masked_hor_probs,axis=-1,name='masked_hsum')
-		self.masked_vsum = tf.reduce_sum(self.masked_ver_probs,axis=-1,name='masked_vsum')
+		self.masked_hsum = tf.reduce_sum(self.masked_hor_probs,axis=-1,name='masked_hsum',keep_dims=True)
+		self.masked_vsum = tf.reduce_sum(self.masked_ver_probs,axis=-1,name='masked_vsum',keep_dims=True)
 
 		self.masked_norm_hprobs = tf.divide(self.masked_hor_probs,self.masked_hsum,name='masked_norm_hprobs')
 		self.masked_norm_vprobs = tf.divide(self.masked_ver_probs,self.masked_vsum,name='masked_norm_vprobs')
@@ -92,7 +92,7 @@ class Model():
 		self.sample_vdist = self.ver_split_dist.sample()
 
 		# # Also maintaining placeholders for scaling, converting to integer, and back to float.
-		self.sampled_split = tf.placeholder(tf.int32,shape=(None,1),name='sampled_split')
+		self.sampled_split = tf.placeholder(tf.int32,shape=(None,),name='sampled_split')
 
 		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
 		self.horizontal_split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='horizontal_split_return_weight')
