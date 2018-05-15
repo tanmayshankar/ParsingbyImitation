@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from headers import *
-import ActorCriticTF
+import TFModel
 import Data_Loader
-# import DeterministicParser
-import DDPGAggrevateParser
+import DeterministicParser
 import NewPlotting
 import Memory
 
@@ -24,14 +23,14 @@ class Meta_RLClass():
 			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
 		self.data_loader.preprocess()
 		
-		self.args.train = bool(self.args.train)
 		# # Instantiate Model Class.		
-		self.ActorCriticModel = ActorCriticTF.ActorCriticModel(self.sess,to_train=self.args.train)
+		self.model = TFModel.Model(num_channels=self.data_loader.num_channels)
+		self.args.train = bool(self.args.train)
 
 		if self.args.model:
-			self.ActorCriticModel.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)
+			self.model.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)
 		else:
-			self.ActorCriticModel.create_network(self.sess,to_train=self.args.train)
+			self.model.create_network(self.sess,to_train=self.args.train)
 
 		# Instantiate memory. 
 		self.memory = Memory.Replay_Memory()
@@ -40,7 +39,7 @@ class Meta_RLClass():
 		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
 
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		self.parser = DDPGAggrevateParser.Parser(model_instance=self.ActorCriticModel, data_loader_instance=self.data_loader,
+		self.parser = DeterministicParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
 			memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 
 	def train(self):
