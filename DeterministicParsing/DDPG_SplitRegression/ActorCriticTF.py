@@ -42,28 +42,31 @@ class BaseModel():
 					self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_size=(self.conv_sizes[i]),strides=(self.conv_strides[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
 
 				# Now going to flatten this and move to a fully connected layer. 		
-				self.flat_conv = tf.layers.flatten(self.conv[-1])
+				self.flat_conv = tf.layers.flatten(self.conv[-1],name='flat_conv')
 				
 				# Define fully connected layers. 
 				self.fc6_shape = 1000
 				self.fc7_shape = 200
 
-				self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
-				self.fc7 = tf.layers.dense(self.fc6,self.fc7_shape,activation=tf.nn.relu)
+				self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu,name='base_fc6')
+				self.fc7 = tf.layers.dense(self.fc6,self.fc7_shape,activation=tf.nn.relu,name='base_fc7')
 	
 class ActorModel(BaseModel):
 
 	def define_split_stream(self):
 
 		with tf.variable_scope(self.name_scope):
-			self.sigmoid_split = tf.layers.dense(self.fc7,1,activation=tf.nn.sigmoid,name='sigmoid_split')
+
+			self.actor_fc8_shape = 100
+			self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.relu, name='actor_fc8')
+			self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split')
 		
 			# Pixel indices, NOT normalized.
 			self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
 			self.upper_lim = tf.placeholder(tf.float32,shape=(None,1),name='upper_lim')
 
 			# Predict split. 
-			self.predicted_split = tf.multiply(self.upper_lim-self.lower_lim,self.sigmoid_split)+self.lower_lim
+			self.predicted_split = tf.add(tf.multiply(self.upper_lim-self.lower_lim,self.sigmoid_split),self.lower_lim,name='predicted_split')
 
 class CriticModel(BaseModel):
 
@@ -73,14 +76,14 @@ class CriticModel(BaseModel):
 			# Must take in both the image as input and the current action taken by the policy. 
 			# Hence inherits from BOTH the Base and Actor Model. 
 			self.fc8_shape = 40
-			self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='fc8')
+			self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='critic_fc8')
 
 			# Concatenate the image features with the predicted split. 
 			self.concat_input = tf.concat([self.fc8, actor_action],axis=-1,name='concat')
 
 			# Now predict the Qvalue of this image state and the action. 
 			self.fc9_shape = 50
-			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='fc9')
+			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9')
 			self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue')
 
 class ActorCriticModel():
@@ -112,7 +115,12 @@ class ActorCriticModel():
 
 		# Creating a training operation to minimize the critic loss.
 		self.critic_optimizer = tf.train.AdamOptimizer(1e-4)
-		self.train_critic = self.critic_optimizer.minimize(self.critic_loss,name='Train_Critic',var_list=self.critic_variables)
+		# self.train_critic = self.critic_optimizer.minimize(self.critic_loss,name='Train_Critic',var_list=self.critic_variables)
+
+		# Clipping gradients because of NaN values. 
+		self.critic_gradients_vars = self.critic_optimizer.compute_gradients(self.critic_loss,var_list=self.critic_variables)
+		self.critic_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.critic_gradients_vars]
+		self.train_critic = self.critic_optimizer.apply_gradients(self.critic_clipped_gradients)
 
 	def define_actor_train_op(self):
 		# Defining the actor's training op.
@@ -122,7 +130,12 @@ class ActorCriticModel():
 		self.actor_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope='ActorModel')
 		
 		self.actor_optimizer = tf.train.AdamOptimizer(1e-4)
-		self.train_actor = self.actor_optimizer.minimize(self.actor_loss,name='Train_Actor',var_list=self.actor_variables)
+		# self.train_actor = self.actor_optimizer.minimize(self.actor_loss,name='Train_Actor',var_list=self.actor_variables)
+
+		# Clipping gradients because of NaN values. 
+		self.actor_gradients_vars = self.actor_optimizer.compute_gradients(self.actor_loss,var_list=self.actor_variables)
+		self.actor_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.actor_gradients_vars]
+		self.train_actor = self.actor_optimizer.apply_gradients(self.actor_clipped_gradients)
 
 	def define_training_ops(self):
 
@@ -130,7 +143,8 @@ class ActorCriticModel():
 		self.define_actor_train_op()
 
 		# Writing graph and other summaries in tensorflow.
-		self.writer = tf.summary.FileWriter('training',self.sess.graph)
+		if self.to_train:
+			self.writer = tf.summary.FileWriter('training',self.sess.graph)			
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
 
@@ -163,6 +177,10 @@ class ActorCriticModel():
 		saver = tf.train.Saver(max_to_keep=None,var_list=restore_vars)
 		saver.restore(self.sess, model_file)
 
+	def model_load_alt(self, model_file):
+		saver = tf.train.Saver(max_to_keep=None)
+		saver.restore(self.sess,model_file)
+
 	def save_model(self, model_index, iteration_number=-1):
 		if not(os.path.isdir("saved_models")):
 			os.mkdir("saved_models")
@@ -178,6 +196,10 @@ class ActorCriticModel():
 
 		self.define_training_ops()
 		self.define_logging_ops()
-	
+		
+		# embed()
 		if pretrained_weight_file:
-			self.model_load(pretrained_weight_file)
+			# self.model_load(pretrained_weight_file)
+			self.model_load_alt(pretrained_weight_file)
+
+		# embed()

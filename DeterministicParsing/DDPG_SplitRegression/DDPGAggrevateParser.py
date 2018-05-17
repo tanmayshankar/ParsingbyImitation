@@ -211,6 +211,8 @@ class Parser():
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1))})
 			# embed()
 			self.state.split = int(self.state.split[0])
+			# embed()
+			# print(float(self.state.split-self.state.x)/self.state.w)
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split-self.state.x
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
@@ -222,7 +224,7 @@ class Parser():
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1))})
 			# embed()
 			self.state.split = int(self.state.split[0])
-
+			# print(float(self.state.split-self.state.y)/self.state.h)
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split- self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)

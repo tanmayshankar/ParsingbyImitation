@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from headers import *
 
-for i in range(0,260,5):
+for i in range(0,260):
 # for i in range(8,60):
 	print("###############################################")
 	print("STARTING WITH:",i)
