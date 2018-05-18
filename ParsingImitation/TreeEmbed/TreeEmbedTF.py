@@ -56,20 +56,19 @@ class Model():
 
 		self.num_rules = 4
 		self.rule_presoftmax = tf.layers.dense(self.rule_fc9,self.num_rules)
-		self.premask_probabilities = tf.nn.softmax(self.rule_presoftmax,name='premask_probabilities')
-
 		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
-		self.prenorm_masked_probabilities = tf.multiply(self.premask_probabilities,self.rule_mask)
-		self.prenorm_mask_sum = tf.reduce_sum(self.prenorm_masked_probabilities,axis=-1,keep_dims=True)
-		self.rule_probabilities = tf.divide(self.prenorm_masked_probabilities,self.prenorm_mask_sum)
+		
+		self.softmax_numerator = tf.multiply(self.rule_mask,tf.exp(self.rule_presoftmax),name='softmax_numerator')
+		self.softmax_denominator = tf.add(tf.reduce_sum(tf.exp(tf.multiply(self.rule_mask,self.rule_presoftmax)),axis=-1,keep_dims=True),
+			tf.subtract(tf.reduce_sum(self.rule_mask,axis=-1,keep_dims=True),tf.constant(float(self.num_rules))))
+		
+		self.rule_probabilities = tf.divide(self.softmax_numerator,self.softmax_denominator)
 
-		self.rule_dist = tf.contrib.distributions.Categorical(probs=self.rule_probabilities)
-		self.sampled_rule = self.rule_dist.sample()
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
-
 		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
+
+		# self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
 		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
-		# self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
 		# self.rule_loss = tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
 		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
 
