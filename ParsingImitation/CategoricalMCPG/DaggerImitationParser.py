@@ -209,6 +209,7 @@ class Parser():
 			self.split_mask_vect[0,self.state.x+1:self.state.x+self.state.w-1] = 1.
 			self.state.split = self.sess.run(self.model.sample_hdist, feed_dict={self.model.input: input_image,
 				self.model.split_mask :self.split_mask_vect	})[0]
+			embed()
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split-self.state.x
 	
@@ -219,6 +220,7 @@ class Parser():
 			self.split_mask_vect[0,self.state.y+1:self.state.y+self.state.h-1] = 1.
 			self.state.split = self.sess.run(self.model.sample_vdist, feed_dict={self.model.input: input_image,
 				self.model.split_mask :self.split_mask_vect	})[0]
+			embed()
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split-self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
@@ -372,10 +374,10 @@ class Parser():
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
 				if state.rule_applied==0:
-					self.batch_split_masks[k,state.x+1:state.x+state.w-1] =1.
+					self.batch_split_masks[k,state.x:state.x+state.w-1] =1.
 					self.batch_horizontal_split_weights[k] = state.reward
 				if state.rule_applied==1:
-					self.batch_split_masks[k,state.y+1:state.y+state.h-1] =1.
+					self.batch_split_masks[k,state.y:state.y+state.h-1] =1.
 					self.batch_vertical_split_weights[k] = state.reward
 
 		# embed()

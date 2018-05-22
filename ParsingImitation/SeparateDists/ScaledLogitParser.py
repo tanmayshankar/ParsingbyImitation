@@ -23,7 +23,7 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
-		self.initial_beta = 0.9
+		self.initial_beta = 0.5
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -178,14 +178,14 @@ class Parser():
 			# self.state.split = float(self.state.boundaryscaled_split-self.state.x)/self.state.w
 			# self.state.boundaryscaled_split -= self.state.x
 			# self.state.split = float(self.state.boundaryscaled_split-1)/self.state.w
-			self.state.split = float(self.state.boundaryscaled_split-1)/(self.state.w-2)
+			self.state.split = float(self.state.boundaryscaled_split)/(self.state.w)
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:	
 			# self.state.split = float(self.state.boundaryscaled_split)/self.state.h
-			self.state.split = float(self.state.boundaryscaled_split-1)/(self.state.h-2)
+			self.state.split = float(self.state.boundaryscaled_split)/(self.state.h)
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
@@ -210,9 +210,12 @@ class Parser():
 			a_val = float(self.state.x+1)/(self.data_loader.image_size-1)
 			b_val = float(self.state.x+self.state.w-1)/(self.data_loader.image_size-1)
 
+			# print("HELLO CAN ANYBODY HEAR ME")
 			self.state.split = self.sess.run(self.model.horizontal_sample_split, feed_dict={self.model.input: input_image,
 				self.model.lower_lim: npy.reshape((a_val),(1,1)),
 					self.model.upper_lim: npy.reshape((b_val),(1,1))})[0,0]
+			
+			# embed()
 			if npy.isnan(self.state.split):
 				embed()			
 
@@ -232,8 +235,11 @@ class Parser():
 			self.state.split = self.sess.run(self.model.vertical_sample_split, feed_dict={self.model.input: input_image,
 				self.model.lower_lim: npy.reshape((a_val),(1,1)),
 					self.model.upper_lim: npy.reshape((b_val),(1,1))})[0,0]
+			# print("HELLO CAN ANYBODY HEAR ME")
+			# embed()
 			if npy.isnan(self.state.split):
 				embed()		
+
 			self.state.boundaryscaled_split = int((self.state.h-2)*self.state.split+self.state.y+1)
 			
 			# Transform to local patch coordinates.
@@ -250,64 +256,6 @@ class Parser():
 		self.insert_node(state1,self.current_parsing_index+1)
 		self.insert_node(state2,self.current_parsing_index+2)
 
-	# def select_split_learner_sample(self):
-	# 	# For a single image, resample unless the sample is valid. 
-	# 	redo = True
-	# 	counter = 0
-
-	# 	while redo: 
-	# 		counter+=1
-	# 		if counter>25:
-	# 			embed()
-	# 		# Constructing attended image.
-	# 		input_image = npy.zeros((1,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-	# 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,0] = \
-	# 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
-
-	# 		if self.state.rule_applied==0:
-	# 			log_split, self.state.split = self.sess.run([self.model.horizontal_logitnormal_sample,self.model.horizontal_sample_split], feed_dict={self.model.input: input_image})
-	# 			self.state.split = self.state.split[0,0]
-	# 			log_split = log_split[0,0]			
-
-	# 			# redo = (self.state.split<0.) or (self.state.split>1.)
-	# 			redo = (log_split<0.) or (log_split>1.)
-
-	# 		if self.state.rule_applied==1:
-	# 			log_split, self.state.split = self.sess.run([self.model.vertical_logitnormal_sample,self.model.vertical_sample_split], feed_dict={self.model.input: input_image})
-	# 			self.state.split = self.state.split[0,0]
-	# 			log_split = log_split[0,0]			
-
-	# 			# redo = (self.state.split<0.) or (self.state.split>1.)
-	# 			redo = (log_split<0.) or (log_split>1.)				
-
-	# 	if self.state.rule_applied==0:
-	# 		# Split between 0 and 1 as s. 
-	# 		# Map to l from x+1 to x+w-1. 
-	# 		self.state.boundaryscaled_split = ((self.state.w-2)*log_split+self.state.x+1).astype(int)
-			
-	# 		# Transform to local patch coordinates.
-	# 		self.state.boundaryscaled_split -= self.state.x
-	# 		state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-	# 		state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-
-	# 	if self.state.rule_applied==1:
-	# 		self.state.boundaryscaled_split = ((self.state.h-2)*log_split+self.state.y+1).astype(int)
-			
-	# 		# Transform to local patch coordinates.
-	# 		self.state.boundaryscaled_split -= self.state.y
-	# 		state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
-	# 		state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
-
-	# 	# Must add resultant states to parse tree.
-	# 	# state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-	# 	# state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
-	# 	state1.image_index = self.state.image_index		
-	# 	state2.image_index = self.state.image_index
-	# 	state1.depth = self.state.depth+1
-	# 	state2.depth = self.state.depth+1
-	# 	# Always inserting the lower indexed split first.
-	# 	self.insert_node(state1,self.current_parsing_index+1)
-	# 	self.insert_node(state2,self.current_parsing_index+2)
 
 	def process_assignment(self):
 		state1 = copy.deepcopy(self.parse_tree[self.current_parsing_index])
@@ -398,12 +346,12 @@ class Parser():
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
-
-		# # Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
 		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].reward /= (self.data_loader.image_size**2)
+		# 	self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+
+		# Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward /= (self.data_loader.image_size**2)
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))

@@ -24,7 +24,7 @@ class Parser():
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
 		self.initial_beta = 1.
-		self.final_beta = 0.8
+		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
 		self.initial_epsilon = 1e-3
@@ -126,7 +126,7 @@ class Parser():
 		
 		rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
 				self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
-
+		embed()
 		# Don't need to change this, since rule mask is fed as input to the model. 
 		self.state.rule_applied = npy.argmax(rule_probabilities)
 

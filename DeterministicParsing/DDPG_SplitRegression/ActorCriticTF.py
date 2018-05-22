@@ -91,7 +91,7 @@ class ActorCriticModel():
 	def __init__(self, sess, to_train=True):
 
 		self.sess = sess
-		
+		self.to_train = to_train		
 		# Here we instantiate the actor and critic (don't inherit).
 		# with tf.name_scope('ActorModel') as scope:
 		# with tf.variable_scope('ActorModel'):

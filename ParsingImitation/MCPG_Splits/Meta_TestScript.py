@@ -1,7 +1,10 @@
 #!/usr/bin/env python
 from headers import *
+i= 30
+command = "python ../Meta_RLClass.py --images ../../../ImageSets/NEW350BINLABS.npy --labels ../../../ImageSets/NEW350BINLABS.npy --indices ../../../ImageSets/TestIndices.npy --train 0 --gpu 1,2 --model saved_models/model_epoch{0}.ckpt --suffix model_test_{0}".format(i)
+subprocess.call(command.split(),shell=False)
 
-for i in range(0,510,10):
+for i in range(40,510,10):
 # for i in range(8,60):
 	print("###############################################")
 	print("STARTING WITH:",i)

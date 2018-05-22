@@ -47,8 +47,7 @@ class Parser():
 			# Only adding non-terminal states to the memory. 
 			# REMEMBER TO CHANGE THIS WHEN PAINTING.		
 
-			# Now only for split rules. First just learn splits. 
-			if self.parse_tree[k].rule_applied==0 or self.parse_tree[k].rule_applied==1:
+			if self.parse_tree[k].label==0:
 				self.memory.append_to_memory(self.parse_tree[k])
 
 	def burn_in(self):
@@ -56,13 +55,13 @@ class Parser():
 		# For one epoch, parse all images, store in memory.
 		image_index_list = range(self.data_loader.num_images)
 		npy.random.shuffle(image_index_list)
+		
+		self.set_parameters(0)
 
 		for i in range(self.data_loader.num_images):
 			print("Burning in image:",i)
 			# Initialize tree.
 			self.initialize_tree(image_index_list[i])
-
-			self.set_parameters(0)
 
 			# Parse Image.
 			self.construct_parse_tree(image_index_list[i])
@@ -264,13 +263,10 @@ class Parser():
 		self.set_rule_mask()
 
 		# Predict rule probabilities and select a rule from it IF epsilon.
-		# if npy.random.random()<self.annealed_epsilon:
-		# 	self.select_rule_random()
-		# else:
-		# 	self.select_rule_learner_greedy()
-
-		# NOW CHEATING AND ALWAYS SELECTING RULE VIA THE EXPERT.
-		self.select_rule_expert_greedy()
+		if npy.random.random()<self.annealed_epsilon:
+			self.select_rule_random()
+		else:
+			self.select_rule_learner_greedy()
 
 		if self.state.rule_applied==0 or self.state.rule_applied==1: 
 			# Function to process splits.	
@@ -328,29 +324,62 @@ class Parser():
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
 		# # Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
-		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].reward /= (self.data_loader.image_size**2)
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward /= (self.data_loader.image_size**2)
 
-		# Not using tan rewards.
-		# if self.args.tanrewards:
-		# self.alpha = 1.1
-			
-		# # Non-linearizing rewards.
-		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].reward = npy.tan(self.alpha*self.parse_tree[j].reward)		
+	# def backprop(self, iter_num):
+	# 	self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+	# 	self.batch_target_splits = npy.zeros((self.batch_size,1))
+	# 	self.batch_lower_lims = npy.zeros((self.batch_size,1))
+	# 	self.batch_upper_lims = npy.ones((self.batch_size,1))
 
-		# # Now propagating likelihood ratios.
-		# for j in reversed(range(len(self.parse_tree))):
-		# 	if (self.parse_tree[j].backward_index>=0):
-		# 		self.parse_tree[self.parse_tree[j].backward_index].likelihood_ratio *= self.parse_tree[j].likelihood_ratio
+	# 	# Select indices of memory to put into batch.
+	# 	indices = self.memory.sample_batch()
+		
+	# 	# Accumulate above variables into batches. 
+	# 	for k in range(len(indices)):
+
+	# 		state = copy.deepcopy(self.memory.memory[indices[k]])
+
+	# 		self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,0] = \
+	# 			self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
+
+	# 		if state.rule_applied==0 or state.rule_applied==1:
+	# 			self.batch_target_splits[k] = state.split
+
+	# 			if state.rule_applied==0:
+	# 				self.batch_lower_lims[k] = float(state.x+1)
+	# 				self.batch_upper_lims[k] = float(state.x+state.w-1)
+	# 			if state.rule_applied==1:
+	# 				self.batch_lower_lims[k] = float(state.y+1)
+	# 				self.batch_upper_lims[k] = float(state.y+state.h-1)
+
+	# 	# embed()
+	# 	# Call sess train.
+
+	# 	# merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
+	# 	# 						self.model.lower_lim: self.batch_lower_lims,
+	# 	# 						self.model.upper_lim: self.batch_upper_lims,
+	# 	# 						self.model.target_split: self.batch_target_splits})
+
+	# 	self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
+	# 							self.model.lower_lim: self.batch_lower_lims,
+	# 							self.model.upper_lim: self.batch_upper_lims,
+	# 							self.model.target_split: self.batch_target_splits})
+
+	# 	# self.model.tf_writer.add_summary(merged, iter_num)		
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
 		self.batch_target_splits = npy.zeros((self.batch_size,1))
+		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
+		self.batch_rule_weights = npy.zeros((self.batch_size,1))
+		self.batch_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_lower_lims = npy.zeros((self.batch_size,1))
 		self.batch_upper_lims = npy.ones((self.batch_size,1))
 
@@ -359,14 +388,24 @@ class Parser():
 		
 		# Accumulate above variables into batches. 
 		for k in range(len(indices)):
-
 			state = copy.deepcopy(self.memory.memory[indices[k]])
 
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,0] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
+			self.batch_rule_masks[k] = state.rule_mask
+
+			if state.rule_applied==-1:
+				self.batch_target_rules[k, state.rule_applied] = 0.
+				self.batch_rule_weights[k] = 0.				
+			else:
+				self.batch_target_rules[k, state.rule_applied] = 1.
+				# self.batch_rule_weights[k] = state.reward
+				self.batch_rule_weights[k] = 1.
 
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_target_splits[k] = state.split
+				# self.batch_split_weights[k] = state.reward
+				self.batch_split_weights[k] = 1.
 
 				if state.rule_applied==0:
 					self.batch_lower_lims[k] = float(state.x+1)
@@ -374,21 +413,18 @@ class Parser():
 				if state.rule_applied==1:
 					self.batch_lower_lims[k] = float(state.y+1)
 					self.batch_upper_lims[k] = float(state.y+state.h-1)
-
 		# embed()
 		# Call sess train.
+		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
+						self.model.lower_lim: self.batch_lower_lims,
+						self.model.upper_lim: self.batch_upper_lims,
+						self.model.target_split: self.batch_target_splits,
+						self.model.split_return_weight: self.batch_split_weights,
+						self.model.target_rule: self.batch_target_rules,
+						self.model.rule_mask: self.batch_rule_masks,
+						self.model.rule_return_weight: self.batch_rule_weights})
 
-		# merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
-		# 						self.model.lower_lim: self.batch_lower_lims,
-		# 						self.model.upper_lim: self.batch_upper_lims,
-		# 						self.model.target_split: self.batch_target_splits})
-
-		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
-								self.model.lower_lim: self.batch_lower_lims,
-								self.model.upper_lim: self.batch_upper_lims,
-								self.model.target_split: self.batch_target_splits})
-
-		# self.model.tf_writer.add_summary(merged, iter_num)		
+		self.model.tf_writer.add_summary(merged, iter_num)		
 
 	def meta_training(self,train=True):
 

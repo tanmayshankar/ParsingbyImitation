@@ -24,7 +24,7 @@ class Parser():
 		# Beta is probability of using expert.
 		self.anneal_epochs = 50
 		self.initial_beta = 1.
-		self.final_beta = 0.5
+		self.final_beta = 0.8
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
 		self.initial_epsilon = 1e-3
@@ -377,13 +377,13 @@ class Parser():
 				self.batch_rule_weights[k] = 0.				
 			else:
 				self.batch_target_rules[k, state.rule_applied] = 1.
-				self.batch_rule_weights[k] = state.reward
-				# self.batch_rule_weights[k] = 1.
+				# self.batch_rule_weights[k] = state.reward
+				self.batch_rule_weights[k] = 1.
 
 			if state.rule_applied==0 or state.rule_applied==1:
 				self.batch_sampled_splits[k] = state.split
-				self.batch_split_weights[k] = state.reward
-				# self.batch_split_weights[k] = 1.
+				# self.batch_split_weights[k] = state.reward
+				self.batch_split_weights[k] = 1.
 		# embed()
 		# Call sess train.
 		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,

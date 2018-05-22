@@ -29,7 +29,8 @@ class Meta_RLClass():
 		if self.args.scale:
 			self.model = ScaledLogitNormalTFModel.Model(num_channels=self.data_loader.num_channels)
 		else:
-			self.model = LogitNormal_TFModel.Model(num_channels=self.data_loader.num_channels)
+			# self.model = LogitNormal_TFModel.Model(num_channels=self.data_loader.num_channels)
+			pass
 		self.args.train = bool(self.args.train)
 
 		if self.args.model:
@@ -48,9 +49,9 @@ class Meta_RLClass():
 			self.parser = ScaledLogitParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
 				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 		else:
-			self.parser = DaggerImitationParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
-				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
-
+			# self.parser = DaggerImitationParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+			# 	memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+			pass
 	def train(self):
 		self.parser.meta_training(self.args.train)
 

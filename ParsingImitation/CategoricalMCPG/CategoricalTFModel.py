@@ -73,8 +73,8 @@ class Model():
 	
 		self.split_mask = tf.placeholder(tf.float32,shape=(None,255),name='split_mask')
 
-		self.hor_preprobs = tf.layers.dense(self.fc6,self.image_size-1)
-		self.ver_preprobs = tf.layers.dense(self.fc6,self.image_size-1)
+		self.hor_preprobs = tf.layers.dense(self.fc6,self.image_size-1,activation=tf.nn.softmax)
+		self.ver_preprobs = tf.layers.dense(self.fc6,self.image_size-1,activation=tf.nn.softmax)
 
 		self.masked_hor_probs = tf.multiply(self.split_mask,self.hor_preprobs,name='masked_hor_probs')
 		self.masked_ver_probs = tf.multiply(self.split_mask,self.ver_preprobs,name='masked_ver_probs')
@@ -105,6 +105,7 @@ class Model():
 		self.vertical_split_loss = -tf.multiply(self.vsplit_loglikelihood,self.vertical_split_return_weight,name='vertical_split_loss')
 
 		# Since TF Case behaves shittily with batches, using tf.where instead.
+
 		self.split_loss = self.horizontal_split_loss+self.vertical_split_loss
 
 	def logging_ops(self):
@@ -128,7 +129,11 @@ class Model():
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
-		self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
+
+		# Clipping gradients because of NaN values. 
+		self.gradients_vars = self.optimizer.compute_gradients(self.total_loss)
+		self.clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.gradients_vars]
+		self.train = self.optimizer.apply_gradients(self.clipped_gradients)
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)

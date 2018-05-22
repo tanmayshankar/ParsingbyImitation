@@ -141,9 +141,11 @@ class Parser():
 		
 		# Greedily select a rule. 
 		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
-
+		if self.state.w==0 or self.state.h==0:
+			embed()
 		# Now returning both greedy axes and greedy splits. 
 		self.greedy_axis,self.greedy_split = EntropySplits.best_valid_split(entropy_image_input, self.state.rule_mask)
+
 		# EntropySplits takes care of the case where splits along one axis are invalid
 		# but the other axis is valid .
 
@@ -178,6 +180,8 @@ class Parser():
 		self.state.boundaryscaled_split = copy.deepcopy(self.greedy_split)
 
 		if self.state.rule_applied==0:
+			if self.state.boundaryscaled_split==0 or self.state.boundaryscaled_split==self.state.w:
+				embed()
 			# self.state.boundaryscaled_split = self.greedy_split + self.state.x
 			# self.state.split = float(self.state.boundaryscaled_split-self.state.x)/self.state.w
 			# self.state.boundaryscaled_split -= self.state.x
@@ -186,7 +190,9 @@ class Parser():
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
-		if self.state.rule_applied==1:	
+		if self.state.rule_applied==1:
+			if self.state.boundaryscaled_split==0 or self.state.boundaryscaled_split==self.state.h:
+				embed()
 			self.state.split = float(self.state.boundaryscaled_split)/self.state.h
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)

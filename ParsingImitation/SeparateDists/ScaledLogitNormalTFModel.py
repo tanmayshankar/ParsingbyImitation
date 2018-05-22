@@ -38,22 +38,24 @@ class Model():
 			self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_size=(self.conv_sizes[i]),strides=(self.conv_strides[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
 
 		# Now going to flatten this and move to a fully connected layer. 		
-		self.flat_conv = tf.layers.flatten(self.conv[-1])
+		self.flat_conv = tf.layers.flatten(self.conv[-1],name='flat_conv')
 
 	def define_rule_stream(self):
+		self.rule_fc5_shape = 1000
 		self.rule_fc6_shape = 200
-		self.rule_fc6 = tf.layers.dense(self.flat_conv,self.rule_fc6_shape,activation=tf.nn.relu)
+		self.rule_fc5 = tf.layers.dense(self.flat_conv,self.rule_fc5_shape,activation=tf.nn.relu,name='rule_fc5')
+		self.rule_fc6 = tf.layers.dense(self.rule_fc5,self.rule_fc6_shape,activation=tf.nn.relu,name='rule_fc6')
 
 		self.num_rules = 4
-		self.rule_presoftmax = tf.layers.dense(self.rule_fc6,self.num_rules)
+		self.rule_presoftmax = tf.layers.dense(self.rule_fc6,self.num_rules,name='rule_presoftmax')
 		self.premask_probabilities = tf.nn.softmax(self.rule_presoftmax,name='premask_probabilities')
 
-		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
-		self.prenorm_masked_probabilities = tf.multiply(self.premask_probabilities,self.rule_mask)
-		self.prenorm_mask_sum = tf.reduce_sum(self.prenorm_masked_probabilities,axis=-1,keep_dims=True)
-		self.rule_probabilities = tf.divide(self.prenorm_masked_probabilities,self.prenorm_mask_sum)
+		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='rule_mask')
+		self.prenorm_masked_probabilities = tf.multiply(self.premask_probabilities,self.rule_mask,name='prenorm_masked_probabilities')
+		self.prenorm_mask_sum = tf.reduce_sum(self.prenorm_masked_probabilities,axis=-1,keep_dims=True,name='prenorm_mask_sum')
+		self.rule_probabilities = tf.divide(self.prenorm_masked_probabilities,self.prenorm_mask_sum,name='rule_probabilities')
 
-		self.rule_dist = tf.contrib.distributions.Categorical(probs=self.rule_probabilities)
+		self.rule_dist = tf.contrib.distributions.Categorical(probs=self.rule_probabilities,name='rule_dist')
 
 		self.sampled_rule = self.rule_dist.sample()
 		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
@@ -64,13 +66,14 @@ class Model():
 		# self.rule_log_probs = self.rule_dist.log_prob(self.target_rule)
 		# self.rule_loss = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
 		# self.rule_loss =  tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
-		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
+		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1),name='rule_loss')
 		# self.rule_loss = tf.multiply(self.rule_return_weight,self.rule_log_probs)
 
 	def define_split_stream(self):
-
+		self.fc5_shape = 1000
 		self.fc6_shape = 200
-		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
+		self.fc5 = tf.layers.dense(self.flat_conv,self.fc5_shape,activation=tf.nn.relu,name='split_fc5')
+		self.fc6 = tf.layers.dense(self.fc5,self.fc6_shape,activation=tf.nn.relu,name='split_fc6')
 	
 		self.horizontal_normal_mean = tf.layers.dense(self.fc6,1,name='horizontal_normal_mean')
 		self.horizontal_normal_var = tf.layers.dense(self.fc6,1,activation=tf.nn.softplus,name='horizontal_normal_var')
@@ -91,7 +94,7 @@ class Model():
 
 		# Defining transformed distributions. 
 		self.sigmoid_bijector = tf.contrib.distributions.bijectors.Sigmoid()
-		self.affine_bijector = tf.contrib.distributions.bijectors.Affine(shift=self.lower_lim,scale_identity_multiplier=self.upper_lim-self.lower_lim)
+		self.affine_bijector = tf.contrib.distributions.bijectors.Affine(shift=self.lower_lim,scale_identity_multiplier=(self.upper_lim-self.lower_lim))
 		
 		self.hor_sigmoid_dist = tf.contrib.distributions.TransformedDistribution(self.horizontal_normal_dist,bijector=self.sigmoid_bijector)
 		self.ver_sigmoid_dist = tf.contrib.distributions.TransformedDistribution(self.vertical_normal_dist,bijector=self.sigmoid_bijector)
@@ -109,8 +112,8 @@ class Model():
 		self.horizontal_split_loglikelihood = self.hor_affsig_dist.log_prob(self.sampled_split)	
 		self.vertical_split_loglikelihood = self.ver_affsig_dist.log_prob(self.sampled_split)
 
-		self.horizontal_split_loss = -tf.multiply(self.horizontal_split_loglikelihood,self.horizontal_split_return_weight)
-		self.vertical_split_loss = -tf.multiply(self.vertical_split_loglikelihood,self.vertical_split_return_weight)
+		self.horizontal_split_loss = -tf.multiply(self.horizontal_split_loglikelihood,self.horizontal_split_return_weight,name='horizontal_split_loss')
+		self.vertical_split_loss = -tf.multiply(self.vertical_split_loglikelihood,self.vertical_split_return_weight,name='vertical_split_loss')
 
 		# self.split_loss = -tf.multiply(self.split_loglikelihood,self.split_return_weight)
 		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
@@ -119,7 +122,8 @@ class Model():
 		# Create a placeholder to set split indicator.
 		self.split_indicator = tf.placeholder(tf.int32,shape=(None,1),name='split_indicator')
 		# Since TF Case behaves shittily with batches, using tf.where instead.
-		self.split_loss = tf.where(tf.equal(self.split_indicator,0),x=self.horizontal_split_loss,y=self.vertical_split_loss,name='where_split_loss')		
+		self.split_loss = self.horizontal_split_loss+self.vertical_split_loss
+		# self.split_loss = tf.where(tf.equal(self.split_indicator,0),x=self.horizontal_split_loss,y=self.vertical_split_loss,name='where_split_loss')		
 
 	def logging_ops(self):
 		# Create file writer to write summaries. 		
@@ -141,12 +145,18 @@ class Model():
 
 		self.loss_indicator = tf.placeholder(tf.int32,shape=(None,1),name='loss_indicator')
 		# embed()
-		self.total_loss = tf.where(tf.equal(self.loss_indicator,0),x=self.rule_loss,y=self.rule_loss+self.split_loss)
-		# self.total_loss = self.rule_loss+self.split_loss
+		# self.total_loss = tf.where(tf.equal(self.loss_indicator,0),x=self.rule_loss,y=self.rule_loss+self.split_loss)
+		self.total_loss = self.rule_loss+self.split_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
-		self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
+
+		# Clipping gradients because of NaN values. 
+		self.gradients_vars = self.optimizer.compute_gradients(self.total_loss)
+		self.clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.gradients_vars]
+		self.train = self.optimizer.apply_gradients(self.clipped_gradients)
+		# Instead of directly minimizing the loss, clip gradients and then apply them.
+		# self.train = self.optimizer.minimize(self.total_loss,name='Adam_Optimizer')
 
 		# Writing graph and other summaries in tensorflow.
 		self.writer = tf.summary.FileWriter('training',self.sess.graph)
