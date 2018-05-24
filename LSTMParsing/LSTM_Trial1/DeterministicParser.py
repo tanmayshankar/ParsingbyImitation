@@ -14,7 +14,7 @@ class Parser():
 		self.plot_manager = plot_manager
 		self.args = args
 		self.sess = session
-		self.batch_size = 10
+		self.batch_size = 5
 		self.num_epochs = 500
 		self.save_every = 1
 		self.max_parse_steps = 20
@@ -23,7 +23,7 @@ class Parser():
 		self.image_size = 256
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-		self.initial_beta = 0.5
+		self.initial_beta = 1.
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -327,7 +327,7 @@ class Parser():
 				self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
 
 			self.current_parsing_index+=1
-			print(self.current_parsing_index,len(self.parse_tree))
+			# print(self.current_parsing_index,len(self.parse_tree))
 
 	def backward_tree_propagation(self):
 
@@ -420,7 +420,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			# self.burn_in()
+			self.burn_in()
 			self.model.save_model(0)
 		else:
 			self.num_epochs=1	

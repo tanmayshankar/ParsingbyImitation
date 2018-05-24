@@ -115,14 +115,14 @@ class Model():
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
 		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
 		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
+		self.split_loss_summary = tf.summary.scalar('Split_Loss',tf.reduce_mean(self.split_loss))
 
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		
 
 	def training_ops(self):
 
-		self.split_loss_lambda = tf.constant(1.)
-
+		self.split_loss_lambda = tf.constant(0.0001)
 		self.total_loss = self.rule_loss+tf.multiply(self.split_loss_lambda,self.split_loss)
 		# self.total_loss = self.split_loss
 
