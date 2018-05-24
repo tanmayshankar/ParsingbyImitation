@@ -145,9 +145,9 @@ class Model():
 
 		self.initialize_base_model(sess,to_train=to_train)
 		self.define_rule_stream()
-		self.define_split_stream()
-		self.logging_ops()
+		self.define_split_stream()		
 		self.training_ops()
+		self.logging_ops()
 
 		if pretrained_weight_file:
 			self.model_load(pretrained_weight_file)
