@@ -93,13 +93,13 @@ class Model():
 		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
 		# self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
 		# self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
-
+		self.split_loss_summary = tf.summary.scalar('Split_Loss',tf.reduce_mean(self.split_loss))
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		
 
 	def training_ops(self):
-
-		self.split_loss_lambda = tf.constant(1.)
+		# Trial3 - 0.01, Trial4 - 0.001
+		self.split_loss_lambda = tf.constant(0.001)
 
 		self.total_loss = self.rule_loss+tf.multiply(self.split_loss_lambda,self.split_loss)
 		# self.total_loss = self.split_loss
