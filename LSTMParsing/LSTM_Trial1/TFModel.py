@@ -113,10 +113,10 @@ class Model():
 		self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
 
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
-		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
-		self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
+		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_Loss',tf.reduce_mean(self.rule_cross_entropy))
+		self.reward_weight_summary = tf.summary.scalar('Reward_Value',tf.reduce_mean(self.rule_return_weight))
 		self.split_loss_summary = tf.summary.scalar('Split_Loss',tf.reduce_mean(self.split_loss))
-
+		self.total_loss_summary = tf.summary.scalar('Total_Loss',tf.reduce_mean(self.total_loss))
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		
 
@@ -170,8 +170,9 @@ class Model():
 		self.define_LSTM()
 		self.define_rule_stream()
 		self.define_split_stream()
-		self.logging_ops()
 		self.training_ops()
+		self.logging_ops()
+
 
 		if pretrained_weight_file:
 			self.model_load(pretrained_weight_file)

@@ -122,7 +122,7 @@ class Parser():
 		input_image = npy.zeros((self.model.max_timesteps,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 		# It starts of with parse_index=0 at index 0, then goes down to current_parsing_index (for the forward pass)
 		# Change for 3 channel image.
-		for parse_index in range(self.current_parsing_index):			
+		for parse_index in range(self.current_parsing_index+1):			
 			state = self.parse_tree[parse_index]
 
 			input_image[parse_index, state.x:state.x+state.w, state.y:state.y+state.h, 0] = \
@@ -208,7 +208,7 @@ class Parser():
 
 		# It starts of with parse_index=0 at index 0, then goes down to current_parsing_index (for the forward pass)
 		# Change for 3 channel image.
-		for parse_index in range(self.current_parsing_index):			
+		for parse_index in range(self.current_parsing_index+1):			
 			state = self.parse_tree[parse_index]
 
 			input_image[parse_index, state.x:state.x+state.w, state.y:state.y+state.h, 0] = \
@@ -369,7 +369,7 @@ class Parser():
 			state, parse_tree_len, parse_tree = copy.deepcopy(self.memory.memory[indices[k]])
 
 			# Assemble batch of states. 
-			for jx in range(parse_tree_len):
+			for jx in range(parse_tree_len+1):
 				state_alt = parse_tree[jx]				
 				self.batch_states[k, jx, state_alt.x:state_alt.x+state_alt.w, state_alt.y:state_alt.y+state_alt.h,0] = \
 					copy.deepcopy(self.data_loader.images[state_alt.image_index,state_alt.x:state_alt.x+state_alt.w,state_alt.y:state_alt.y+state_alt.h])
