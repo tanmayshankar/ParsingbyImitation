@@ -8,7 +8,7 @@ class Parser():
 	# In this class, we are going to learn assignments and splits.
 	def __init__(self, model_instance=None, data_loader_instance=None, memory_instance=None, plot_manager=None, args=None, session=None): 
 
-		self.ACModel = model_instance
+		self.model = model_instance
 		self.data_loader = data_loader_instance
 		self.memory = memory_instance
 		self.plot_manager = plot_manager
@@ -22,7 +22,7 @@ class Parser():
 		self.max_depth = 4
 
 		# Beta is probability of using expert.
-		self.anneal_epochs = 100
+		self.anneal_epochs = 50
 		self.initial_beta = 1.
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
@@ -47,10 +47,9 @@ class Parser():
 			# Only adding non-terminal states to the memory. 
 			# REMEMBER TO CHANGE THIS WHEN PAINTING.		
 
-			# Now only for split rules. First just learn splits. AND MUST check depth. 
-			if self.parse_tree[k].depth==self.switch_depth-1:
-				if self.parse_tree[k].rule_applied==0 or self.parse_tree[k].rule_applied==1:
-					self.memory.append_to_memory(self.parse_tree[k])
+			# Now only for split rules. First just learn splits. 
+			if self.parse_tree[k].rule_applied==0 or self.parse_tree[k].rule_applied==1:
+				self.memory.append_to_memory(self.parse_tree[k])
 
 	def burn_in(self):
 		
@@ -58,24 +57,22 @@ class Parser():
 		image_index_list = range(self.data_loader.num_images)
 		npy.random.shuffle(image_index_list)
 
-		self.burn_epochs = 10
 		self.set_parameters(0)
-	
-		for e in range(self.burn_epochs):
-			for i in range(self.data_loader.num_images):
-				print("Epoch",e,"Burning in image:",i)
-				# Initialize tree.
-				self.initialize_tree(image_index_list[i])
 
-				# Parse Image.
-				self.construct_parse_tree(image_index_list[i])
+		for i in range(self.data_loader.num_images):
+			print("Burning in image:",i)
+			# Initialize tree.
+			self.initialize_tree(image_index_list[i])
 
-				# Compute rewards.
-				# self.compute_rewards()
-				self.backward_tree_propagation()
+			# Parse Image.
+			self.construct_parse_tree(image_index_list[i])
 
-				# For every state in the parse tree, push to memory.
-				self.append_parse_tree()
+			# Compute rewards.
+			# self.compute_rewards()
+			self.backward_tree_propagation()
+
+			# For every state in the parse tree, push to memory.
+			self.append_parse_tree()
 
 	def set_parameters(self,e):
 
@@ -129,8 +126,8 @@ class Parser():
 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,:] = \
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 		
-		rule_probabilities = self.sess.run(self.ACModel.rule_probabilities, feed_dict={self.ACModel.input: input_image,
-				self.ACModel.rule_mask: self.state.rule_mask.reshape((1,self.ACModel.num_rules))})
+		rule_probabilities = self.sess.run(self.model.rule_probabilities, feed_dict={self.model.input: input_image,
+				self.model.rule_mask: self.state.rule_mask.reshape((1,self.model.num_rules))})
 
 		# Don't need to change this, since rule mask is fed as input to the model. 
 		self.state.rule_applied = npy.argmax(rule_probabilities)
@@ -208,25 +205,23 @@ class Parser():
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 
 		if self.state.rule_applied==0:	
-			self.state.split = self.sess.run(self.ACModel.actor_network.predicted_split,feed_dict={self.ACModel.actor_network.input: input_image,
-				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.x+1,(1,1)),
-				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1))})
+			self.state.split = self.sess.run(self.model.predicted_split,feed_dict={self.model.input: input_image,
+				self.model.lower_lim: npy.reshape(self.state.x+1,(1,1)),
+				self.model.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1))})
 			# embed()
 			self.state.split = int(self.state.split[0])
-			# embed()
-			# print(float(self.state.split-self.state.x)/self.state.w)
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split-self.state.x
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:
-			self.state.split = self.sess.run(self.ACModel.actor_network.predicted_split,feed_dict={self.ACModel.actor_network.input: input_image,
-				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.y+1,(1,1)),
-				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1))})
+			self.state.split = self.sess.run(self.model.predicted_split,feed_dict={self.model.input: input_image,
+				self.model.lower_lim: npy.reshape(self.state.y+1,(1,1)),
+				self.model.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1))})
 			# embed()
 			self.state.split = int(self.state.split[0])
-			# print(float(self.state.split-self.state.y)/self.state.h)
+
 			# Transform to local patch coordinates.
 			self.state.boundaryscaled_split = self.state.split- self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
@@ -299,10 +294,6 @@ class Parser():
 		self.predicted_labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h] = self.state.label
 
 	def construct_parse_tree(self, image_index):
-		
-		# Sample a depth beyond which we follow the expert policy deterministically. 
-		# This switch depth is true for the entire parse - i.e. all branches of the parse tree. 
-		self.switch_depth = npy.random.randint(1,high=self.max_depth+1)
 
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):					
 
@@ -310,16 +301,11 @@ class Parser():
 			if self.state.label==0:
 
 				if self.args.train:
-					if self.state.depth<self.switch_depth:
-
-						random_probability = npy.random.random()
-
-						if random_probability<self.annealed_beta:
-							self.parse_nonterminal_expert()
-						else:
-							self.parse_nonterminal_learner()
+					# Using DT Policy with probability beta.
+					if npy.random.random()<self.annealed_beta:
+						self.parse_nonterminal_expert()
 					else:
-						self.parse_nonterminal_expert()				
+						self.parse_nonterminal_learner()
 				else:
 					# Using Learnt Policy
 					# self.parse_nonterminal_expert()
@@ -364,11 +350,9 @@ class Parser():
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-	
+		self.batch_target_splits = npy.zeros((self.batch_size,1))
 		self.batch_lower_lims = npy.zeros((self.batch_size,1))
 		self.batch_upper_lims = npy.ones((self.batch_size,1))
-
-		self.batch_target_Qvalues = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
 		indices = self.memory.sample_batch()
@@ -381,8 +365,8 @@ class Parser():
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,:] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
 
-			if state.rule_applied==0 or state.rule_applied==1:				
-				self.batch_target_Qvalues[k] = state.reward
+			if state.rule_applied==0 or state.rule_applied==1:
+				self.batch_target_splits[k] = state.split
 
 				if state.rule_applied==0:
 					self.batch_lower_lims[k] = float(state.x+1)
@@ -391,43 +375,20 @@ class Parser():
 					self.batch_lower_lims[k] = float(state.y+1)
 					self.batch_upper_lims[k] = float(state.y+state.h-1)
 
-		# MAYBE UPDATE CRITIC FIRST, BECAUSE OTHERWISE THE ACTION "TAKEN" Changes? 
-		self.sess.run(self.ACModel.train_critic, feed_dict={self.ACModel.actor_network.input: self.batch_states,
-			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
-			self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
-			self.ACModel.critic_network.input: self.batch_states,
-			self.ACModel.target_Qvalue: self.batch_target_Qvalues})
+		# embed()
+		# Call sess train.
 
-		self.sess.run(self.ACModel.train_actor, feed_dict={self.ACModel.actor_network.input: self.batch_states,
-			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
-			self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
-			self.ACModel.critic_network.input: self.batch_states})
+		# merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
+		# 						self.model.lower_lim: self.batch_lower_lims,
+		# 						self.model.upper_lim: self.batch_upper_lims,
+		# 						self.model.target_split: self.batch_target_splits})
 
-		# merged, _ = self.sess.run([self.ACModel.merged_summaries, self.ACModel.train], feed_dict={self.ACModel.input: self.batch_states,
-		# 						self.ACModel.lower_lim: self.batch_lower_lims,
-		# 						self.ACModel.upper_lim: self.batch_upper_lims,
-		# 						self.ACModel.target_split: self.batch_target_splits})
+		self.sess.run(self.model.train, feed_dict={self.model.input: self.batch_states,
+								self.model.lower_lim: self.batch_lower_lims,
+								self.model.upper_lim: self.batch_upper_lims,
+								self.model.target_split: self.batch_target_splits})
 
-		# self.ACModel.tf_writer.add_summary(merged, iter_num)		
-
-	def epoch_setup(self,e):
-		self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
-		# self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
-
-		self.image_index_list = range(self.data_loader.num_images)
-		npy.random.shuffle(self.image_index_list)
-
-		# Set training parameters (Update epsilon).
-		self.set_parameters(e)
-
-	def save_setup(self,e):
-		if self.args.train:
-			npy.save("rewards_{0}.npy".format(e),self.average_episode_rewards)
-			if ((e%self.save_every)==0):				
-				self.ACModel.save_model(e)
-		else: 
-			npy.save("val_rewards_{0}.npy".format(self.args.suffix),self.average_episode_rewards)
+		# self.model.tf_writer.add_summary(merged, iter_num)		
 
 	def meta_training(self,train=True):
 
@@ -437,23 +398,31 @@ class Parser():
 		# embed()
 		if self.args.train:
 			self.burn_in()
-			self.ACModel.save_model(0)
+			self.model.save_model(0)
 		else:
 			self.num_epochs=1	
 
 		# For all epochs. 
 		for e in range(self.num_epochs):
 
-			self.epoch_setup(e)
+			self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
+			# self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
+			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
+
+			image_index_list = range(self.data_loader.num_images)
+			npy.random.shuffle(image_index_list)
 
 			# For all images in the dataset.
 			for i in range(self.data_loader.num_images):
 				
 				# Initialize the tree for the current image.
-				self.initialize_tree(self.image_index_list[i])
+				self.initialize_tree(image_index_list[i])
+
+				# Set training parameters (Update epsilon).
+				self.set_parameters(e)
 
 				# Parse this image.
-				self.construct_parse_tree(self.image_index_list[i])
+				self.construct_parse_tree(image_index_list[i])
 
 				# Propagate rewards. 
 				self.backward_tree_propagation()
@@ -464,10 +433,17 @@ class Parser():
 				if self.args.train:
 					# Backprop --> over a batch sampled from memory. 
 					self.backprop(self.data_loader.num_images*e+i)
-
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
-				self.average_episode_rewards[self.image_index_list[i]] = self.parse_tree[0].reward
+				self.average_episode_rewards[image_index_list[i]] = self.parse_tree[0].reward
 
-			self.save_setup(e)
+			if self.args.train:
+				# npy.save("predicted_labels_{0}.npy".format(e),self.predicted_labels)
+				npy.save("rewards_{0}.npy".format(e),self.average_episode_rewards)
+				if ((e%self.save_every)==0):
+					self.model.save_model(e)				
+			else: 
+				npy.save("validation_{0}.npy".format(self.args.suffix),self.predicted_labels)
+				npy.save("val_rewards_{0}.npy".format(self.args.suffix),self.average_episode_rewards)
+			
 			print("Cummulative Reward for Episode:",self.average_episode_rewards.mean())

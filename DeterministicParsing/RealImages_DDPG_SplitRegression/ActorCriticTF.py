@@ -3,7 +3,7 @@ from headers import *
 
 class BaseModel():
 
-	def __init__(self, image_size=256, num_channels=1):
+	def __init__(self, image_size=256, num_channels=3):
 		self.image_size = image_size
 		self.num_channels = num_channels
 		self.num_layers = 7
@@ -58,8 +58,12 @@ class ActorModel(BaseModel):
 		with tf.variable_scope(self.name_scope):
 
 			self.actor_fc8_shape = 100
-			self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.relu, name='actor_fc8')
-			self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split')
+			self.initialization_val = 3e-4
+			# self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.relu, name='actor_fc8')
+			self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.tanh, name='actor_fc8')
+			self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split',
+				kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+				bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 		
 			# Pixel indices, NOT normalized.
 			self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
@@ -76,15 +80,21 @@ class CriticModel(BaseModel):
 			# Must take in both the image as input and the current action taken by the policy. 
 			# Hence inherits from BOTH the Base and Actor Model. 
 			self.fc8_shape = 40
+			self.initialization_val = 3e-4
 			self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='critic_fc8')
+			# self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.tanh,name='critic_fc8')
 
 			# Concatenate the image features with the predicted split. 
 			self.concat_input = tf.concat([self.fc8, actor_action],axis=-1,name='concat')
 
 			# Now predict the Qvalue of this image state and the action. 
 			self.fc9_shape = 50
-			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9')
-			self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue')
+			# self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9')
+			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.tanh,name='critic_fc9')
+
+			self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue',
+				kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+				bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 
 class ActorCriticModel():
 
@@ -178,6 +188,7 @@ class ActorCriticModel():
 		saver.restore(self.sess, model_file)
 
 	def model_load_alt(self, model_file):
+		print("RESTORING MODEL FROM:", model_file)
 		saver = tf.train.Saver(max_to_keep=None)
 		saver.restore(self.sess,model_file)
 

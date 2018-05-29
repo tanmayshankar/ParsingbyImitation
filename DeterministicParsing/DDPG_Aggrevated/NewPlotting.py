@@ -27,9 +27,8 @@ class PlotManager():
 			self.ax[1].set_adjustable('box-forced')
 
 			if self.data_loader.num_channels==3:
-				# img = cv2.cvtColor(self.data_loader.images[image_index],cv2.COLOR_RGB2BGR)
-				img  = self.data_loader.orig_images[image_index]
-				# img/= abs(img).max()
+				print("HELLO")
+				img = cv2.cvtColor(self.data_loader.images[image_index],cv2.COLOR_RGB2BGR)
 				self.sc3 = self.ax[2].imshow(img,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
 			else:
 				self.sc3 = self.ax[2].imshow(self.data_loader.images[image_index],aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -71,7 +70,7 @@ class PlotManager():
 		self.sc1.set_data(self.alternate_predicted_labels)
 		self.parse_tree_plotting()
 		self.sc2.set_data(self.mask)
-		self.sc3.set_data(self.data_loader.orig_images[image_index])
+		self.sc3.set_data(self.data_loader.images[image_index])
 
 		# Plotting split line segments from the parse tree.
 		split_segs = []

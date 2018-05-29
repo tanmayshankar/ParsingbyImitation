@@ -87,7 +87,7 @@ class CriticModel(BaseModel):
 			self.concat_input = tf.concat([self.fc8, actor_action],axis=-1,name='concat')
 
 			# Now predict the Qvalue of this image state and the action. 
-			self.fc9_shape = 50
+			self.fc9_shape = 100
 			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 			self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 

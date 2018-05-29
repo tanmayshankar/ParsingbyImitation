@@ -22,7 +22,7 @@ class Parser():
 		self.max_depth = 4
 
 		# Beta is probability of using expert.
-		self.anneal_epochs = 50
+		self.anneal_epochs = 100
 		self.initial_beta = 1.
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
@@ -448,14 +448,14 @@ class Parser():
 			image_index_list = range(self.data_loader.num_images)
 			npy.random.shuffle(image_index_list)
 
+			# Set training parameters (Update epsilon).
+			self.set_parameters(e)
+			
 			# For all images in the dataset.
 			for i in range(self.data_loader.num_images):
 				
 				# Initialize the tree for the current image.
 				self.initialize_tree(image_index_list[i])
-
-				# Set training parameters (Update epsilon).
-				self.set_parameters(e)
 
 				# Parse this image.
 				self.construct_parse_tree(image_index_list[i])

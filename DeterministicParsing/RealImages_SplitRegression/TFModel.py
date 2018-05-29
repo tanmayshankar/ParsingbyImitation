@@ -3,7 +3,7 @@ from headers import *
 
 class Model():
 
-	def __init__(self, image_size=256, num_channels=1):
+	def __init__(self, image_size=256, num_channels=3):
 		self.image_size = image_size
 		self.num_channels = num_channels
 		self.num_layers = 7
@@ -41,28 +41,20 @@ class Model():
 		self.flat_conv = tf.layers.flatten(self.conv[-1])
 
 	def define_rule_stream(self):
-		self.rule_fc6_shape = 1000
-		self.rule_fc7_shape = 200
-		self.rule_fc6 = tf.layers.dense(self.flat_conv,self.rule_fc6_shape,activation=tf.nn.relu)
-		self.rule_fc7 = tf.layers.dense(self.rule_fc6,self.rule_fc7_shape,activation=tf.nn.relu)
-
+		self.fc6_shape = 1000
+		self.fc7_shape = 200
 		self.num_rules = 4
-		self.rule_presoftmax = tf.layers.dense(self.rule_fc7,self.num_rules)
+
+		self.rule_fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
+		self.rule_fc7 = tf.layers.dense(self.rule_fc6,self.fc6_shape,activation=tf.nn.relu)
+		self.rule_Qvalues = tf.layers.dense(self.rule_fc7,self.num_rules)
+
 		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
+		self.selected_rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
 
-		self.softmax_numerator = tf.multiply(self.rule_mask,tf.exp(self.rule_presoftmax),name='softmax_numerator')
-		self.softmax_denominator = tf.add(tf.reduce_sum(tf.exp(tf.multiply(self.rule_mask,self.rule_presoftmax)),axis=-1,keep_dims=True),
-			tf.subtract(tf.reduce_sum(self.rule_mask,axis=-1,keep_dims=True),tf.constant(float(self.num_rules))))
-		
-		self.rule_probabilities = tf.divide(self.softmax_numerator,self.softmax_denominator)
-
-		self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
-		self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
-
-		# self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
-		self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
-		# self.rule_loss = tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
-		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
+		self.predicted_rule_Qvalue = tf.reduce_sum(tf.multiply(self.rule_Qvalues,self.selected_rule_mask),axis=-1)
+		self.target_rule_Qvalue = tf.placeholder(tf.float32,shape=(None,),name='target_rule_Qvalue')
+		self.rule_loss = tf.losses.mean_squared_error(self.target_rule_Qvalue,self.predicted_rule_Qvalue)
 
 	def define_split_stream(self):
 		self.fc6_shape = 1000
@@ -79,9 +71,7 @@ class Model():
 		self.predicted_split = tf.multiply(self.upper_lim-self.lower_lim,self.sigmoid_split)+self.lower_lim
 
 		self.target_split = tf.placeholder(tf.float32,shape=(None,1),name='target_split')
-		self.split_mse = tf.losses.mean_squared_error(self.target_split,self.predicted_split)
-		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		self.split_loss = tf.multiply(self.split_mse,self.split_return_weight)
+		self.split_loss = tf.losses.mean_squared_error(self.target_split,self.predicted_split)
 
 	def logging_ops(self):
 		# Create file writer to write summaries. 		
@@ -89,20 +79,18 @@ class Model():
 
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
 		# self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_mean(self.split_loglikelihood))
-		self.rule_loglikelihood_summary = tf.summary.scalar('Rule_Loss',tf.reduce_mean(self.rule_cross_entropy))
-		self.reward_weight_summary = tf.summary.scalar('Reward_Value',tf.reduce_mean(self.rule_return_weight))
-		self.split_loss_summary = tf.summary.scalar('Split_Loss',tf.reduce_mean(self.split_loss))
-		self.scaled_split_loss_summary = tf.summary.scalar('Scaled_Split_Loss',tf.reduce_mean(self.scaled_split_loss))
-		self.total_loss_summary = tf.summary.scalar('Total_Loss',tf.reduce_mean(self.total_loss))
+		# self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
+		# self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
+		# self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
+		# self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
+
 		# Merge summaries. 
 		self.merged_summaries = tf.summary.merge_all()		
 
 	def training_ops(self):
-		# Trial3 - 0.01, Trial4 - 0.001
-		self.split_loss_lambda = tf.constant(0.001)
-		self.scaled_split_loss = tf.multiply(self.split_loss,self.split_loss_lambda)
-		self.total_loss = self.rule_loss+self.scaled_split_loss
-		# self.total_loss = self.split_loss
+
+		# self.total_loss = self.rule_loss+self.split_loss
+		self.total_loss = self.split_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
@@ -145,10 +133,10 @@ class Model():
 	def create_network(self, sess, pretrained_weight_file=None, to_train=False):
 
 		self.initialize_base_model(sess,to_train=to_train)
-		self.define_rule_stream()
-		self.define_split_stream()		
+		# self.define_rule_stream()
+		self.define_split_stream()
+		# self.logging_ops()
 		self.training_ops()
-		self.logging_ops()
 
 		if pretrained_weight_file:
 			self.model_load(pretrained_weight_file)

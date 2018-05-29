@@ -58,24 +58,22 @@ class Parser():
 		image_index_list = range(self.data_loader.num_images)
 		npy.random.shuffle(image_index_list)
 
-		self.burn_epochs = 10
 		self.set_parameters(0)
-	
-		for e in range(self.burn_epochs):
-			for i in range(self.data_loader.num_images):
-				print("Epoch",e,"Burning in image:",i)
-				# Initialize tree.
-				self.initialize_tree(image_index_list[i])
 
-				# Parse Image.
-				self.construct_parse_tree(image_index_list[i])
+		for i in range(self.data_loader.num_images):
+			print("Burning in image:",i)
+			# Initialize tree.
+			self.initialize_tree(image_index_list[i])
 
-				# Compute rewards.
-				# self.compute_rewards()
-				self.backward_tree_propagation()
+			# Parse Image.
+			self.construct_parse_tree(image_index_list[i])
 
-				# For every state in the parse tree, push to memory.
-				self.append_parse_tree()
+			# Compute rewards.
+			# self.compute_rewards()
+			self.backward_tree_propagation()
+
+			# For every state in the parse tree, push to memory.
+			self.append_parse_tree()
 
 	def set_parameters(self,e):
 

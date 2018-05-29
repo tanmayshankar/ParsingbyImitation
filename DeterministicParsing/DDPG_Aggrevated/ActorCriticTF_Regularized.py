@@ -15,7 +15,7 @@ class BaseModel():
 		self.to_train = to_train
 		# EARlier was 0.01, reduced to 0.001, now to 0.005
 		# 0.005 is too little, because it saturates. so 0.008
-		self.regularization_coeff = 0.0001
+		self.regularization_coeff = 0.008
 
 		if name_scope:
 			self.name_scope = name_scope
@@ -57,19 +57,36 @@ class BaseModel():
 				self.fc7 = tf.layers.dense(self.fc6,self.fc7_shape,activation=tf.nn.relu,name='base_fc7',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 	
 class ActorModel(BaseModel):
+	def define_rule_stream(self):
+		with tf.variable_scope(self.name_scope):
+			self.actor_rule_fc8_shape = 100
+			self.actor_rule_fc8 = tf.layers.dense(self.fc7, self.actor_rule_fc8_shape,activation=tf.nn.relu, name='actor_rule_fc8',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
+
+			self.num_rules = 4
+			self.rule_presoftmax = tf.layers.dense(self.actor_rule_fc8,self.num_rules)
+			self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
+
+			self.softmax_numerator = tf.multiply(self.rule_mask,tf.exp(self.rule_presoftmax),name='softmax_numerator')
+			self.softmax_denominator = tf.add(tf.reduce_sum(tf.exp(tf.multiply(self.rule_mask,self.rule_presoftmax)),axis=-1,keep_dims=True),
+				tf.subtract(tf.reduce_sum(self.rule_mask,axis=-1,keep_dims=True),tf.constant(float(self.num_rules))))
+		
+			self.rule_probabilities = tf.divide(self.softmax_numerator,self.softmax_denominator)
+
+			# self.rule_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='rule_return_weight')
+			# self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
+
+			# # self.target_rule = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='target_rule')
+			# self.rule_cross_entropy = tf.keras.backend.categorical_crossentropy(self.target_rule,self.rule_probabilities)
+			# # self.rule_loss = tf.multiply(self.rule_return_weight,self.rule_cross_entropy)
+			# self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
 
 	def define_split_stream(self):
 
 		with tf.variable_scope(self.name_scope):
 
 			self.actor_fc8_shape = 100
-			self.initialization_val = 3e-4
-			# self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.relu, name='actor_fc8',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
-			self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.tanh, name='actor_fc8',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
-			self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split',
-				kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff),
-				kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
-				bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
+			self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.relu, name='actor_fc8',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
+			self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 		
 			# Pixel indices, NOT normalized.
 			self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
@@ -86,7 +103,6 @@ class CriticModel(BaseModel):
 			# Must take in both the image as input and the current action taken by the policy. 
 			# Hence inherits from BOTH the Base and Actor Model. 
 			self.fc8_shape = 40
-			self.initialization_val = 3e-4
 			self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='critic_fc8',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 
 			# Concatenate the image features with the predicted split. 
@@ -96,12 +112,9 @@ class CriticModel(BaseModel):
 			self.fc9_shape = 100
 			# self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 			# self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue',kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
-			
-			# self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9')
-			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.tanh,name='critic_fc9')
-			self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue',	
-				kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
-				bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
+
+			self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9')
+			self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue')
 
 class ActorCriticModel():
 
@@ -131,7 +144,7 @@ class ActorCriticModel():
 		self.critic_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope='CriticModel')
 
 		# Creating a training operation to minimize the critic loss.
-		self.critic_optimizer = tf.train.AdamOptimizer(1e-5)
+		self.critic_optimizer = tf.train.AdamOptimizer(1e-4)
 		# self.train_critic = self.critic_optimizer.minimize(self.critic_loss,name='Train_Critic',var_list=self.critic_variables)
 
 		# Clipping gradients because of NaN values. 
@@ -146,7 +159,7 @@ class ActorCriticModel():
 		# Must get actor variables. 
 		self.actor_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope='ActorModel')
 		
-		self.actor_optimizer = tf.train.AdamOptimizer(1e-5)
+		self.actor_optimizer = tf.train.AdamOptimizer(1e-4)
 		# self.train_actor = self.actor_optimizer.minimize(self.actor_loss,name='Train_Actor',var_list=self.actor_variables)
 
 		# Clipping gradients because of NaN values. 
