@@ -28,7 +28,7 @@ class Replay_Memory():
 			self.memory.pop(0)
 			self.memory.append([state,k,parse_tree])
 
-	def sample_batch(self, batch_size=3):
+	def sample_batch(self, batch_size=5):
 		
 		memory_len = len(self.memory)	
 		indices = npy.random.randint(0,high=memory_len,size=(batch_size))

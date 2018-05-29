@@ -27,12 +27,6 @@ class Model():
 		# Now doing this for single channel images.
 		self.input = tf.placeholder(tf.float32,shape=[None,self.image_size,self.image_size,self.num_channels],name='input')
 
-		self.max_timesteps = 48
-		# self.input = tf.placeholder(tf.float32,shape=[None,self.max_timesteps,self.image_size, self.image_size, self.num_channels],name='input')
-
-		# Reshaping input to (BATCHxTIME) x W x H x (Num channels=1)
-		# self.reshaped_input = tf.reshape(self.input, (-1,self.image_size,self.image_size,self.num_channels))
-
 		# Defining conv layers.
 		self.conv = [[] for i in range(self.num_layers)]
 
@@ -43,41 +37,17 @@ class Model():
 		for i in range(1,self.num_layers):
 			self.conv[i] = tf.layers.conv2d(self.conv[i-1],filters=self.conv_num_filters[i],kernel_size=(self.conv_sizes[i]),strides=(self.conv_strides[i]),activation=tf.nn.relu,name='conv{0}'.format(i))
 
-		self.final_conv_shape = self.conv[-1].get_shape().as_list()
-
-		# Instead of the flatten, reshape back to BATCH x TIME x D
-		# Here, D should be number of conv filters in the last
-		self.reshape_conv = tf.reshape(self.conv[-1],(-1,self.max_timesteps,self.conv_num_filters[-1]*self.final_conv_shape[-2]*self.final_conv_shape[-3]))
-		# embed()
-			
-	def define_LSTM(self):
-
-		self.fc6_shape = 1000
-		self.fc7_shape = 200
-		self.fc6 = tf.layers.dense(self.reshape_conv,self.fc6_shape,activation=tf.nn.relu)
-		self.fc7 = tf.layers.dense(self.fc6,self.fc7_shape,activation=tf.nn.relu)
-
-		# Now defining LSTM that takes fc7 as input.
-		self.lstm_numunits = 100
-		# Tuple state means h and c are separate. 
-		# Otherwise concatenated.
-		self.cell = tf.nn.rnn_cell.LSTMCell(num_units=self.lstm_numunits,state_is_tuple=True)
-
-		# Placeholder for actual sequence lengths.
-		self.sequence_length = tf.placeholder(tf.int32,shape=(None,),name='sequence_length')
-
-		# Defining the unrolled graph.
-		self.outputs, self.states = tf.nn.dynamic_rnn(cell=self.cell,dtype=tf.float32,sequence_length=self.sequence_length,inputs=self.fc7)
-	
-		self.lstm_hidden_state = self.states.h		
+		# Now going to flatten this and move to a fully connected layer. 		
+		self.flat_conv = tf.layers.flatten(self.conv[-1])
 
 	def define_rule_stream(self):
-
-		self.rule_fc8_shape = 100		
-		self.rule_fc8 = tf.layers.dense(self.lstm_hidden_state,self.rule_fc8_shape,activation=tf.nn.relu)
+		self.rule_fc6_shape = 1000
+		self.rule_fc7_shape = 200
+		self.rule_fc6 = tf.layers.dense(self.flat_conv,self.rule_fc6_shape,activation=tf.nn.relu)
+		self.rule_fc7 = tf.layers.dense(self.rule_fc6,self.rule_fc7_shape,activation=tf.nn.relu)
 
 		self.num_rules = 4
-		self.rule_presoftmax = tf.layers.dense(self.rule_fc8,self.num_rules)
+		self.rule_presoftmax = tf.layers.dense(self.rule_fc7,self.num_rules)
 		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
 
 		self.softmax_numerator = tf.multiply(self.rule_mask,tf.exp(self.rule_presoftmax),name='softmax_numerator')
@@ -95,38 +65,52 @@ class Model():
 		self.rule_loss =  tf.multiply(self.rule_return_weight,tf.expand_dims(self.rule_cross_entropy,axis=-1))
 
 	def define_split_stream(self):
-		self.fc8_shape = 100
-		self.fc8 = tf.layers.dense(self.lstm_hidden_state,self.fc8_shape,activation=tf.nn.relu)
-		self.sigmoid_split = tf.layers.dense(self.fc8,1,activation=tf.nn.sigmoid)
+		self.fc6_shape = 1000
+		self.fc7_shape = 200
+		self.fc6 = tf.layers.dense(self.flat_conv,self.fc6_shape,activation=tf.nn.relu)
+		self.fc7 = tf.layers.dense(self.fc6,self.fc7_shape,activation=tf.nn.relu)
 	
-		# Pixel indices, NOT normalized.
-		self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
-		self.upper_lim = tf.placeholder(tf.float32,shape=(None,1),name='upper_lim')
+		self.normal_mean = tf.layers.dense(self.fc7,1)
+		self.normal_var = tf.layers.dense(self.fc7,1,activation=tf.nn.softplus)
 
-		self.predicted_split = tf.multiply(self.upper_lim-self.lower_lim,self.sigmoid_split)+self.lower_lim
+		self.normal_dist = tf.contrib.distributions.Normal(loc=self.normal_mean,scale=self.normal_var)
+		# # Creating a function that samples from this distribution.
+		self.sample_split = self.normal_dist.sample()
 
-		self.target_split = tf.placeholder(tf.float32,shape=(None,1),name='target_split')
-		self.split_loss = tf.losses.mean_squared_error(self.target_split,self.predicted_split)
-		# self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
-		# self.split_loss = tf.multiply(self.split_mse,self.split_return_weight)
+		# # Also maintaining placeholders for scaling, converting to integer, and back to float.
+		self.sampled_split = tf.placeholder(tf.float32,shape=(None,1),name='sampled_split')
+
+		# Maximizing the log-likelihood of the logit-normal sample is equivalent 
+		# to maximizing the log-likelihood of the normal dist sample, 
+		# because the inverse logistic function, i.e. the sigmoid, is monotonic. 
+		self.logitnormal_sample = tf.nn.sigmoid(self.sample_split)
+
+		# Defining return weight and loss. - 		# # Evaluate the likelihood of a particular sample.
+		self.split_return_weight = tf.placeholder(tf.float32,shape=(None,1),name='split_return_weight')
+		self.split_loglikelihood = self.normal_dist.log_prob(self.sampled_split)		
+		self.split_loss = -tf.multiply(self.split_loglikelihood,self.split_return_weight)
+		# embed()
+		# self.split_loss = -self.split_dist.log_prob(self.sampled_split)
 
 	def logging_ops(self):
-		# Create file writer to write summaries. 		
-		self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
+		if self.to_train:
+			# Create file writer to write summaries. 		
+			self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
 
-		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
-		# self.rule_loglikelihood_summary = tf.summary.scalar('Rule_Loss',tf.reduce_mean(self.rule_cross_entropy))
-		# self.reward_weight_summary = tf.summary.scalar('Reward_Value',tf.reduce_mean(self.rule_return_weight))
-		# self.split_loss_summary = tf.summary.scalar('Split_Loss',tf.reduce_mean(self.split_loss))
-		self.total_loss_summary = tf.summary.scalar('Total_Loss',tf.reduce_mean(self.total_loss))
-		# Merge summaries. 
-		self.merged_summaries = tf.summary.merge_all()		
+			# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
+			self.split_loglikelihood_summary = tf.summary.scalar('Split_LogLikelihood',tf.reduce_mean(self.split_loglikelihood))
+			self.rule_loglikelihood_summary = tf.summary.scalar('Rule_LogLikelihood',tf.reduce_mean(self.rule_cross_entropy))
+			self.reward_weight_summary = tf.summary.scalar('Reward_Weight',tf.reduce_mean(self.rule_return_weight))
+			self.split_mean_summary = tf.summary.scalar('Split_Mean',tf.reduce_mean(self.normal_mean))
+			self.split_var_summary = tf.summary.scalar('Split_Var',tf.reduce_mean(self.normal_var))		
+
+			# Merge summaries. 
+			self.merged_summaries = tf.summary.merge_all()		
 
 	def training_ops(self):
 
-		# self.split_loss_lambda = tf.constant(0.0001)
-		# self.total_loss = self.rule_loss+tf.multiply(self.split_loss_lambda,self.split_loss)
-		self.total_loss = self.split_loss
+		self.total_loss = self.rule_loss+self.split_loss
+		# self.total_loss = self.split_loss
 
 		# Creating a training operation to minimize the total loss.
 		self.optimizer = tf.train.AdamOptimizer(1e-4)
@@ -169,13 +153,10 @@ class Model():
 	def create_network(self, sess, pretrained_weight_file=None, to_train=False):
 
 		self.initialize_base_model(sess,to_train=to_train)
-		self.define_LSTM()
-		# self.define_rule_stream()
+		self.define_rule_stream()
 		self.define_split_stream()
-		self.training_ops()
 		self.logging_ops()
+		self.training_ops()
 
-		embed()
-		
 		if pretrained_weight_file:
 			self.model_load(pretrained_weight_file)

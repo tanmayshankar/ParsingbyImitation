@@ -14,13 +14,14 @@ class Parser():
 		self.plot_manager = plot_manager
 		self.args = args
 		self.sess = session
-		self.batch_size = 3
+		self.batch_size = 5
 		self.num_epochs = 500
 		self.save_every = 1
 		self.max_parse_steps = 20
 		self.minimum_width = 25
-		self.max_depth = 4
+		self.max_depth = 3
 		self.image_size = 256
+		
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
 		self.initial_beta = 1.
@@ -122,6 +123,7 @@ class Parser():
 		input_image = npy.zeros((self.model.max_timesteps,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
 		# It starts of with parse_index=0 at index 0, then goes down to current_parsing_index (for the forward pass)
 		# Change for 3 channel image.
+		# for parse_index in range(self.current_parsing_index):			
 		for parse_index in range(self.current_parsing_index+1):			
 			state = self.parse_tree[parse_index]
 
@@ -138,7 +140,7 @@ class Parser():
 	def select_rule_expert_greedy(self):
 		
 		# Greedily select a rule. 
-		entropy_image_input = self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
+		entropy_image_input = self.data_loader.labels[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h]
 
 		# Now returning both greedy axes and greedy splits. 
 		self.greedy_axis,self.greedy_split = EntropySplits.best_valid_split(entropy_image_input, self.state.rule_mask)
@@ -176,18 +178,13 @@ class Parser():
 		self.state.boundaryscaled_split = copy.deepcopy(self.greedy_split)
 
 		if self.state.rule_applied==0:
-			# self.state.boundaryscaled_split = self.greedy_split + self.state.x
-			# self.state.split = float(self.state.boundaryscaled_split-self.state.x)/self.state.w
-			# self.state.boundaryscaled_split -= self.state.x
-			self.state.split = float(self.state.boundaryscaled_split+self.state.x)
+			self.state.split = float(self.state.boundaryscaled_split)/self.state.w
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:	
-			# self.state.split = float(self.state.boundaryscaled_split)/self.state.h
-			self.state.split = float(self.state.boundaryscaled_split+self.state.y)
-
+			self.state.split = float(self.state.boundaryscaled_split)/self.state.h
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
@@ -208,34 +205,30 @@ class Parser():
 
 		# It starts of with parse_index=0 at index 0, then goes down to current_parsing_index (for the forward pass)
 		# Change for 3 channel image.
+		# for parse_index in range(self.current_parsing_index):			
 		for parse_index in range(self.current_parsing_index+1):			
 			state = self.parse_tree[parse_index]
 
 			input_image[parse_index, state.x:state.x+state.w, state.y:state.y+state.h, 0] = \
 				copy.deepcopy(self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h])
 
-		if self.state.rule_applied==0:	
-			self.state.split = self.sess.run(self.model.predicted_split,feed_dict={self.model.input: input_image,
-				self.model.lower_lim: npy.reshape(self.state.x+1,(1,1)),
-				self.model.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1)),
-				self.model.sequence_length: npy.array([self.current_parsing_index+1])})
+		log_split, self.state.split = self.sess.run([self.model.logitnormal_sample,self.model.sample_split],
+			feed_dict={self.model.input: input_image,
+						self.model.sequence_length: npy.array([self.current_parsing_index+1])})
+		self.state.split = self.state.split[0,0]
+		log_split = log_split[0,0]			
 
-			self.state.split = int(self.state.split[0])
+		if self.state.rule_applied==0:	
+			self.state.boundaryscaled_split = ((self.state.w-2)*log_split+self.state.x+1).astype(int)
 			# Transform to local patch coordinates.
-			self.state.boundaryscaled_split = self.state.split-self.state.x
+			self.state.boundaryscaled_split -= self.state.x
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:
-			self.state.split = self.sess.run(self.model.predicted_split,feed_dict={self.model.input: input_image,
-				self.model.lower_lim: npy.reshape(self.state.y+1,(1,1)),
-				self.model.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1)),
-				self.model.sequence_length: npy.array([self.current_parsing_index+1])})
-			# embed()
-			self.state.split = int(self.state.split[0])
-
+			self.state.boundaryscaled_split = ((self.state.h-2)*log_split+self.state.y+1).astype(int)	
 			# Transform to local patch coordinates.
-			self.state.boundaryscaled_split = self.state.split-self.state.y
+			self.state.boundaryscaled_split -= self.state.y
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
 
@@ -275,13 +268,11 @@ class Parser():
 	def parse_nonterminal_learner(self):
 		self.set_rule_mask()
 
-		# # Predict rule probabilities and select a rule from it IF epsilon.
-		# if npy.random.random()<self.annealed_epsilon:
-		# 	self.select_rule_random()
-		# else:
-		# 	self.select_rule_learner_greedy()
-		# CHEATING HERE AND USING EXPERT for RULES.
-		self.select_rule_expert_greedy()
+		# Predict rule probabilities and select a rule from it IF epsilon.
+		if npy.random.random()<self.annealed_epsilon:
+			self.select_rule_random()
+		else:
+			self.select_rule_learner_greedy()
 
 		if self.state.rule_applied==0 or self.state.rule_applied==1: 
 			# Function to process splits.	
@@ -349,17 +340,12 @@ class Parser():
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.model.max_timesteps,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-
-		# self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
-		# self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
-		# self.batch_rule_weights = npy.zeros((self.batch_size,1))
+		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
+		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
+		self.batch_rule_weights = npy.zeros((self.batch_size,1))
 
 		self.batch_split_weights = npy.zeros((self.batch_size,1))
-		self.batch_target_splits = npy.zeros((self.batch_size,1))
-
-		self.batch_lower_lims = npy.zeros((self.batch_size,1))
-		self.batch_upper_lims = npy.ones((self.batch_size,1))
-
+		self.batch_sampled_splits = npy.zeros((self.batch_size,1))
 		self.batch_sequence_lengths = npy.zeros((self.batch_size),dtype=int)	
 
 		# Select indices of memory to put into batch.
@@ -371,46 +357,38 @@ class Parser():
 			state, parse_tree_len, parse_tree = copy.deepcopy(self.memory.memory[indices[k]])
 
 			# Assemble batch of states. 
+			# for jx in range(parse_tree_len):
 			for jx in range(parse_tree_len+1):
 				state_alt = parse_tree[jx]				
 				self.batch_states[k, jx, state_alt.x:state_alt.x+state_alt.w, state_alt.y:state_alt.y+state_alt.h,0] = \
 					copy.deepcopy(self.data_loader.images[state_alt.image_index,state_alt.x:state_alt.x+state_alt.w,state_alt.y:state_alt.y+state_alt.h])
 				
 			self.batch_sequence_lengths[k] = parse_tree_len
-			# self.batch_rule_masks[k] = state.rule_mask
+			self.batch_rule_masks[k] = state.rule_mask
 
-			# if state.rule_applied==-1:
-			# 	self.batch_target_rules[k, state.rule_applied] = 0.
-			# 	self.batch_rule_weights[k] = 0.				
-			# else:
-			# 	self.batch_target_rules[k, state.rule_applied] = 1.
-			# 	# self.batch_rule_weights[k] = state.reward
-			# 	self.batch_rule_weights[k] = 1.
+			if state.rule_applied==-1:
+				self.batch_target_rules[k, state.rule_applied] = 0.
+				self.batch_rule_weights[k] = 0.				
+			else:
+				self.batch_target_rules[k, state.rule_applied] = 1.
+				self.batch_rule_weights[k] = state.reward
+				# self.batch_rule_weights[k] = 1.
 
 			if state.rule_applied==0 or state.rule_applied==1:
-				self.batch_target_splits[k] = state.split
-				# self.batch_split_weights[k] = state.reward
-				self.batch_split_weights[k] = 1.
+				self.batch_sampled_splits[k] = state.split
+				self.batch_split_weights[k] = state.reward
+				# self.batch_split_weights[k] = 1.
 
-				if state.rule_applied==0:
-					self.batch_lower_lims[k] = float(state.x+1)
-					self.batch_upper_lims[k] = float(state.x+state.w-1)
-				if state.rule_applied==1:
-					self.batch_lower_lims[k] = float(state.y+1)
-					self.batch_upper_lims[k] = float(state.y+state.h-1)
 		# Reshape states.
-
 		self.batch_states = self.batch_states.reshape((-1,self.image_size,self.image_size,1))								
-		# embed()
+
 		# Call sess train.
 		merged, _ = self.sess.run([self.model.merged_summaries, self.model.train], feed_dict={self.model.input: self.batch_states,
-						self.model.lower_lim: self.batch_lower_lims,
-						self.model.upper_lim: self.batch_upper_lims,
-						self.model.target_split: self.batch_target_splits,
-						# self.model.split_return_weight: self.batch_split_weights,
-						# self.model.target_rule: self.batch_target_rules,
-						# self.model.rule_mask: self.batch_rule_masks,
-						# self.model.rule_return_weight: self.batch_rule_weights,
+						self.model.sampled_split: self.batch_sampled_splits,
+						self.model.split_return_weight: self.batch_split_weights,
+						self.model.target_rule: self.batch_target_rules,
+						self.model.rule_mask: self.batch_rule_masks,
+						self.model.rule_return_weight: self.batch_rule_weights,
 						self.model.sequence_length: self.batch_sequence_lengths})
 
 		self.model.tf_writer.add_summary(merged, iter_num)		
