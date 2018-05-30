@@ -23,9 +23,9 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-		# FOR BEHAVIOR CLONING, ALWAYS USE BETA=1.
+		# FOR DAGGER, ANNEAL Beta.
 		self.initial_beta = 1.
-		self.final_beta = 1.
+		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
 		self.initial_epsilon = 1e-3
