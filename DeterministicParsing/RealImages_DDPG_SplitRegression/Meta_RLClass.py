@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from headers import *
 import ActorCriticTF
+import ActorCriticTanhTF
 import ActorCriticTF_Regularized
 import Data_Loader
 # import DeterministicParser
@@ -28,7 +29,8 @@ class Meta_RLClass():
 		self.args.train = bool(self.args.train)
 		# # Instantiate Model Class.		
 		if self.args.reg:
-			self.ActorCriticModel = ActorCriticTF_Regularized.ActorCriticModel(self.sess,to_train=self.args.train)
+			# self.ActorCriticModel = ActorCriticTF_Regularized.ActorCriticModel(self.sess,to_train=self.args.train)
+			self.ActorCriticModel = ActorCriticTanhTF.ActorCriticModel(self.sess,to_train=self.args.train)
 		else:
 			self.ActorCriticModel = ActorCriticTF.ActorCriticModel(self.sess,to_train=self.args.train)
 
@@ -56,7 +58,7 @@ def parse_arguments():
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--indices',dest='indices',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
-	parser.add_argument('--reg',dest='reg',type=int,default=0)
+	parser.add_argument('--tanh',dest='reg',type=int,default=0)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--train',dest='train',type=int,default=1)

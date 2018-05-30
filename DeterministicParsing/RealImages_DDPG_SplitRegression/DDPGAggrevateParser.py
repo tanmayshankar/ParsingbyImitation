@@ -179,14 +179,14 @@ class Parser():
 			# self.state.boundaryscaled_split = self.greedy_split + self.state.x
 			# self.state.split = float(self.state.boundaryscaled_split-self.state.x)/self.state.w
 			# self.state.boundaryscaled_split -= self.state.x
-			self.state.split = float(self.state.boundaryscaled_split+self.state.x)
+			self.state.split = copy.deepcopy(float(self.state.boundaryscaled_split+self.state.x))
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
 		if self.state.rule_applied==1:	
 			# self.state.split = float(self.state.boundaryscaled_split)/self.state.h
-			self.state.split = float(self.state.boundaryscaled_split+self.state.y)
+			self.state.split = copy.deepcopy(float(self.state.boundaryscaled_split+self.state.y))
 
 			# Must add resultant states to parse tree.
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
@@ -212,11 +212,11 @@ class Parser():
 				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.x+1,(1,1)),
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1))})
 			# embed()
-			self.state.split = int(self.state.split[0])
+			self.state.split = copy.deepcopy(int(self.state.split[0]))
 			# embed()
 			# print(float(self.state.split-self.state.x)/self.state.w)
 			# Transform to local patch coordinates.
-			self.state.boundaryscaled_split = self.state.split-self.state.x
+			self.state.boundaryscaled_split = copy.deepcopy(self.state.split-self.state.x)
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x+self.state.boundaryscaled_split,y=self.state.y,w=self.state.w-self.state.boundaryscaled_split,h=self.state.h,backward_index=self.current_parsing_index)
 
@@ -225,10 +225,10 @@ class Parser():
 				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.y+1,(1,1)),
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1))})
 			# embed()
-			self.state.split = int(self.state.split[0])
+			self.state.split = copy.deepcopy(int(self.state.split[0]))
 			# print(float(self.state.split-self.state.y)/self.state.h)
 			# Transform to local patch coordinates.
-			self.state.boundaryscaled_split = self.state.split- self.state.y
+			self.state.boundaryscaled_split = copy.deepcopy(self.state.split-self.state.y)
 			state1 = parse_tree_node(label=0,x=self.state.x,y=self.state.y,w=self.state.w,h=self.state.boundaryscaled_split,backward_index=self.current_parsing_index)
 			state2 = parse_tree_node(label=0,x=self.state.x,y=self.state.y+self.state.boundaryscaled_split,w=self.state.w,h=self.state.h-self.state.boundaryscaled_split,backward_index=self.current_parsing_index)			
 
@@ -390,7 +390,7 @@ class Parser():
 				if state.rule_applied==1:
 					self.batch_lower_lims[k] = float(state.y+1)
 					self.batch_upper_lims[k] = float(state.y+state.h-1)
-
+		embed()
 		# MAYBE UPDATE CRITIC FIRST, BECAUSE OTHERWISE THE ACTION "TAKEN" Changes? 
 		self.sess.run(self.ACModel.train_critic, feed_dict={self.ACModel.actor_network.input: self.batch_states,
 			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
@@ -436,7 +436,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
@@ -461,7 +461,7 @@ class Parser():
 				# Add to memory. 
 				self.append_parse_tree()
 
-				if self.args.train:
+				if self.args.train and i>50:
 					# Backprop --> over a batch sampled from memory. 
 					self.backprop(self.data_loader.num_images*e+i)
 
