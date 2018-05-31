@@ -155,7 +155,7 @@ class CriticModel():
 		self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='critic_fc8')
 
 		# Concatenate the image features with the predicted split. 
-		self.concat_input = tf.concat([self.fc8, actor_split, onehot_rules, selected_rule_probabilities],axis=-1,name='concat')
+		self.concat_input = tf.concat([self.fc8, actor_split, onehot_rules, selected_rule_probability],axis=-1,name='concat')
 
 		# Now predict the Qvalue of this image state and the action. 
 		self.fc9_shape = 50
