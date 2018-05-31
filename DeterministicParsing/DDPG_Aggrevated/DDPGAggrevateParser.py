@@ -360,7 +360,7 @@ class Parser():
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
+		self.batch_rule_masks = npy.zeros((self.batch_size,self.ACModel.actor_network.num_rules))
 		self.batch_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_lower_lims = npy.zeros((self.batch_size,1))
 		self.batch_upper_lims = npy.ones((self.batch_size,1))
