@@ -196,9 +196,9 @@ class ActorCriticModel():
 
 		# Clipping gradients because of NaN values. 
 		self.critic_gradients_vars = self.critic_optimizer.compute_gradients(self.critic_loss,var_list=self.critic_variables)
-		# self.critic_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.critic_gradients_vars]
-		self.train_critic = self.critic_optimizer.apply_gradients(self.critic_gradients_vars)
-		# self.train_critic = self.critic_optimizer.apply_gradients(self.critic_clipped_gradients)
+		self.critic_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.critic_gradients_vars]
+		# self.train_critic = self.critic_optimizer.apply_gradients(self.critic_gradients_vars)
+		self.train_critic = self.critic_optimizer.apply_gradients(self.critic_clipped_gradients)
 
 	def define_actor_train_op(self):
 		# Defining the actor's training op.
@@ -212,9 +212,9 @@ class ActorCriticModel():
 
 		# Clipping gradients because of NaN values. 
 		self.actor_gradients_vars = self.actor_optimizer.compute_gradients(self.actor_loss,var_list=self.actor_variables)
-		# self.actor_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.actor_gradients_vars]
-		self.train_actor = self.actor_optimizer.apply_gradients(self.actor_gradients_vars)
-		# self.train_actor = self.actor_optimizer.apply_gradients(self.actor_clipped_gradients)
+		self.actor_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.actor_gradients_vars]
+		# self.train_actor = self.actor_optimizer.apply_gradients(self.actor_gradients_vars)
+		self.train_actor = self.actor_optimizer.apply_gradients(self.actor_clipped_gradients)
 
 	def define_training_ops(self):
 

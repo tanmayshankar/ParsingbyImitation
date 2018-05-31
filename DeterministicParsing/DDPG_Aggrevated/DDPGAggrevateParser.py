@@ -23,7 +23,7 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-		self.initial_beta = 0.5
+		self.initial_beta = 1.
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
