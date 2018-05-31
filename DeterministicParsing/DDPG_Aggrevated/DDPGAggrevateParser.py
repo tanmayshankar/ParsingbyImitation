@@ -47,9 +47,8 @@ class Parser():
 			# Only adding non-terminal states to the memory. 
 			# REMEMBER TO CHANGE THIS WHEN PAINTING.		
 
-			# Now only for split rules. First just learn splits. AND MUST check depth. 
 			if self.parse_tree[k].depth==self.switch_depth-1:
-				if self.parse_tree[k].rule_applied==0 or self.parse_tree[k].rule_applied==1:
+				if self.parse_tree[k].label==0:
 					self.memory.append_to_memory(self.parse_tree[k])
 
 	def burn_in(self):
@@ -127,8 +126,8 @@ class Parser():
 		input_image[0,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h,:] = \
 			copy.deepcopy(self.data_loader.images[self.state.image_index,self.state.x:self.state.x+self.state.w,self.state.y:self.state.y+self.state.h])
 		
-		rule_probabilities = self.sess.run(self.ACModel.rule_probabilities, feed_dict={self.ACModel.input: input_image,
-				self.ACModel.rule_mask: self.state.rule_mask.reshape((1,self.ACModel.num_rules))})
+		rule_probabilities = self.sess.run(self.ACModel.actor_network.rule_probabilities, feed_dict={self.ACModel.actor_network.input: input_image,
+				self.ACModel.actor_network.rule_mask: self.state.rule_mask.reshape((1,self.ACModel.actor_network.num_rules))})
 
 		# Don't need to change this, since rule mask is fed as input to the model. 
 		self.state.rule_applied = npy.argmax(rule_probabilities)
@@ -207,6 +206,7 @@ class Parser():
 
 		if self.state.rule_applied==0:	
 			self.state.split = self.sess.run(self.ACModel.actor_network.predicted_split,feed_dict={self.ACModel.actor_network.input: input_image,
+				self.ACModel.actor_network.split_weight: npy.ones((1,1)),
 				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.x+1,(1,1)),
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1))})
 			# embed()
@@ -220,6 +220,7 @@ class Parser():
 
 		if self.state.rule_applied==1:
 			self.state.split = self.sess.run(self.ACModel.actor_network.predicted_split,feed_dict={self.ACModel.actor_network.input: input_image,
+				self.ACModel.actor_network.split_weight: npy.ones((1,1)),
 				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.y+1,(1,1)),
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1))})
 			# embed()
@@ -267,13 +268,10 @@ class Parser():
 		self.set_rule_mask()
 
 		# Predict rule probabilities and select a rule from it IF epsilon.
-		# if npy.random.random()<self.annealed_epsilon:
-		# 	self.select_rule_random()
-		# else:
-		# 	self.select_rule_learner_greedy()
-
-		# NOW CHEATING AND ALWAYS SELECTING RULE VIA THE EXPERT.
-		self.select_rule_expert_greedy()
+		if npy.random.random()<self.annealed_epsilon:
+			self.select_rule_random()
+		else:
+			self.select_rule_learner_greedy()
 
 		if self.state.rule_applied==0 or self.state.rule_applied==1: 
 			# Function to process splits.	
@@ -362,10 +360,10 @@ class Parser():
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-	
+		self.batch_rule_masks = npy.zeros((self.batch_size,self.model.num_rules))
+		self.batch_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_lower_lims = npy.zeros((self.batch_size,1))
 		self.batch_upper_lims = npy.ones((self.batch_size,1))
-
 		self.batch_target_Qvalues = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
@@ -378,9 +376,14 @@ class Parser():
 
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,:] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
+			self.batch_rule_masks[k] = state.rule_mask
 
-			if state.rule_applied==0 or state.rule_applied==1:				
+			if state.rule_applied>=0:
 				self.batch_target_Qvalues[k] = state.reward
+				self.batch_rule_masks[k] = state.rule_mask
+
+			if state.rule_applied==0 or state.rule_applied==1:						
+				self.batch_split_weights[k] = 1.
 
 				if state.rule_applied==0:
 					self.batch_lower_lims[k] = float(state.x+1)
@@ -391,14 +394,18 @@ class Parser():
 
 		# MAYBE UPDATE CRITIC FIRST, BECAUSE OTHERWISE THE ACTION "TAKEN" Changes? 
 		self.sess.run(self.ACModel.train_critic, feed_dict={self.ACModel.actor_network.input: self.batch_states,
+			self.ACModel.actor_network.split_weight: self.batch_split_weights,
 			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
 			self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
+			self.ACModel.actor_network.rule_mask: self.batch_rule_masks,
 			self.ACModel.critic_network.input: self.batch_states,
 			self.ACModel.target_Qvalue: self.batch_target_Qvalues})
 
 		self.sess.run(self.ACModel.train_actor, feed_dict={self.ACModel.actor_network.input: self.batch_states,
 			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
 			self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
+			self.ACModel.actor_network.rule_mask: self.batch_rule_masks,
+			self.ACModel.actor_network.split_weight: self.batch_split_weights,
 			self.ACModel.critic_network.input: self.batch_states})
 
 		# merged, _ = self.sess.run([self.ACModel.merged_summaries, self.ACModel.train], feed_dict={self.ACModel.input: self.batch_states,

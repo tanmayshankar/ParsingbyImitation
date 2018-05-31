@@ -53,13 +53,16 @@ class ActorModel():
 		self.actor_fc8_shape = 100
 		self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.tanh, name='actor_fc8')
 		self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split')
-	
+
 		# Pixel indices, NOT normalized.
 		self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
 		self.upper_lim = tf.placeholder(tf.float32,shape=(None,1),name='upper_lim')
 
+		self.split_weight = tf.placeholder(tf.float32,shape=(None,1))
+		# To mask gradients for non-split rules.
+		self.weighted_sigmoid_split = tf.multiply(self.split_weight,self.sigmoid_split)
 		# Predict split. 
-		self.predicted_split = tf.add(tf.multiply(self.upper_lim-self.lower_lim,self.sigmoid_split),self.lower_lim,name='predicted_split')
+		self.predicted_split = tf.add(tf.multiply(self.upper_lim-self.lower_lim,self.weighted_sigmoid_split),self.lower_lim,name='predicted_split')
 
 	def define_rule_stream(self):
 		self.num_rules = 4
