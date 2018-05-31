@@ -155,17 +155,17 @@ class CriticModel():
 		self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='critic_fc8')
 
 		# Concatenate the image features with the predicted split. 
-		self.concat_input = tf.concat([self.fc8, actor_action, onehot_rules, selected_rule_probabilities],axis=-1,name='concat')
+		self.concat_input = tf.concat([self.fc8, actor_split, onehot_rules, selected_rule_probabilities],axis=-1,name='concat')
 
 		# Now predict the Qvalue of this image state and the action. 
 		self.fc9_shape = 50
 		self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.tanh,name='critic_fc9')
 		self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue')
 
-	def define_model(self,sess, model_file=None, to_train=None, actor_action=None, onehot_rules=None, selected_rule_probability=None):
+	def define_model(self,sess, model_file=None, to_train=None, actor_split=None, onehot_rules=None, selected_rule_probability=None):
 		with tf.variable_scope(self.name_scope):
 			self.define_base_model(sess, model_file,to_train)
-			self.define_eval_stream(actor_action, onehot_rules, selected_rule_probability)
+			self.define_eval_stream(actor_split, onehot_rules, selected_rule_probability)
 
 class ActorCriticModel():
 
@@ -177,7 +177,7 @@ class ActorCriticModel():
 		self.actor_network = ActorModel(name_scope='ActorModel')
 		self.actor_network.define_model(sess,to_train=to_train)		
 		self.critic_network = CriticModel(name_scope='CriticModel')
-		self.critic_network.define_model(sess,to_train=to_train, actor_action=self.actor_network.predicted_split,
+		self.critic_network.define_model(sess,to_train=to_train, actor_split=self.actor_network.predicted_split,
 			onehot_rules=self.actor_network.onehot_rules, selected_rule_probability=self.actor_network.selected_rule_probabilities)
 
 	def define_critic_train_op(self):
