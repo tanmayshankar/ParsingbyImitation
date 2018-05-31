@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from headers import *
-import ActorCriticTF_Regularized
+import ActorCriticTF
 import Data_Loader
 import DDPGAggrevateParser
 import NewPlotting
@@ -25,7 +25,7 @@ class Meta_RLClass():
 		
 		self.args.train = bool(self.args.train)
 		# # Instantiate Model Class.		
-		self.ActorCriticModel = ActorCriticTF_Regularized.ActorCriticModel(self.sess,to_train=self.args.train)
+		self.ActorCriticModel = ActorCriticTF.ActorCriticModel(self.sess,to_train=self.args.train)
 
 		if self.args.model:
 			self.ActorCriticModel.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)

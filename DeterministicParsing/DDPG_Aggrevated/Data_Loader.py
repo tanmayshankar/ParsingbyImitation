@@ -36,6 +36,8 @@ class DataLoader():
 
 			for i in range(self.num_images):
 				self.images[i] = cv2.cvtColor(self.images[i],cv2.COLOR_RGB2BGR)
+			# Just for plotting.
+			self.orig_images = copy.deepcopy(self.images)
 
 			self.images = self.images.astype(float)
 			self.images -= self.images.mean(axis=(0,1,2))
