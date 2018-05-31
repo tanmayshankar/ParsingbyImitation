@@ -23,7 +23,7 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-		self.initial_beta = 1.
+		self.initial_beta = 0.5
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -434,7 +434,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
