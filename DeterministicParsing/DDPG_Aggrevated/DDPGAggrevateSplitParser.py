@@ -57,24 +57,22 @@ class Parser():
 		image_index_list = range(self.data_loader.num_images)
 		npy.random.shuffle(image_index_list)
 
-		self.burn_epochs = 5
 		self.set_parameters(0)
-	
-		for e in range(self.burn_epochs):
-			for i in range(self.data_loader.num_images):
-				print("Epoch",e,"Burning in image:",i)
-				# Initialize tree.
-				self.initialize_tree(image_index_list[i])
 
-				# Parse Image.
-				self.construct_parse_tree(image_index_list[i])
+		for i in range(self.data_loader.num_images):
+			print("Burning in image:",i)
+			# Initialize tree.
+			self.initialize_tree(image_index_list[i])
 
-				# Compute rewards.
-				# self.compute_rewards()
-				self.backward_tree_propagation()
+			# Parse Image.
+			self.construct_parse_tree(image_index_list[i])
 
-				# For every state in the parse tree, push to memory.
-				self.append_parse_tree()
+			# Compute rewards.
+			# self.compute_rewards()
+			self.backward_tree_propagation()
+
+			# For every state in the parse tree, push to memory.
+			self.append_parse_tree()
 
 	def set_parameters(self,e):
 
@@ -208,7 +206,6 @@ class Parser():
 
 		if self.state.rule_applied==0:	
 			self.state.split = self.sess.run(self.ACModel.actor_network.predicted_split,feed_dict={self.ACModel.actor_network.input: input_image,
-				self.ACModel.actor_network.split_weight: npy.ones((1,1)),
 				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.x+1,(1,1)),
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.x+self.state.w-1,(1,1))})
 			# embed()
@@ -222,7 +219,6 @@ class Parser():
 
 		if self.state.rule_applied==1:
 			self.state.split = self.sess.run(self.ACModel.actor_network.predicted_split,feed_dict={self.ACModel.actor_network.input: input_image,
-				self.ACModel.actor_network.split_weight: npy.ones((1,1)),
 				self.ACModel.actor_network.lower_lim: npy.reshape(self.state.y+1,(1,1)),
 				self.ACModel.actor_network.upper_lim: npy.reshape(self.state.y+self.state.h-1,(1,1))})
 			# embed()
@@ -270,10 +266,11 @@ class Parser():
 		self.set_rule_mask()
 
 		# Predict rule probabilities and select a rule from it IF epsilon.
-		if npy.random.random()<self.annealed_epsilon:
-			self.select_rule_random()
-		else:
-			self.select_rule_learner_greedy()
+		# if npy.random.random()<self.annealed_epsilon:
+		# 	self.select_rule_random()
+		# else:
+		# 	self.select_rule_learner_greedy()
+		self.select_rule_expert_greedy()
 
 		if self.state.rule_applied==0 or self.state.rule_applied==1: 
 			# Function to process splits.	
@@ -362,8 +359,6 @@ class Parser():
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
-		self.batch_rule_masks = npy.zeros((self.batch_size,self.ACModel.actor_network.num_rules))
-		self.batch_split_weights = npy.zeros((self.batch_size,1))
 		self.batch_lower_lims = npy.zeros((self.batch_size,1))
 		self.batch_upper_lims = npy.ones((self.batch_size,1))
 		self.batch_target_Qvalues = npy.zeros((self.batch_size,1))
@@ -378,14 +373,11 @@ class Parser():
 
 			self.batch_states[k, state.x:state.x+state.w, state.y:state.y+state.h,:] = \
 				self.data_loader.images[state.image_index, state.x:state.x+state.w, state.y:state.y+state.h]
-			self.batch_rule_masks[k] = state.rule_mask
 
 			if state.rule_applied>=0:
 				self.batch_target_Qvalues[k] = state.reward
-				self.batch_rule_masks[k] = state.rule_mask
 
 			if state.rule_applied==0 or state.rule_applied==1:						
-				self.batch_split_weights[k] = 1.
 
 				if state.rule_applied==0:
 					self.batch_lower_lims[k] = float(state.x+1)
@@ -393,23 +385,17 @@ class Parser():
 				if state.rule_applied==1:
 					self.batch_lower_lims[k] = float(state.y+1)
 					self.batch_upper_lims[k] = float(state.y+state.h-1)
-		
-		# if iter_num%20==0:
-		# 	embed()
+
 		# MAYBE UPDATE CRITIC FIRST, BECAUSE OTHERWISE THE ACTION "TAKEN" Changes? 
 		self.sess.run(self.ACModel.train_critic, feed_dict={self.ACModel.actor_network.input: self.batch_states,
-			self.ACModel.actor_network.split_weight: self.batch_split_weights,
 			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
 			self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
-			self.ACModel.actor_network.rule_mask: self.batch_rule_masks,
 			self.ACModel.critic_network.input: self.batch_states,
 			self.ACModel.target_Qvalue: self.batch_target_Qvalues})
 
 		self.sess.run(self.ACModel.train_actor, feed_dict={self.ACModel.actor_network.input: self.batch_states,
 			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
 			self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
-			self.ACModel.actor_network.rule_mask: self.batch_rule_masks,
-			self.ACModel.actor_network.split_weight: self.batch_split_weights,
 			self.ACModel.critic_network.input: self.batch_states})
 
 		# merged, _ = self.sess.run([self.ACModel.merged_summaries, self.ACModel.train], feed_dict={self.ACModel.input: self.batch_states,
@@ -445,7 +431,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
@@ -469,16 +455,11 @@ class Parser():
 
 				# Add to memory. 
 				self.append_parse_tree()
-				
-				# Backprop --> over a batch sampled from memory. 
-				if self.args.train:
-					# if e==0 and i>50:
-					# 	self.backprop(self.data_loader.num_images*e+i)
-					# if e>0:
-					# 	self.backprop(self.data_loader.num_images*e+i)
 
-					self.backprop(self.data_loader.num_images*e+i)					
-					
+				if self.args.train:
+					# Backprop --> over a batch sampled from memory. 
+					self.backprop(self.data_loader.num_images*e+i)
+
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
 				self.average_episode_rewards[self.image_index_list[i]] = self.parse_tree[0].reward
