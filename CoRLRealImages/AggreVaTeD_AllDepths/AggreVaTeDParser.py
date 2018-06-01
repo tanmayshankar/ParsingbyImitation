@@ -439,7 +439,10 @@ class Parser():
 		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 
 		# Iterating multiple times for switching depth (1 to MAX_DEPTH+1):
-		self.iterate_times = self.max_depth
+		if self.args.train:
+			self.iterate_times = self.max_depth
+		else:
+			self.iterate_times = 1
 
 		# embed()
 		if self.args.train:
@@ -463,10 +466,11 @@ class Parser():
 
 			# For all images in the dataset.
 			for i in range(self.data_loader.num_images):
-				
+
 				for switch_depth_value in range(1,self.iterate_times+1):
 
 					self.switch_depth = switch_depth_value
+
 					# Initialize the tree for the current image.
 					self.initialize_tree(image_index_list[i])
 
