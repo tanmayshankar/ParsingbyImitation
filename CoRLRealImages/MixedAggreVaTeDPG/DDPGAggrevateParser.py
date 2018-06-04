@@ -355,7 +355,7 @@ class Parser():
 		self.batch_upper_lims = npy.ones((self.batch_size,1))
 		self.batch_target_Qvalues = npy.zeros((self.batch_size,1))
 
-		self.batch_target_rules = npy.zeros((self.batch_size,self.model.num_rules))
+		self.batch_target_rules = npy.zeros((self.batch_size,self.ACModel.actor_network.num_rules))
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
@@ -441,7 +441,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			# self.burn_in()
+			self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
@@ -468,12 +468,12 @@ class Parser():
 				
 				# Backprop --> over a batch sampled from memory. 
 				if self.args.train:
-					if e==0 and i>50:
-						self.backprop(self.data_loader.num_images*e+i)
-					if e>0:
-						self.backprop(self.data_loader.num_images*e+i)
+					# if e==0 and i>50:
+					# 	self.backprop(self.data_loader.num_images*e+i)
+					# if e>0:
+					# 	self.backprop(self.data_loader.num_images*e+i)
 
-					# self.backprop(self.data_loader.num_images*e+i)					
+					self.backprop(self.data_loader.num_images*e+i)					
 
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
