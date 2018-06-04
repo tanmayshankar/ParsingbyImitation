@@ -55,9 +55,12 @@ class ActorModel():
 				self.initialization_val = 3e-4
 				# self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.relu, name='actor_fc8')
 				self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.tanh, name='actor_fc8')
-				self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split',
-					kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
-					bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
+				# self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split',
+				# 	kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+				# 	bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
+				self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split')
+					# kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+					# bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 			
 				# Pixel indices, NOT normalized.
 				self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
@@ -132,9 +135,9 @@ class CriticModel():
 				# self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.relu,name='critic_fc9')
 				self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.tanh,name='critic_fc9')
 
-				self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue',
-					kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
-					bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
+				self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue')
+					# kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+					# bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 
 class ActorCriticModel():
 
@@ -166,8 +169,9 @@ class ActorCriticModel():
 
 		# Clipping gradients because of NaN values. 
 		self.critic_gradients_vars = self.critic_optimizer.compute_gradients(self.critic_loss,var_list=self.critic_variables)
-		self.critic_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.critic_gradients_vars]
-		self.train_critic = self.critic_optimizer.apply_gradients(self.critic_clipped_gradients)
+		# self.critic_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.critic_gradients_vars]
+		self.train_critic = self.critic_optimizer.apply_gradients(self.critic_gradients_vars)
+		# self.train_critic = self.critic_optimizer.apply_gradients(self.critic_clipped_gradients)
 
 	def define_actor_train_op(self):
 		# Defining the actor's training op.
@@ -181,8 +185,9 @@ class ActorCriticModel():
 
 		# Clipping gradients because of NaN values. 
 		self.actor_gradients_vars = self.actor_optimizer.compute_gradients(self.actor_loss,var_list=self.actor_variables)
-		self.actor_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.actor_gradients_vars]
-		self.train_actor = self.actor_optimizer.apply_gradients(self.actor_clipped_gradients)
+		# self.actor_clipped_gradients = [(tf.clip_by_norm(grad,10),var) for grad, var in self.actor_gradients_vars]
+		self.train_actor = self.actor_optimizer.apply_gradients(self.actor_gradients_vars)
+		# self.train_actor = self.actor_optimizer.apply_gradients(self.actor_clipped_gradients)
 
 	def define_training_ops(self):
 

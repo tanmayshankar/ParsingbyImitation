@@ -438,14 +438,14 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			# self.burn_in()
+			self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
 
 		# For all epochs. 
 		for e in range(self.num_epochs):
-
+			# embed()
 			self.epoch_setup(e)
 
 			# For all images in the dataset.
