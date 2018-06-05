@@ -55,7 +55,7 @@ def parse_arguments():
 	parser.add_argument('--labels',dest='labels',type=str)
 	parser.add_argument('--indices',dest='indices',type=str)
 	parser.add_argument('--suffix',dest='suffix',type=str)
-	parser.add_argument('--reg',dest='suffix',type=int,default=0)
+	parser.add_argument('--reg',dest='reg',type=int,default=0)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
 	parser.add_argument('--train',dest='train',type=int,default=1)
