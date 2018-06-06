@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from headers import *
 
-for i in range(185,500,5):
+for i in range(0,500,5):
 	print("###############################################")
 	print("STARTING WITH:",i)
 	# FOR FULL PARSING:
