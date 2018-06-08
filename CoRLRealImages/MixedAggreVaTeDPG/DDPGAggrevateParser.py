@@ -60,7 +60,7 @@ class Parser():
 		image_index_list = range(self.data_loader.num_images)
 		npy.random.shuffle(image_index_list)
 
-		self.burn_epochs = 5
+		self.burn_epochs = 1
 		self.set_parameters(0)
 	
 		for e in range(self.burn_epochs):
