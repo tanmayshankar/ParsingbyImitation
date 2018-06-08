@@ -205,9 +205,15 @@ class ActorCriticModel():
 	def define_actor_train_op(self):
 		# Defining the actor's training op.
 		# Actor split loss (from DDPG). 
-		self.actor_split_loss = -self.critic_network.predicted_Qvalue+ tf.losses.get_regularization_losses(scope=self.actor_network.name_scope)
+		self.actor_split_loss = -self.critic_network.predicted_Qvalue + tf.losses.get_regularization_losses(scope=self.actor_network.name_scope)
 		self.actor_rule_loss = self.actor_network.rule_loss
-		self.actor_loss = self.actor_rule_loss+self.actor_split_loss
+
+		# Lambda loss weight.
+		self.lambda_loss_weight = tf.constant(0.1,name='Lambda_Weight')
+
+		# Actor loss.
+		self.actor_weighted_split_loss = tf.multiply(self.actor_split_loss, self.lambda_loss_weight)
+		self.actor_loss = self.actor_rule_loss+self.actor_weighted_split_loss
 		
 		# Must get actor variables. 
 		self.actor_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope='ActorModel')
@@ -228,7 +234,7 @@ class ActorCriticModel():
 
 		# Writing graph and other summaries in tensorflow.
 		if self.to_train:
-			self.writer = tf.summary.FileWriter('training',self.sess.graph)			
+			self.writer = tf.summary.FileWriter('training',self.sess.graph)
 		init = tf.global_variables_initializer()
 		self.sess.run(init)
 
@@ -237,6 +243,10 @@ class ActorCriticModel():
 		self.tf_writer = tf.summary.FileWriter('train_logging'+'/',self.sess.graph)
 
 		# Create summaries for: Log likelihood, reward weight, and total reward on the full image. 
+		# Actor loss has two components: rule loss and split loss.
+		self.actor_rule_loss_summary = tf.summary.scalar('Actor_Rule_Loss',tf.reduce_mean(self.actor_rule_loss))
+		self.actor_split_loss_summary = tf.summary.scalar('Actor_Split_Loss',tf.reduce_mean(self.actor_split_loss))
+		self.actor_weighted_split_loss_summary = tf.summary.scalar('Actor_Weighted_Split_Loss',tf.reduce_mean(self.actor_weighted_split_loss))
 		self.actor_loss_summary = tf.summary.scalar('Actor_Loss',tf.reduce_mean(self.actor_loss))
 		self.critic_loss_summary = tf.summary.scalar('Critic_Loss',tf.reduce_mean(self.critic_loss))
 
