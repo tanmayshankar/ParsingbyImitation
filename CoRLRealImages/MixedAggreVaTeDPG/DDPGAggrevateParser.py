@@ -395,7 +395,7 @@ class Parser():
 		# if iter_num%20==0:
 		# embed()
 		# MAYBE UPDATE CRITIC FIRST, BECAUSE OTHERWISE THE ACTION "TAKEN" Changes? 
-		self.sess.run([self.ACModel.train_critic, self.ACModel.train_actor], feed_dict={self.ACModel.actor_network.input: self.batch_states,
+		merged, _, _ = self.sess.run([self.ACModel.merged_summaries, self.ACModel.train_critic, self.ACModel.train_actor], feed_dict={self.ACModel.actor_network.input: self.batch_states,
 			self.ACModel.actor_network.split_weight: self.batch_split_weights,
 			self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
 			self.ACModel.actor_network.target_rule: self.batch_target_rules,
@@ -405,19 +405,7 @@ class Parser():
 			self.ACModel.critic_network.input: self.batch_states,
 			self.ACModel.target_Qvalue: self.batch_target_Qvalues})
 
-		# self.sess.run(self.ACModel.train_actor, feed_dict={self.ACModel.actor_network.input: self.batch_states,
-		# 	self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
-		# 	self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
-		# 	self.ACModel.actor_network.rule_mask: self.batch_rule_masks,
-		# 	self.ACModel.actor_network.split_weight: self.batch_split_weights,
-		# 	self.ACModel.critic_network.input: self.batch_states})
-
-		# merged, _ = self.sess.run([self.ACModel.merged_summaries, self.ACModel.train], feed_dict={self.ACModel.input: self.batch_states,
-		# 						self.ACModel.lower_lim: self.batch_lower_lims,
-		# 						self.ACModel.upper_lim: self.batch_upper_lims,
-		# 						self.ACModel.target_split: self.batch_target_splits})
-
-		# self.ACModel.tf_writer.add_summary(merged, iter_num)		
+		self.ACModel.tf_writer.add_summary(merged, iter_num)		
 
 	def epoch_setup(self,e):
 		self.average_episode_rewards = npy.zeros((self.data_loader.num_images))			
