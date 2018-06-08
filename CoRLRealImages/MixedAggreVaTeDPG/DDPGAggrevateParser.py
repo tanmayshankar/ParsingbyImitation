@@ -444,7 +444,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			# self.burn_in()
+			self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
