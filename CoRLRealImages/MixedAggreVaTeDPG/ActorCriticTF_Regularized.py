@@ -209,7 +209,7 @@ class ActorCriticModel():
 		self.actor_rule_loss = self.actor_network.rule_loss
 
 		# Lambda loss weight.
-		self.lambda_loss_weight = tf.constant(10.,name='Lambda_Weight')
+		self.lambda_loss_weight = tf.constant(2.,name='Lambda_Weight')
 
 		# Actor loss.
 		self.actor_weighted_split_loss = tf.multiply(self.actor_split_loss, self.lambda_loss_weight)
