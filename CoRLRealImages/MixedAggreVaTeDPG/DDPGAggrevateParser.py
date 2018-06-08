@@ -393,7 +393,7 @@ class Parser():
 					self.batch_upper_lims[k] = float(state.y+state.h-1)
 		
 		# if iter_num%20==0:
-		embed()
+		# embed()
 		# MAYBE UPDATE CRITIC FIRST, BECAUSE OTHERWISE THE ACTION "TAKEN" Changes? 
 		self.sess.run([self.ACModel.train_critic, self.ACModel.train_actor], feed_dict={self.ACModel.actor_network.input: self.batch_states,
 			self.ACModel.actor_network.split_weight: self.batch_split_weights,
@@ -471,12 +471,12 @@ class Parser():
 				
 				# Backprop --> over a batch sampled from memory. 
 				if self.args.train:
-					if e==0 and i>50:
-						self.backprop(self.data_loader.num_images*e+i)
-					if e>0:
-						self.backprop(self.data_loader.num_images*e+i)
+					# if e==0 and i>50:
+					# 	self.backprop(self.data_loader.num_images*e+i)
+					# if e>0:
+					# 	self.backprop(self.data_loader.num_images*e+i)
 
-					# self.backprop(self.data_loader.num_images*e+i)					
+					self.backprop(self.data_loader.num_images*e+i)					
 
 				print("Completed Epoch:",e,"Training Image:",i,"Total Reward:",self.parse_tree[0].reward)	
 
