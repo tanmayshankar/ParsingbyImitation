@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from headers import *
-import ActorCriticTF
 import ActorCriticTF_Regularized
 import Data_Loader
-import DDPGAggrevateParser
+import DDPGParser
 import NewPlotting
 import Memory
 
@@ -40,7 +39,7 @@ class Meta_RLClass():
 		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
 
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		self.parser = DDPGAggrevateParser.Parser(model_instance=self.ActorCriticModel, data_loader_instance=self.data_loader,
+		self.parser = DDPGParser.Parser(model_instance=self.ActorCriticModel, data_loader_instance=self.data_loader,
 			memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 
 	def train(self):
