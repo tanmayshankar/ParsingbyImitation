@@ -288,6 +288,22 @@ class Parser():
 			else:
 				embed()
 
+	def parse_nonterminal_learner_test(self):
+		self.set_rule_mask()
+
+		# Predict rule probabilities and select a rule from it IF epsilon.
+		if npy.random.random()<self.annealed_epsilon:
+			self.select_rule_random()
+		else:
+			self.select_rule_learner_greedy()
+
+		if self.state.rule_applied==0 or self.state.rule_applied==1: 
+			# Function to process splits.	
+			self.select_split_learner_sample()
+
+		elif self.state.rule_applied==2 or self.state.rule_applied==3:
+			self.process_assignment()	
+
 	def parse_terminal(self):
 		# Here, change value of predicted_labels.
 		# Compute reward for state.
@@ -323,7 +339,7 @@ class Parser():
 				else:
 					# Using Learnt Policy
 					# self.parse_nonterminal_expert()
-					self.parse_nonterminal_learner()	
+					self.parse_nonterminal_learner_test()	
 
 			else:
 				self.parse_terminal()
