@@ -23,12 +23,8 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-<<<<<<< HEAD
-		self.initial_beta = 1. 
-=======
-		self.initial_beta = 1.
->>>>>>> 9a47cff882e652ad43d0973a4808aa39ca7259ab
-		self.final_beta = 0.5
+		self.initial_beta = 0.
+		self.final_beta = 0.
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
 		self.initial_epsilon = 1e-3
@@ -56,8 +52,7 @@ class Parser():
 			# 		self.memory.append_to_memory(self.parse_tree[k])
 
 			if self.parse_tree[k].label==0:
-				if self.parse_tree[k].depth>=self.switch_depth-1:
-					self.memory.append_to_memory(self.parse_tree[k])
+				self.memory.append_to_memory(self.parse_tree[k])
 
 	def burn_in(self):
 		
@@ -258,21 +253,21 @@ class Parser():
 		state1.image_index = self.state.image_index
 		self.insert_node(state1,self.current_parsing_index+1)
 
-	def parse_nonterminal_expert(self):
-		self.set_rule_mask()
+	# def parse_nonterminal_expert(self):
+	# 	self.set_rule_mask()
 
-		# Predict rule probabilities and select a rule from it IF epsilon.
-		# self.select_rule_behavioural_policy()
-		self.select_rule_expert_greedy()
+	# 	# Predict rule probabilities and select a rule from it IF epsilon.
+	# 	# self.select_rule_behavioural_policy()
+	# 	self.select_rule_expert_greedy()
 		
-		if self.state.rule_applied==0 or self.state.rule_applied==1:
-			# Function to process splits.	
-			# self.process_splits_behavioural_policy()
-			self.select_split_expert_greedy()
+	# 	if self.state.rule_applied==0 or self.state.rule_applied==1:
+	# 		# Function to process splits.	
+	# 		# self.process_splits_behavioural_policy()
+	# 		self.select_split_expert_greedy()
 
-		elif self.state.rule_applied==2 or self.state.rule_applied==3:
-			# Function to process assignments.
-			self.process_assignment()	
+	# 	elif self.state.rule_applied==2 or self.state.rule_applied==3:
+	# 		# Function to process assignments.
+	# 		self.process_assignment()	
 
 	def parse_nonterminal_learner(self):
 		self.set_rule_mask()
@@ -306,31 +301,11 @@ class Parser():
 
 	def construct_parse_tree(self, image_index):
 		
-		# Sample a depth beyond which we follow the expert policy deterministically. 
-		# This switch depth is true for the entire parse - i.e. all branches of the parse tree. 
-		self.switch_depth = npy.random.randint(1,high=self.max_depth+1)
-
 		while ((self.predicted_labels[image_index]==0).any() or (self.current_parsing_index<=len(self.parse_tree)-1)):					
 
 			self.state = self.parse_tree[self.current_parsing_index]
 			if self.state.label==0:
-
-				if self.args.train:
-					if self.state.depth<self.switch_depth:
-
-						random_probability = npy.random.random()
-
-						if random_probability<self.annealed_beta:
-							self.parse_nonterminal_expert()
-						else:
-							self.parse_nonterminal_learner()
-					else:
-						self.parse_nonterminal_expert()				
-				else:
-					# Using Learnt Policy
-					# self.parse_nonterminal_expert()
-					self.parse_nonterminal_learner()	
-
+				self.parse_nonterminal_learner()
 			else:
 				self.parse_terminal()
 			
@@ -348,12 +323,12 @@ class Parser():
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
 		# # Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
-		# for j in range(len(self.parse_tree)):
-		#	self.parse_tree[j].reward /= (self.data_loader.image_size**2)
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward /= (self.data_loader.image_size**2)
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))

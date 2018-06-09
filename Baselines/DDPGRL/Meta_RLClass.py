@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 from headers import *
-import TFModel
+import ActorCriticTF_Regularized
 import Data_Loader
-import DeterministicParser
-import DAggerVariantParser
+import DDPGParser
 import NewPlotting
 import Memory
 
@@ -24,14 +23,14 @@ class Meta_RLClass():
 			self.data_loader = Data_Loader.DataLoader(image_path=self.args.images,label_path=self.args.labels)
 		self.data_loader.preprocess()
 		
-		# # Instantiate Model Class.		
-		self.model = TFModel.Model(num_channels=self.data_loader.num_channels)
 		self.args.train = bool(self.args.train)
+		# # Instantiate Model Class.		
+		self.ActorCriticModel = ActorCriticTF_Regularized.ActorCriticModel(self.sess,to_train=self.args.train)
 
 		if self.args.model:
-			self.model.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)
+			self.ActorCriticModel.create_network(self.sess,pretrained_weight_file=self.args.model,to_train=self.args.train)
 		else:
-			self.model.create_network(self.sess,to_train=self.args.train)
+			self.ActorCriticModel.create_network(self.sess,to_train=self.args.train)
 
 		# Instantiate memory. 
 		self.memory = Memory.Replay_Memory()
@@ -40,12 +39,8 @@ class Meta_RLClass():
 		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
 
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		if self.args.variant:
-			self.parser = DAggerVariantParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
-				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
-		else:
-			self.parser = DeterministicParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
-				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+		self.parser = DDPGParser.Parser(model_instance=self.ActorCriticModel, data_loader_instance=self.data_loader,
+			memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -58,7 +53,6 @@ def parse_arguments():
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
-	parser.add_argument('--variant',dest='variant',type=int,default=0)
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
