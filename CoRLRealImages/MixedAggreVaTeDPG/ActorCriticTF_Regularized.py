@@ -160,7 +160,7 @@ class CriticModel():
 		# Hence inherits from BOTH the Base and Actor Model. 
 		self.fc8_shape = 40
 		self.fc8 = tf.layers.dense(self.fc7,self.fc8_shape,activation=tf.nn.relu,name='critic_fc8')
-
+		self.initialization_val = 3e-4
 		# Concatenate the image features with the predicted split. 
 		self.concat_input = tf.concat([self.fc8, actor_split, onehot_rules],axis=-1,name='concat')
 
