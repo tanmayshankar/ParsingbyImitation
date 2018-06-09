@@ -54,10 +54,13 @@ class ActorModel():
 
 	def define_split_stream(self):
 		self.actor_fc8_shape = 100
+		self.initialization_val = 3e-4
 		self.actor_fc8 = tf.layers.dense(self.fc7,self.actor_fc8_shape,activation=tf.nn.tanh, name='actor_fc8',
 			kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
 		self.sigmoid_split = tf.layers.dense(self.actor_fc8,1,activation=tf.nn.sigmoid,name='sigmoid_split',
-			kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff))
+			kernel_regularizer=tf.contrib.layers.l2_regularizer(self.regularization_coeff),
+			kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+			bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 
 		# Pixel indices, NOT normalized.
 		self.lower_lim = tf.placeholder(tf.float32,shape=(None,1),name='lower_lim')
@@ -164,7 +167,9 @@ class CriticModel():
 		# Now predict the Qvalue of this image state and the action. 
 		self.fc9_shape = 50
 		self.fc9 = tf.layers.dense(self.concat_input,self.fc9_shape,activation=tf.nn.tanh,name='critic_fc9')
-		self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue')
+		self.predicted_Qvalue = tf.layers.dense(self.fc9,1,name='predicted_Qvalue',
+			kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
+			bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 
 	def define_model(self,sess, model_file=None, to_train=None, actor_split=None, onehot_rules=None):
 		with tf.variable_scope(self.name_scope):
@@ -193,7 +198,7 @@ class ActorCriticModel():
 		self.critic_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope='CriticModel')
 
 		# Creating a training operation to minimize the critic loss.
-		self.critic_optimizer = tf.train.AdamOptimizer(1e-4)
+		self.critic_optimizer = tf.train.AdamOptimizer(1e-5)
 		# self.train_critic = self.critic_optimizer.minimize(self.critic_loss,name='Train_Critic',var_list=self.critic_variables)
 
 		# Clipping gradients because of NaN values. 
@@ -218,7 +223,7 @@ class ActorCriticModel():
 		# Must get actor variables. 
 		self.actor_variables = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES,scope='ActorModel')
 		
-		self.actor_optimizer = tf.train.AdamOptimizer(1e-4)
+		self.actor_optimizer = tf.train.AdamOptimizer(1e-5)
 		# self.train_actor = self.actor_optimizer.minimize(self.actor_loss,name='Train_Actor',var_list=self.actor_variables)
 
 		# Clipping gradients because of NaN values. 

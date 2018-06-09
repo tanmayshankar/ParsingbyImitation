@@ -19,15 +19,11 @@ class Parser():
 		self.save_every = 1
 		self.max_parse_steps = 20
 		self.minimum_width = 25
-		self.max_depth = 4
+		self.max_depth = 7
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-<<<<<<< HEAD
 		self.initial_beta = 1. 
-=======
-		self.initial_beta = 1.
->>>>>>> 9a47cff882e652ad43d0973a4808aa39ca7259ab
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
