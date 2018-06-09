@@ -23,7 +23,7 @@ class Parser():
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
-		self.initial_beta = 0.5
+		self.initial_beta = 1. 
 		self.final_beta = 0.5
 		self.beta_anneal_rate = (self.initial_beta-self.final_beta)/self.anneal_epochs
 
@@ -52,7 +52,8 @@ class Parser():
 			# 		self.memory.append_to_memory(self.parse_tree[k])
 
 			if self.parse_tree[k].label==0:
-				self.memory.append_to_memory(self.parse_tree[k])
+				if self.parse_tree[k].depth>=self.switch_depth-1:
+					self.memory.append_to_memory(self.parse_tree[k])
 
 	def burn_in(self):
 		
@@ -343,12 +344,12 @@ class Parser():
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
-		# for j in range(len(self.parse_tree)):
-		# 	self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
 		# # Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.data_loader.image_size**2)
+		# for j in range(len(self.parse_tree)):
+		#	self.parse_tree[j].reward /= (self.data_loader.image_size**2)
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
