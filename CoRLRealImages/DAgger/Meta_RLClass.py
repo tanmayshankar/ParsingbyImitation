@@ -3,6 +3,7 @@ from headers import *
 import TFModel
 import Data_Loader
 import DeterministicParser
+import DAggerVariantParser
 import NewPlotting
 import Memory
 
@@ -39,8 +40,12 @@ class Meta_RLClass():
 		self.plotting_manager = NewPlotting.PlotManager(to_plot=self.args.plot,data_loader=self.data_loader)		
 
 		# Instantiate parser, passing arguments to take care of train / test / IGM within the parsing code. 
-		self.parser = DeterministicParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
-			memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+		if self.args.variant:
+			self.parser = DAggerVariantParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
+		else:
+			self.parser = DeterministicParser.Parser(model_instance=self.model, data_loader_instance=self.data_loader,
+				memory_instance=self.memory, plot_manager=self.plotting_manager, args=self.args, session=self.sess)
 
 	def train(self):
 		self.parser.meta_training(self.args.train)
@@ -53,6 +58,7 @@ def parse_arguments():
 	parser.add_argument('--suffix',dest='suffix',type=str)
 	parser.add_argument('--plot',dest='plot',type=int,default=0)
 	parser.add_argument('--gpu',dest='gpu')
+	parser.add_argument('--variant',dest='variant',type=int,default=0)
 	parser.add_argument('--train',dest='train',type=int,default=1)
 	parser.add_argument('--model',dest='model',type=str)
 	return parser.parse_args()
