@@ -312,9 +312,11 @@ class Parser():
 					# Using DT Policy with probability beta.
 					if npy.random.random()<self.annealed_beta:
 						self.parse_nonterminal_expert()
+						# Adding Dagger variant.
 						self.state.expert = 1
 					else:
 						self.parse_nonterminal_learner()
+						# Adding Dagger variant.
 						self.state.expert = 0
 				else:
 					# Using Learnt Policy
