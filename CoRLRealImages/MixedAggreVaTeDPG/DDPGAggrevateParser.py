@@ -344,12 +344,12 @@ class Parser():
 			if (self.parse_tree[j].backward_index>=0):
 				self.parse_tree[self.parse_tree[j].backward_index].reward += self.parse_tree[j].reward*self.gamma
 
-		for j in range(len(self.parse_tree)):
-			self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
+		# for j in range(len(self.parse_tree)):
+		# 	self.parse_tree[j].reward /= (self.parse_tree[j].w*self.parse_tree[j].h)
 
 		# # Scaling rewards by constant value - image_size **2 .(so it's at maximum 1).
-		# for j in range(len(self.parse_tree)):
-		#	self.parse_tree[j].reward /= (self.data_loader.image_size**2)
+		for j in range(len(self.parse_tree)):
+			self.parse_tree[j].reward *= 10./(self.data_loader.image_size**2)
 
 	def backprop(self, iter_num):
 		self.batch_states = npy.zeros((self.batch_size,self.data_loader.image_size,self.data_loader.image_size,self.data_loader.num_channels))
