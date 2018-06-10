@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 from headers import *
 
-for i in range(0,500,5):
+i = 125
+command = "python ../Meta_RLClass.py --images ../../../ImageSets/NEW350IMS.npy --labels ../../../ImageSets/NEW350BINLABS.npy --indices ../../../ImageSets/TestIndices.npy --train 0 --reg 1 --gpu 5,4 --model saved_models/model_epoch{0}.ckpt --suffix model_test_{0}".format(i)
+subprocess.call(command.split(),shell=False)
+
+
+for i in range(130,500,5):
 	print("###############################################")
 	print("STARTING WITH:",i)
 	# FOR FULL PARSING:
