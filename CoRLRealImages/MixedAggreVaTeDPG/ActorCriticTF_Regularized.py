@@ -17,7 +17,7 @@ class ActorModel():
 		self.to_train = to_train
 
 		# Starting regularization_coeff at 0.01
-		self.regularization_coeff = 0.1
+		self.regularization_coeff = 0.01
 
 		# Number of layers. 
 		self.num_fc_layers = 2
@@ -214,7 +214,7 @@ class ActorCriticModel():
 		self.actor_rule_loss = self.actor_network.rule_loss
 
 		# Lambda loss weight.
-		self.lambda_loss_weight = tf.constant(2.,name='Lambda_Weight')
+		self.lambda_loss_weight = tf.constant(1.,name='Lambda_Weight')
 
 		# Actor loss.
 		self.actor_weighted_split_loss = tf.multiply(self.actor_split_loss, self.lambda_loss_weight)
