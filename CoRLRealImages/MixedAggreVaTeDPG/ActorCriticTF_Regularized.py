@@ -17,7 +17,7 @@ class ActorModel():
 		self.to_train = to_train
 
 		# Starting regularization_coeff at 0.01
-		self.regularization_coeff = 0.001
+		self.regularization_coeff = 0.1
 
 		# Number of layers. 
 		self.num_fc_layers = 2
