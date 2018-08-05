@@ -311,10 +311,12 @@ class Parser():
 			else:
 				self.parse_terminal()
 			
-			if self.args.plot:
-				self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
-
 			self.current_parsing_index+=1
+			
+		if self.args.plot:
+			self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
+
+			
 
 	def backward_tree_propagation(self):
 
@@ -447,7 +449,8 @@ class Parser():
 			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 
 			image_index_list = range(self.data_loader.num_images)
-			npy.random.shuffle(image_index_list)
+			if self.args.train:
+				npy.random.shuffle(image_index_list)
 
 			# Set training parameters (Update epsilon).
 			self.set_parameters(e)

@@ -42,6 +42,22 @@ class Parser():
 		self.parse_tree = [parse_tree_node()]
 		self.parse_tree[self.current_parsing_index]=self.state
 
+	def mentropy(self, image_segment_v):      
+		# Calculate the emperical entropy for an image segment. 
+		image_segment = copy.deepcopy(image_segment_v)
+		image_segment[image_segment==-1]=0
+		nones = npy.count_nonzero(image_segment)
+		segment_size = image_segment.shape[0]*image_segment.shape[1]
+
+		nzeros = segment_size-nones
+		p_zeros = float(nzeros)/segment_size
+		p_ones = float(nones)/segment_size
+		
+		if p_zeros==0 or p_ones==0:
+			return 0.
+
+		return -(p_zeros*npy.log2(p_zeros)+p_ones*npy.log2(p_ones))  
+
 	def append_parse_tree(self):
 		for k in range(len(self.parse_tree)):
 			# Only adding non-terminal states to the memory. 
@@ -329,11 +345,14 @@ class Parser():
 
 			else:
 				self.parse_terminal()
-			
+
 			if self.args.plot:
 				self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
+		
+			self.current_parsing_index+=1			
+			
 
-			self.current_parsing_index+=1
+
 
 	def backward_tree_propagation(self):
 
@@ -425,7 +444,8 @@ class Parser():
 		self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 
 		self.image_index_list = range(self.data_loader.num_images)
-		npy.random.shuffle(self.image_index_list)
+		if self.args.train:
+			npy.random.shuffle(self.image_index_list)
 
 		# Set training parameters (Update epsilon).
 		self.set_parameters(e)
@@ -450,6 +470,9 @@ class Parser():
 		else:
 			self.num_epochs=1	
 
+		self.avg_entropy_values = npy.zeros((self.data_loader.num_images))
+		self.scaled_avg_entropy_values = npy.zeros((self.data_loader.num_images))
+
 		# For all epochs. 
 		for e in range(self.num_epochs):
 
@@ -470,6 +493,11 @@ class Parser():
 				# Add to memory. 
 				self.append_parse_tree()
 				
+   				for ix in range(len(self.parse_tree)):
+   					if self.parse_tree[ix].label==2 or self.parse_tree[ix].label==3:
+   						self.avg_entropy_values[i]+= self.mentropy(self.data_loader.labels[self.parse_tree[ix].image_index, self.parse_tree[ix].x:self.parse_tree[ix].x+self.parse_tree[ix].w, self.parse_tree[ix].y:self.parse_tree[ix].y+self.parse_tree[ix].h])
+						self.scaled_avg_entropy_values[i]+= self.mentropy(self.data_loader.labels[self.parse_tree[ix].image_index, self.parse_tree[ix].x:self.parse_tree[ix].x+self.parse_tree[ix].w, self.parse_tree[ix].y:self.parse_tree[ix].y+self.parse_tree[ix].h]) /(self.parse_tree[ix].w*self.parse_tree[ix].h)
+
 				# Backprop --> over a batch sampled from memory. 
 				if self.args.train:
 					# if e==0 and i>50:
@@ -485,3 +513,5 @@ class Parser():
 
 			self.save_setup(e)
 			print("Cummulative Reward for Episode:",self.average_episode_rewards.mean())
+
+		embed()

@@ -1,7 +1,5 @@
 #!/usr/bin/env python
 import numpy as npy
-import matplotlib
-matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.collections import LineCollection

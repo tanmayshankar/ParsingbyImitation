@@ -13,7 +13,7 @@ class PlotManager():
 		
 		self.fig, self.ax = plt.subplots(1,3,sharey=True)
 		if self.plot:			
-			self.fig.show()
+			# self.fig.show()
 
 			self.pred_labels = npy.zeros((self.data_loader.image_size,self.data_loader.image_size))			
 			self.sc1 = self.ax[0].imshow(self.pred_labels,aspect='equal',cmap='jet',extent=[0,self.image_size,0,self.image_size],origin='lower')
@@ -125,8 +125,8 @@ class PlotManager():
 		self.fig.canvas.draw()
 		# raw_input("Press any key to continue.")
 		# self.fig.savefig
-		# self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
-		plt.pause(0.1)	
+		self.fig.savefig("Image_{0}_Step_{1}.png".format(image_index,self.current_parsing_index),format='png',bbox_inches='tight')
+		# plt.pause(0.1)	
 		# plt.pause(0.5)	
 
 		# if len(self.ax[0].collections):

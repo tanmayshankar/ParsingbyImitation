@@ -19,7 +19,7 @@ class Parser():
 		self.save_every = 5
 		self.max_parse_steps = 20
 		self.minimum_width = 25
-		self.max_depth = 7
+		self.max_depth = 4
 
 		# Beta is probability of using expert.
 		self.anneal_epochs = 100
@@ -317,10 +317,11 @@ class Parser():
 			else:
 				self.parse_terminal()
 			
-			if self.args.plot:
-				self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
-
 			self.current_parsing_index+=1
+
+		if self.args.plot:
+			self.plot_manager.update_plot_data(image_index, self.predicted_labels[image_index], self.parse_tree, self.current_parsing_index)
+
 
 	def backward_tree_propagation(self):
 
@@ -413,7 +414,8 @@ class Parser():
 			self.predicted_labels = npy.zeros((self.data_loader.num_images,self.data_loader.image_size,self.data_loader.image_size))
 
 			image_index_list = range(self.data_loader.num_images)
-			npy.random.shuffle(image_index_list)
+			if self.args.train:
+				npy.random.shuffle(image_index_list)
 
 			# Set training parameters (Update epsilon).
 			self.set_parameters(e)
