@@ -15,7 +15,7 @@ Our paper targets learning a parser to construct hierarchical decompositions of 
 4. Introduces a novel hybrid imitation-reinforcement learning approach, by building a deterministic DDPG-style actor-critic variant of AggreVaTeD.
 
 ### Is that all? ###
-Yes and no. I'm evaluating our novel policy gradient update, DRAG, on OpenAI Gym environments! you can check out https://github.com/tanmayshankar/DeepVectorPolicyFields for more! 
+Yes and no. I'm evaluating our novel policy gradient update, DRAG, on OpenAI Gym environments! you can check out https://github.com/tanmayshankar/GymRobotics for more! 
 
 ### Can I use this code to pretend I did some research? ###
 Feel free to use my code, but please remember to cite my paper above (and this repository)! 
