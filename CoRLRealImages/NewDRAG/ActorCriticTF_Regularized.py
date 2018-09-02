@@ -77,7 +77,7 @@ class ActorModel():
 	def define_rule_stream(self):
 		self.num_rules = 4
 		self.rule_presoftmax = tf.layers.dense(self.fc7,self.num_rules)
-		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules))
+		self.rule_mask = tf.placeholder(tf.float32,shape=(None,self.num_rules),name='RuleMask')
 
 		self.softmax_numerator = tf.multiply(self.rule_mask,tf.exp(self.rule_presoftmax),name='softmax_numerator')
 		self.softmax_denominator = tf.add(tf.reduce_sum(tf.exp(tf.multiply(self.rule_mask,self.rule_presoftmax)),axis=-1,keep_dims=True),
@@ -116,6 +116,7 @@ class CriticModel():
 		self.image_size = image_size
 		self.num_channels = num_channels
 		self.num_layers = 7
+		self.num_rules = 4
 		if name_scope:
 			self.name_scope = name_scope
 
@@ -182,10 +183,10 @@ class CriticModel():
 			kernel_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val),
 			bias_initializer=tf.random_uniform_initializer(minval=-self.initialization_val,maxval=self.initialization_val))
 
-	def define_model(self,sess, model_file=None, to_train=None, actor_split=None, onehot_rules=None):
+	def define_model(self,sess, model_file=None, to_train=None):
 		with tf.variable_scope(self.name_scope):
 			self.define_base_model(sess, model_file,to_train)
-			self.define_eval_stream(actor_split, onehot_rules)
+			self.define_eval_stream()
 
 class ActorCriticModel():
 
@@ -199,7 +200,7 @@ class ActorCriticModel():
 		self.actor_network.define_model(sess,to_train=to_train)		
 
 		self.critic_network = CriticModel(name_scope='CriticModel')
-		self.critic_network.define_model(sess,to_train=to_train, actor_split=self.actor_network.predicted_split, onehot_rules=self.actor_network.onehot_rules)
+		self.critic_network.define_model(sess,to_train=to_train)
 
 	def define_critic_train_op(self):
 		self.target_Qvalue = tf.placeholder(tf.float32, shape=(None,1), name='target_Qvalue')
@@ -237,17 +238,39 @@ class ActorCriticModel():
 		self.actor_split_gradients = tf.gradients(self.actor_network.predicted_split,self.actor_variables,grad_ys=self.critic_gradients_wrt_split)
 		self.actor_rule_gradients = tf.gradients(self.actor_rule_loss,self.actor_variables)		
 
-
 		# Lambda loss weight.
 		self.lambda_weight = tf.constant(1.,name='Lambda_Weight')
-
+		# embed()
 		# # Actor loss.
 		# self.actor_weighted_split_loss = tf.multiply(self.actor_split_loss, self.lambda_loss_weight)
 		# self.actor_loss = self.actor_rule_loss+self.actor_weighted_split_loss
 
 		# Weight rule and split gradients. 		
 		# Should be able to add these because they're gradients with respect to the same parameters. 
-		self.actor_gradients = self.actor_rule_gradients+self.lambda_weight*self.actor_split_gradients
+		# self.actor_gradients = self.actor_rule_gradients+self.lambda_weight*self.actor_split_gradients
+
+		self.collect_gradients = zip(self.actor_rule_gradients,self.actor_split_gradients)
+
+		self.actor_gradients = []
+
+		# Colecting gradients.
+		for grad_inds in range(len(self.collect_gradients)):
+			# print("We are at:",grad_inds)
+			# embed()
+			# if (self.actor_rule_gradients[grad_inds] is not None) and (self.actor_split_gradients[grad_inds] is not None):
+			# 	self.actor_gradients.append(self.actor_rule_gradients[grad_inds]+self.actor_split_gradients[grad_inds])
+			# else:				
+			# 	self.actor_gradients.append(self.actor_split_gradients[grad_inds])
+
+			if (self.actor_rule_gradients[grad_inds] is None):
+				self.actor_gradients.append(self.actor_split_gradients[grad_inds])
+			elif (self.actor_split_gradients[grad_inds] is None):
+				self.actor_gradients.append(self.actor_rule_gradients[grad_inds])
+			elif (self.actor_rule_gradients[grad_inds] is not None) and (self.actor_split_gradients[grad_inds] is not None):
+				self.actor_gradients.append(self.actor_rule_gradients[grad_inds]+self.actor_split_gradients[grad_inds])
+
+		# self.actor_gradients = [() for rule_grad_inst, split_grad_inst in self.collect_gradients if 
+
 		# Zip with actor variables. 
 		self.actor_gradients_vars = zip(self.actor_gradients,self.actor_variables)
 		# Now clip gradients. 

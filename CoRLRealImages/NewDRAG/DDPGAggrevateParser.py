@@ -388,7 +388,7 @@ class Parser():
 		self.batch_target_Qvalues = npy.zeros((self.batch_size,1))
 
 		self.batch_target_rules = npy.zeros((self.batch_size,self.ACModel.actor_network.num_rules))
-		self.batch_selected_splits = npy.zeors((self.batch_size,1))				
+		self.batch_selected_splits = npy.zeros((self.batch_size,1))				
 		self.batch_rule_weights = npy.zeros((self.batch_size,1))
 
 		# Select indices of memory to put into batch.
@@ -416,7 +416,7 @@ class Parser():
 			if state.rule_applied==0 or state.rule_applied==1:						
 				self.batch_split_weights[k] = 1.
 
-				self.batch_selected_splits = state.split
+				self.batch_selected_splits[k] = state.split
 
 				if state.rule_applied==0:
 					self.batch_lower_lims[k] = float(state.x+1)
@@ -445,17 +445,22 @@ class Parser():
 			feed_dict={self.ACModel.critic_network.input: self.batch_states,
 						self.ACModel.critic_network.selected_rule: self.batch_target_rules,
 						self.ACModel.critic_network.selected_split: self.batch_selected_splits,
-						self.ACModel.critic_network.target_Qvalue: self.batch_target_Qvalues})
+						self.ACModel.target_Qvalue: self.batch_target_Qvalues})
 
 		actor_splits = self.sess.run(self.ACModel.actor_network.predicted_split,
 			feed_dict={self.ACModel.actor_network.input: self.batch_states,
-						self.ACModel.actor_network.split_weight: self.batch_split_weights})
+						self.ACModel.actor_network.split_weight: self.batch_split_weights,
+						self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
+						self.ACModel.actor_network.upper_lim: self.batch_upper_lims})
 
 		# UPDATE ACTOR: 
 		_ = self.sess.run(self.ACModel.train_actor,
 			feed_dict={self.ACModel.actor_network.split_weight: self.batch_split_weights,
 						self.ACModel.actor_network.lower_lim: self.batch_lower_lims,
 						self.ACModel.actor_network.upper_lim: self.batch_upper_lims,
+						self.ACModel.actor_network.input: self.batch_states,
+						self.ACModel.actor_network.target_rule: self.batch_target_rules,
+						self.ACModel.actor_network.rule_mask: self.batch_rule_masks,
 						# This should actually be critic critic_estimates. 
 						# Earlier we were using the Monte Carlo return itself. 
 
@@ -514,7 +519,7 @@ class Parser():
 		
 		# embed()
 		if self.args.train:
-			self.burn_in()
+			# self.burn_in()
 			self.ACModel.save_model(0)
 		else:
 			self.num_epochs=1	
